@@ -2,7 +2,10 @@ import { google } from "@ai-sdk/google";
 import { generateText } from "ai";
 import { z } from "zod";
 
-export const maxDuration = 30;
+// Hasta 2 intentos de 20 s cada uno: Gemini a veces se queda colgado y un reintento suele responder en segundos
+export const maxDuration = 60;
+const ATTEMPT_TIMEOUT_MS = 20_000;
+const MAX_ATTEMPTS = 2;
 
 const buildSystemPrompt = (idioma: string, flux: boolean) => `Eres un experto diseñador de miniaturas de YouTube. Tu objetivo es generar un ÚNICO prompt en lenguaje natural y descriptivo, en inglés, optimizado para Google Gemini (Imagen 3), basado en las variables del usuario.
 
@@ -102,12 +105,21 @@ export async function POST(req: Request) {
   ].join("\n");
 
   try {
-    const { text } = await generateText({
-      model: google(process.env.GEMINI_MODEL ?? "gemini-3.5-flash-lite"),
-      system: buildSystemPrompt(v.idioma || "Español", flux),
-      prompt,
-      maxOutputTokens: 2048,
-    });
+    let text = "";
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      try {
+        ({ text } = await generateText({
+          model: google(process.env.GEMINI_MODEL ?? "gemini-flash-lite-latest"),
+          system: buildSystemPrompt(v.idioma || "Español", flux),
+          prompt,
+          maxOutputTokens: 2048,
+          abortSignal: AbortSignal.timeout(ATTEMPT_TIMEOUT_MS),
+        }));
+        break;
+      } catch (err) {
+        if (attempt === MAX_ATTEMPTS) throw err;
+      }
+    }
 
     // Limpieza defensiva: sin parámetros de Midjourney, URLs ni marcadores del modelo
     const description = text
@@ -129,7 +141,10 @@ export async function POST(req: Request) {
     // La relación de aspecto se inyecta por código (no depende del modelo)
     return new Response(`${ASPECT_SENTENCE}\n\n${description}`);
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Error desconocido";
+    const raw = err instanceof Error ? err.message : "Error desconocido";
+    const message = /timeout|abort/i.test(raw)
+      ? "Gemini tardó demasiado en responder. Inténtalo de nuevo."
+      : raw;
     return new Response(message, { status: 502 });
   }
 }
