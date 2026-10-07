@@ -1,5 +1,6 @@
 "use client";
 
+import { Dices, Shuffle } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -51,8 +52,30 @@ const IDIOMAS = [
   "Italiano",
 ];
 const GENEROS = ["Hombre", "Mujer"];
-const EDADES = ["Joven (20-25 años)", "Adulto (30-40 años)", "Maduro (45+ años)"];
-const ETNIAS = ["Latino", "Caucásico", "Afrodescendiente", "Asiático"];
+const EDADES = [
+  "Joven (18-25 años)",
+  "Adulto Joven (30-40 años)",
+  "Adulto Mayor (45-55 años)",
+  "Maduro (56 a 70 años)",
+  "Viejo (75 a 90 años)",
+];
+const ETNIAS = [
+  "Latino (Genérico)",
+  "Mexicano",
+  "Colombiano",
+  "Argentino",
+  "Peruano",
+  "Caribeño",
+  "Brasileño",
+  "Caucásico (Norteamericano/Europeo)",
+  "Nórdico",
+  "Mediterráneo",
+  "Afrodescendiente",
+  "Afroamericano",
+  "Asiático (Este de Asia)",
+  "Indio / Surasiático",
+  "Árabe / Medio Oriente",
+];
 const PROFESIONES = [
   "Técnico",
   "Ama de casa",
@@ -78,22 +101,61 @@ const ESTILOS = [
   "Camisa a cuadros remangada",
 ];
 const EMOCIONES = [
-  "Asombro absoluto (boca abierta, ojos muy abiertos)",
-  "Alivio y felicidad (sonrisa grande)",
-  "Confianza/Éxito (guiño y pulgar arriba)",
-  "Shock extremo (manos en la cabeza, ojos desorbitados)",
-  "Euforia total (puños arriba, grito de alegría)",
-  "Incredulidad (ceja levantada, mano en la boca)",
-  "Sorpresa pícara (sonrisa de lado, mirada cómplice)",
-  "Triunfo (puño cerrado, sonrisa de victoria)",
-  "Satisfacción tranquila (brazos cruzados, sonrisa segura)",
-  "Mente explotada (cara de asombro, destellos alrededor)",
+  "Asombro absoluto (mandíbula caída, boca muy abierta)",
+  "Alivio y felicidad (sonrisa grande y relajada)",
+  "Confianza/Éxito (sonrisa amplia y muy segura)",
+  "Shock extremo (boca desencajada por la impresión)",
+  "Euforia total (boca abierta en grito de alegría, dientes a la vista)",
+  "Incredulidad (mueca de duda, labios apretados hacia un lado)",
+  "Sorpresa pícara (media sonrisa ladeada)",
+  "Triunfo (sonrisa de victoria radiante y efusiva)",
+  "Satisfacción tranquila (sonrisa leve, labios cerrados y serenos)",
+  "Mente explotada (expresión facial rígida y paralizada por el asombro)",
 ];
 const MIRADAS = [
-  "Hacia el frente (a la cámara)",
-  "Hacia el objeto (la impresora)",
-  "Hacia las letras (el texto)",
-  "Ojos cerrados",
+  "Contacto visual directo (mirando fijamente a la cámara para conectar con el espectador)",
+  "Mirando fijamente hacia la impresora (enfocando la atención en el problema)",
+  "Mirando hacia los textos 3D gigantes (guiando la vista hacia el código de error o solución)",
+  "Mirando de reojo hacia la impresora (ideal para expresiones de duda o sospecha)",
+  "Mirando hacia arriba en ángulo (ideal para admirar insignias o textos flotantes)",
+];
+const BADGES = [
+  "Ninguno",
+  "Reset en 1 Minuto",
+  "Desbloqueo Inmediato",
+  "Ultra Rápido",
+  "100% Seguro",
+  "Libre de Virus",
+  "Solo Compartes USB",
+  "Cero Instalaciones",
+  "Sin AnyDesk",
+  "No Requiere Desarmar",
+  "Sin Desactivar Antivirus",
+  "No Cambias Almohadillas",
+  "Revisión Gratis",
+  "Diagnóstico Gratis",
+  "Primero Revisión, Después Pago",
+  "100% Garantizado",
+  "Reutilizable en cualquier PC",
+  "Atención 24/7",
+  "Pago PayPal",
+  "Se recibe Nequi",
+  "Pago Binance",
+  "Pago con Tarjeta",
+  "Pago Banco Local",
+];
+const GESTOS = [
+  "Sin gesto específico (Por defecto)",
+  "Señalando la impresora con el dedo índice",
+  "Señalando los textos 3D",
+  "Señalando directamente a la cámara",
+  "Ambas manos en la cabeza (shock/frustración)",
+  "Mano cubriendo la boca (sorpresa)",
+  "Encogimiento de hombros con palmas arriba (confusión)",
+  "Pulgar hacia arriba (aprobación/éxito)",
+  "Brazos cruzados (confianza/experto)",
+  "Sosteniendo un cable USB brillante",
+  "Palmas abiertas mostrando la impresora (presentación)",
 ];
 const FONDOS = [
   "Cyber-tech oscuro con escudos holográficos azules",
@@ -138,10 +200,12 @@ type FormState = {
   estilo: string;
   emocion: string;
   mirada: string;
+  gesto: string;
   fondo: string;
   marco: string;
   idioma: string;
-  badges: string;
+  badge1: string;
+  badge2: string;
 };
 
 type SelectKey =
@@ -154,9 +218,12 @@ type SelectKey =
   | "estilo"
   | "emocion"
   | "mirada"
+  | "gesto"
   | "fondo"
   | "marco"
-  | "idioma";
+  | "idioma"
+  | "badge1"
+  | "badge2";
 
 const SELECT_FIELDS: { key: SelectKey; label: string; options: string[] }[] = [
   { key: "marca", label: "Marca", options: MARCAS },
@@ -166,12 +233,31 @@ const SELECT_FIELDS: { key: SelectKey; label: string; options: string[] }[] = [
   { key: "etnia", label: "Etnia / Raza", options: ETNIAS },
   { key: "profesion", label: "Profesión", options: PROFESIONES },
   { key: "estilo", label: "Estilo / Vestimenta", options: ESTILOS },
-  { key: "emocion", label: "Emoción", options: EMOCIONES },
+  { key: "emocion", label: "Emociones y Gestos Rostros", options: EMOCIONES },
   { key: "mirada", label: "Mirada", options: MIRADAS },
+  { key: "gesto", label: "Gesto de las manos", options: GESTOS },
   { key: "fondo", label: "Fondo", options: FONDOS },
   { key: "marco", label: "Marco", options: MARCOS },
   { key: "idioma", label: "Idioma de los Textos", options: IDIOMAS },
+  { key: "badge1", label: "Badges 3D # 1", options: BADGES },
+  { key: "badge2", label: "Badges 3D # 2", options: BADGES },
 ];
+
+// Campos con botón individual de aleatorizar (NO incluye marca, modelo, error ni idioma)
+const RANDOMIZABLE = new Set<SelectKey>([
+  "genero",
+  "edad",
+  "etnia",
+  "profesion",
+  "estilo",
+  "emocion",
+  "mirada",
+  "gesto",
+  "fondo",
+  "marco",
+  "badge1",
+  "badge2",
+]);
 
 const INITIAL: FormState = {
   marca: MARCAS[0],
@@ -185,10 +271,12 @@ const INITIAL: FormState = {
   estilo: ESTILOS[0],
   emocion: EMOCIONES[0],
   mirada: MIRADAS[0],
+  gesto: GESTOS[0],
   fondo: FONDOS[0],
   marco: MARCOS[0],
   idioma: IDIOMAS[0],
-  badges: "",
+  badge1: BADGES[0],
+  badge2: BADGES[0],
 };
 
 export default function Home() {
@@ -197,6 +285,46 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const update = (key: keyof FormState, value: string) =>
     setForm((f) => ({ ...f, [key]: value }));
+
+  // Aleatoriza únicamente el campo indicado, sin tocar el resto del formulario
+  function randomizeSingleField(fieldName: SelectKey) {
+    if (!RANDOMIZABLE.has(fieldName)) return;
+    const options = SELECT_FIELDS.find((f) => f.key === fieldName)!.options;
+    const other = fieldName === "badge1" ? "badge2" : fieldName === "badge2" ? "badge1" : null;
+    // Se evita repetir el valor actual (para que el cambio sea visible) y, en badges,
+    // la misma insignia del otro menú (salvo "Ninguno")
+    const candidates = options.filter(
+      (o) =>
+        o !== form[fieldName] &&
+        !(other && o !== BADGES[0] && o === form[other]),
+    );
+    const pool = candidates.length ? candidates : options;
+    const value = pool[Math.floor(Math.random() * pool.length)];
+    setForm((f) => ({ ...f, [fieldName]: value }));
+  }
+
+  // Aleatoriza solo la apariencia/escena. NO toca marca, modelo, error (ni errorOtro) ni idioma.
+  function handleRandomize() {
+    const pick = (list: string[]) => list[Math.floor(Math.random() * list.length)];
+    const badge1 = pick(BADGES);
+    // Evita repetir la misma insignia (salvo "Ninguno", que puede coincidir)
+    const badge2 = pick(BADGES.filter((b) => b === BADGES[0] || b !== badge1));
+    setForm((f) => ({
+      ...f,
+      genero: pick(GENEROS),
+      edad: pick(EDADES),
+      etnia: pick(ETNIAS),
+      profesion: pick(PROFESIONES),
+      estilo: pick(ESTILOS),
+      emocion: pick(EMOCIONES),
+      mirada: pick(MIRADAS),
+      gesto: pick(GESTOS),
+      fondo: pick(FONDOS),
+      marco: pick(MARCOS),
+      badge1,
+      badge2,
+    }));
+  }
 
   async function generate(e: React.FormEvent) {
     e.preventDefault();
@@ -234,10 +362,12 @@ export default function Home() {
           modelo: modeloCompleto,
           error,
           personaje,
+          gesto: form.gesto,
           fondo: form.fondo,
           marco: form.marco,
           idioma: form.idioma,
-          badges: form.badges,
+          badge1: form.badge1,
+          badge2: form.badge2,
         }),
       });
       const text = await res.text();
@@ -273,7 +403,23 @@ export default function Home() {
 
   const renderSelect = ({ key, label, options }: (typeof SELECT_FIELDS)[number]) => (
     <div key={key} className="space-y-2">
-      <Label htmlFor={key}>{label}</Label>
+      <div className="flex items-center gap-1">
+        <Label htmlFor={key}>{label}</Label>
+        {RANDOMIZABLE.has(key) && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="size-6 text-muted-foreground"
+            aria-label={`Aleatorizar ${label}`}
+            title={`Aleatorizar ${label}`}
+            onClick={() => randomizeSingleField(key)}
+            disabled={loading}
+          >
+            <Shuffle className="size-3.5" />
+          </Button>
+        )}
+      </div>
       <Select value={form[key]} onValueChange={(v) => update(key, v)}>
         <SelectTrigger id={key} className="w-full">
           <SelectValue placeholder="Selecciona..." />
@@ -307,7 +453,7 @@ export default function Home() {
           <CardHeader>
             <CardTitle>Plantilla de miniatura</CardTitle>
             <CardDescription>
-              Escribe modelo y badges; elige el resto en los menús.
+              Escribe el modelo; elige el resto en los menús.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -346,25 +492,30 @@ export default function Home() {
                     "estilo",
                     "emocion",
                     "mirada",
+                    "gesto",
                     "fondo",
                     "marco",
                     "idioma",
+                    "badge1",
+                    "badge2",
                   ] as SelectKey[]
                 ).map((k) => renderSelect(select(k)))}
-
-                <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="badges">Badges 3D</Label>
-                  <Input
-                    id="badges"
-                    placeholder="Ej: 100% REMOTO + VÍA USB"
-                    value={form.badges}
-                    onChange={(e) => update("badges", e.target.value)}
-                  />
-                </div>
               </div>
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? "Generando..." : "Generar prompt"}
-              </Button>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="sm:w-auto"
+                  onClick={handleRandomize}
+                  disabled={loading}
+                >
+                  <Dices className="size-4" />
+                  Generar al Azar
+                </Button>
+                <Button type="submit" className="flex-1" disabled={loading}>
+                  {loading ? "Generando..." : "Generar prompt"}
+                </Button>
+              </div>
             </form>
           </CardContent>
         </Card>
