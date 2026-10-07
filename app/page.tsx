@@ -280,6 +280,79 @@ const INITIAL: FormState = {
   badge2: BADGES[0],
 };
 
+const pick = (list: string[]) => list[Math.floor(Math.random() * list.length)];
+
+// Apariencia/escena al azar. NO incluye marca, modelo, error ni idioma.
+function randomAppearance() {
+  const badge1 = pick(BADGES);
+  // Evita repetir la misma insignia (salvo "Ninguno", que puede coincidir)
+  const badge2 = pick(BADGES.filter((b) => b === BADGES[0] || b !== badge1));
+  return {
+    genero: pick(GENEROS),
+    edad: pick(EDADES),
+    etnia: pick(ETNIAS),
+    profesion: pick(PROFESIONES),
+    estilo: pick(ESTILOS),
+    emocion: pick(EMOCIONES),
+    mirada: pick(MIRADAS),
+    gesto: pick(GESTOS),
+    fondo: pick(FONDOS),
+    marco: pick(MARCOS),
+    badge1,
+    badge2,
+  };
+}
+
+// Cuerpo de la petición a /api/chat a partir del estado del formulario
+function buildPayload(f: FormState, error: string, isFluxMode: boolean) {
+  // Los atributos del personaje se concatenan en un único campo para la API
+  const personaje = [
+    f.genero,
+    f.edad,
+    f.etnia,
+    `profesión: ${f.profesion}`,
+    `vestimenta: ${f.estilo}`,
+    `emoción: ${f.emocion}`,
+    `mirada: ${f.mirada}`,
+  ].join(", ");
+
+  // Marca + modelo, sin repetir la marca si ya la escribieron
+  const modelo = f.modelo.trim();
+  const modeloCompleto = modelo.toLowerCase().startsWith(f.marca.toLowerCase())
+    ? modelo
+    : `${f.marca} ${modelo}`.trim();
+
+  return {
+    modelo: modeloCompleto,
+    error,
+    personaje,
+    gesto: f.gesto,
+    fondo: f.fondo,
+    marco: f.marco,
+    idioma: f.idioma,
+    badge1: f.badge1,
+    badge2: f.badge2,
+    isFluxMode,
+  };
+}
+
+async function requestPrompt(payload: ReturnType<typeof buildPayload>) {
+  const res = await fetch("/api/chat", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  const text = await res.text();
+  if (!res.ok) throw new Error(text || "Error al generar el prompt");
+  return text;
+}
+
+// El modo FLUX está oculto en la interfaz; poner en true para volver a mostrar el interruptor
+const SHOW_FLUX_TOGGLE = false;
+
+const MAX_BATCH = 50;
+const BATCH_CONCURRENCY = 3;
+
 export default function Home() {
   const [form, setForm] = useState<FormState>(INITIAL);
   const [result, setResult] = useState("");
@@ -287,6 +360,9 @@ export default function Home() {
   const [isFluxMode, setIsFluxMode] = useState(false);
   // Prompts generados, acumulados para descargar como lote (.txt)
   const [batch, setBatch] = useState<string[]>([]);
+  const [batchCount, setBatchCount] = useState("10");
+  const [batchProgress, setBatchProgress] = useState<{ done: number; total: number } | null>(null);
+  const busy = loading || batchProgress !== null;
   const update = (key: keyof FormState, value: string) =>
     setForm((f) => ({ ...f, [key]: value }));
 
@@ -309,25 +385,7 @@ export default function Home() {
 
   // Aleatoriza solo la apariencia/escena. NO toca marca, modelo, error (ni errorOtro) ni idioma.
   function handleRandomize() {
-    const pick = (list: string[]) => list[Math.floor(Math.random() * list.length)];
-    const badge1 = pick(BADGES);
-    // Evita repetir la misma insignia (salvo "Ninguno", que puede coincidir)
-    const badge2 = pick(BADGES.filter((b) => b === BADGES[0] || b !== badge1));
-    setForm((f) => ({
-      ...f,
-      genero: pick(GENEROS),
-      edad: pick(EDADES),
-      etnia: pick(ETNIAS),
-      profesion: pick(PROFESIONES),
-      estilo: pick(ESTILOS),
-      emocion: pick(EMOCIONES),
-      mirada: pick(MIRADAS),
-      gesto: pick(GESTOS),
-      fondo: pick(FONDOS),
-      marco: pick(MARCOS),
-      badge1,
-      badge2,
-    }));
+    setForm((f) => ({ ...f, ...randomAppearance() }));
   }
 
   async function generate(e: React.FormEvent) {
@@ -342,41 +400,7 @@ export default function Home() {
     setLoading(true);
     setResult("");
     try {
-      // Los atributos del personaje se concatenan en un único campo para la API
-      const personaje = [
-        form.genero,
-        form.edad,
-        form.etnia,
-        `profesión: ${form.profesion}`,
-        `vestimenta: ${form.estilo}`,
-        `emoción: ${form.emocion}`,
-        `mirada: ${form.mirada}`,
-      ].join(", ");
-
-      // Marca + modelo, sin repetir la marca si ya la escribieron
-      const modelo = form.modelo.trim();
-      const modeloCompleto = modelo.toLowerCase().startsWith(form.marca.toLowerCase())
-        ? modelo
-        : `${form.marca} ${modelo}`.trim();
-
-      const res = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          modelo: modeloCompleto,
-          error,
-          personaje,
-          gesto: form.gesto,
-          fondo: form.fondo,
-          marco: form.marco,
-          idioma: form.idioma,
-          badge1: form.badge1,
-          badge2: form.badge2,
-          isFluxMode,
-        }),
-      });
-      const text = await res.text();
-      if (!res.ok) throw new Error(text || "Error al generar el prompt");
+      const text = await requestPrompt(buildPayload(form, error, isFluxMode));
       setResult(text);
       setBatch((b) => [...b, text]);
     } catch (err) {
@@ -384,6 +408,61 @@ export default function Home() {
     } finally {
       setLoading(false);
     }
+  }
+
+  // Genera N prompts con marca, modelo, error e idioma fijos y el resto de campos al azar
+  async function generateRandomBatch() {
+    const error = form.error === OTRO ? form.errorOtro.trim() : form.error;
+    if (!error) {
+      toast.error("Escribe el error en el campo OTRO");
+      return;
+    }
+    if (!form.modelo.trim()) {
+      toast.error("Escribe el modelo de la impresora");
+      return;
+    }
+    const total = Math.floor(Number(batchCount));
+    if (!Number.isFinite(total) || total < 1 || total > MAX_BATCH) {
+      toast.error(`La cantidad debe estar entre 1 y ${MAX_BATCH}`);
+      return;
+    }
+
+    setBatchProgress({ done: 0, total });
+    const results: (string | null)[] = new Array(total).fill(null);
+    let next = 0;
+    let done = 0;
+    let firstError = "";
+
+    // Pocos pedidos en paralelo para no saturar la API de Gemini
+    const worker = async () => {
+      while (next < total) {
+        const i = next++;
+        // Un reintento por prompt si la API falla o tarda demasiado
+        for (let attempt = 1; attempt <= 2 && results[i] === null; attempt++) {
+          try {
+            results[i] = await requestPrompt(
+              buildPayload({ ...form, ...randomAppearance() }, error, isFluxMode),
+            );
+          } catch (err) {
+            if (!firstError) firstError = err instanceof Error ? err.message : "Error inesperado";
+          }
+        }
+        done++;
+        setBatchProgress({ done, total });
+      }
+    };
+    await Promise.all(Array.from({ length: Math.min(BATCH_CONCURRENCY, total) }, worker));
+
+    const ok = results.filter((r): r is string => r !== null);
+    if (ok.length) {
+      setBatch((b) => [...b, ...ok]);
+      setResult(ok[ok.length - 1]);
+    }
+    setBatchProgress(null);
+    if (!ok.length) toast.error(firstError || "No se pudo generar el lote");
+    else if (ok.length < total)
+      toast.warning(`Lote parcial: ${ok.length} de ${total} prompts (${firstError})`);
+    else toast.success(`Lote listo: ${ok.length} prompts. Pulsa "Descargar Lote (.txt)".`);
   }
 
   // Una línea por prompt (Automatic1111 lee una imagen por línea): sin saltos internos
@@ -440,7 +519,7 @@ export default function Home() {
             aria-label={`Aleatorizar ${label}`}
             title={`Aleatorizar ${label}`}
             onClick={() => randomizeSingleField(key)}
-            disabled={loading}
+            disabled={busy}
           >
             <Shuffle className="size-3.5" />
           </Button>
@@ -527,6 +606,7 @@ export default function Home() {
                   ] as SelectKey[]
                 ).map((k) => renderSelect(select(k)))}
               </div>
+              {SHOW_FLUX_TOGGLE && (
               <div className="flex items-center justify-between gap-3 rounded-lg border p-3">
                 <div className="space-y-0.5">
                   <Label htmlFor="isFluxMode" className="leading-tight">
@@ -542,20 +622,53 @@ export default function Home() {
                   onCheckedChange={setIsFluxMode}
                 />
               </div>
+              )}
               <div className="flex flex-col gap-2 sm:flex-row">
                 <Button
                   type="button"
                   variant="outline"
                   className="sm:w-auto"
                   onClick={handleRandomize}
-                  disabled={loading}
+                  disabled={busy}
                 >
                   <Dices className="size-4" />
                   Generar al Azar
                 </Button>
-                <Button type="submit" className="flex-1" disabled={loading}>
+                <Button type="submit" className="flex-1" disabled={busy}>
                   {loading ? "Generando..." : "Generar prompt"}
                 </Button>
+              </div>
+
+              <div className="space-y-2 rounded-lg border p-3">
+                <Label htmlFor="batchCount">Lote al azar</Label>
+                <p className="text-xs text-muted-foreground">
+                  Mantiene Marca, Modelo, Error e Idioma y varía el resto de campos en cada prompt.
+                </p>
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <Input
+                    id="batchCount"
+                    type="number"
+                    min={1}
+                    max={MAX_BATCH}
+                    value={batchCount}
+                    onChange={(e) => setBatchCount(e.target.value)}
+                    className="sm:w-28"
+                    disabled={busy}
+                    aria-label="Cantidad de prompts del lote"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="flex-1"
+                    onClick={generateRandomBatch}
+                    disabled={busy}
+                  >
+                    <Dices className="size-4" />
+                    {batchProgress
+                      ? `Generando ${batchProgress.done}/${batchProgress.total}...`
+                      : "Generar lote al azar"}
+                  </Button>
+                </div>
               </div>
             </form>
           </CardContent>

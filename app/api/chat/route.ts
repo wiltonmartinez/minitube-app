@@ -2,10 +2,10 @@ import { google } from "@ai-sdk/google";
 import { generateText } from "ai";
 import { z } from "zod";
 
-// Hasta 2 intentos de 20 s cada uno: Gemini a veces se queda colgado y un reintento suele responder en segundos
+// Hasta 3 intentos de 15 s cada uno: Gemini a veces se queda colgado y un reintento suele responder en segundos
 export const maxDuration = 60;
-const ATTEMPT_TIMEOUT_MS = 20_000;
-const MAX_ATTEMPTS = 2;
+const ATTEMPT_TIMEOUT_MS = 15_000;
+const MAX_ATTEMPTS = 3;
 
 const buildSystemPrompt = (idioma: string, flux: boolean) => `Eres un experto diseñador de miniaturas de YouTube. Tu objetivo es generar un ÚNICO prompt en lenguaje natural y descriptivo, en inglés, optimizado para Google Gemini (Imagen 3), basado en las variables del usuario.
 
