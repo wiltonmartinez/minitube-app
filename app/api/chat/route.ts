@@ -4,7 +4,7 @@ import { z } from "zod";
 
 export const maxDuration = 30;
 
-const buildSystemPrompt = (idioma: string) => `Eres un experto diseñador de miniaturas de YouTube. Tu objetivo es generar un ÚNICO prompt en lenguaje natural y descriptivo, en inglés, optimizado para Google Gemini (Imagen 3), basado en las variables del usuario.
+const buildSystemPrompt = (idioma: string, flux: boolean) => `Eres un experto diseñador de miniaturas de YouTube. Tu objetivo es generar un ÚNICO prompt en lenguaje natural y descriptivo, en inglés, optimizado para Google Gemini (Imagen 3), basado en las variables del usuario.
 
 Formato (MUY IMPORTANTE):
 - Escribe en párrafos de lenguaje natural, como si le describieras la escena a un director de arte. PROHIBIDO usar parámetros técnicos de Midjourney: nada de '--ar', '--v', '--sref', '--iw', '--no' ni ningún otro parámetro con guiones dobles.
@@ -26,9 +26,19 @@ Calidad anatómica y coherencia (OBLIGATORIAS, expresadas en lenguaje natural):
 - Describe UNA sola persona con anatomía humana correcta: exactamente dos brazos, dos manos con cinco dedos cada una, un solo rostro simétrico y proporciones naturales. No añadas personas ni extremidades extra.
 - La impresora debe ser un único objeto coherente y realista, con la forma reconocible del modelo indicado, sin formas abstractas, objetos fusionados ni elementos incoherentes.
 - Composición limpia y ordenada, sin elementos duplicados y sin texto adicional distinto al indicado.
-- Termina el prompt con una frase de exclusión en lenguaje natural, por ejemplo: 'Avoid extra limbs, extra or missing fingers, deformed hands, distorted faces, duplicate people, blurry or low-quality rendering, misspelled text, watermarks and incoherent shapes.'
+- Termina el prompt con una frase de exclusión en lenguaje natural, por ejemplo: 'Avoid extra limbs, extra or missing fingers, deformed hands, distorted faces, duplicate people, blurry or low-quality rendering, misspelled text, watermarks and incoherent shapes.' (excepto en MODO FLUX, donde está prohibida)
 
+${flux ? FLUX_RULES : ""}
 Devuelve ÚNICAMENTE el texto del prompt resultante.`;
+
+// Reglas estrictas del modo FLUX (generación por lotes, p. ej. Automatic1111: una imagen por línea)
+const FLUX_RULES = `
+MODO FLUX ACTIVADO (reglas estrictas, tienen prioridad sobre las anteriores):
+- Lenguaje natural y estructurado: frases completas y fluidas que describan la escena. PROHIBIDAS las listas de etiquetas separadas por comas (tag salads) como "dramatic lighting, 8k, ultra detailed, masterpiece".
+- TODOS los textos literales que aparecerán escritos en la imagen (marca, modelo, código de error y badges) deben ir OBLIGATORIAMENTE entre comillas dobles, por ejemplo "00080000" o "EPSON L3250". No uses comillas simples para esos textos.
+- El prompt debe ser UN SOLO PÁRRAFO en UNA SOLA LÍNEA continua: sin saltos de línea, sin viñetas, sin encabezados, sin numeraciones.
+- FLUX no usa prompts negativos: NO escribas la frase de exclusión 'Avoid ...'; expresa todo en positivo (anatomía correcta, texto nítido y exacto, composición limpia).
+`;
 
 // Frase fija de relación de aspecto, insertada por código para no depender del modelo
 const ASPECT_SENTENCE =
@@ -46,6 +56,7 @@ const BodySchema = z.object({
   badge1: field,
   badge2: field,
   idioma: field,
+  isFluxMode: z.boolean().default(false),
 });
 
 export async function POST(req: Request) {
@@ -62,13 +73,16 @@ export async function POST(req: Request) {
   const error = v.error || "Almohadillas";
   // "Sin gesto específico" no se envía al modelo: se mantiene el gesto por defecto
   const gesto = /^sin gesto/i.test(v.gesto) ? "" : v.gesto;
+  const flux = v.isFluxMode;
+  // FLUX exige comillas dobles en los textos 3D; en el modo normal se mantienen las simples
+  const q = flux ? '"' : "'";
   // "Ninguno" no genera insignia
   const badges = [v.badge1, v.badge2].filter((b) => b && !/^ninguno$/i.test(b));
   const badgeInstruction =
     badges.length === 2
-      ? `Incluye dos insignias (badges) 3D flotantes en la composición, una que diga '${badges[0]}' y otra que diga '${badges[1]}'.`
+      ? `Incluye dos insignias (badges) 3D flotantes en la composición, una que diga ${q}${badges[0]}${q} y otra que diga ${q}${badges[1]}${q}.`
       : badges.length === 1
-        ? `Incluye una insignia (badge) 3D flotante en la composición que diga '${badges[0]}'.`
+        ? `Incluye una insignia (badge) 3D flotante en la composición que diga ${q}${badges[0]}${q}.`
         : "NO incluyas ninguna insignia (badge) en la composición.";
 
   const prompt = [
@@ -79,18 +93,18 @@ export async function POST(req: Request) {
     ...(v.fondo ? [`Fondo: ${v.fondo}`] : []),
     ...(v.marco ? [`Marco: ${v.marco}`] : []),
     `Idioma de los textos: ${v.idioma || "Español"}`,
-    "Textos 3D gigantes a renderizar (literales, entre comillas en el prompt):",
-    "- 'RESET' en amarillo brillante",
-    `- '${error.toUpperCase()}' en rojo vibrante`,
-    `- '${modelo.toUpperCase()}' en blanco metálico`,
-    ...badges.map((b) => `- Badge flotante (traducir al idioma indicado, conservando nombres propios como PayPal, Binance, Nequi o USB): '${b}'`),
+    `Textos 3D gigantes a renderizar (literales, entre comillas ${flux ? "dobles " : ""}en el prompt):`,
+    `- ${q}RESET${q} en amarillo brillante`,
+    `- ${q}${error.toUpperCase()}${q} en rojo vibrante`,
+    `- ${q}${modelo.toUpperCase()}${q} en blanco metálico`,
+    ...badges.map((b) => `- Badge flotante (traducir al idioma indicado, conservando nombres propios como PayPal, Binance, Nequi o USB): ${q}${b}${q}`),
     badgeInstruction,
   ].join("\n");
 
   try {
     const { text } = await generateText({
       model: google(process.env.GEMINI_MODEL ?? "gemini-3.5-flash-lite"),
-      system: buildSystemPrompt(v.idioma || "Español"),
+      system: buildSystemPrompt(v.idioma || "Español", flux),
       prompt,
       maxOutputTokens: 2048,
     });
@@ -102,6 +116,15 @@ export async function POST(req: Request) {
       .replace(/https?:\/\/\S+/gi, "")
       .replace(/[ \t]+/g, " ")
       .trim();
+
+    if (flux) {
+      // FLUX: una sola línea continua y textos entre comillas dobles (no depende del modelo)
+      const oneLine = `${ASPECT_SENTENCE} ${description}`
+        .replace(/(^|[\s(,:;])'([^'\n]{1,80})'(?=[\s).,:;!?]|$)/g, '$1"$2"')
+        .replace(/\s+/g, " ")
+        .trim();
+      return new Response(oneLine);
+    }
 
     // La relación de aspecto se inyecta por código (no depende del modelo)
     return new Response(`${ASPECT_SENTENCE}\n\n${description}`);

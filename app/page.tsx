@@ -1,6 +1,6 @@
 "use client";
 
-import { Dices, Shuffle } from "lucide-react";
+import { Dices, Download, Shuffle, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 
 const OTRO = "OTRO";
@@ -283,6 +284,9 @@ export default function Home() {
   const [form, setForm] = useState<FormState>(INITIAL);
   const [result, setResult] = useState("");
   const [loading, setLoading] = useState(false);
+  const [isFluxMode, setIsFluxMode] = useState(false);
+  // Prompts generados, acumulados para descargar como lote (.txt)
+  const [batch, setBatch] = useState<string[]>([]);
   const update = (key: keyof FormState, value: string) =>
     setForm((f) => ({ ...f, [key]: value }));
 
@@ -368,16 +372,38 @@ export default function Home() {
           idioma: form.idioma,
           badge1: form.badge1,
           badge2: form.badge2,
+          isFluxMode,
         }),
       });
       const text = await res.text();
       if (!res.ok) throw new Error(text || "Error al generar el prompt");
       setResult(text);
+      setBatch((b) => [...b, text]);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Error inesperado");
     } finally {
       setLoading(false);
     }
+  }
+
+  // Una línea por prompt (Automatic1111 lee una imagen por línea): sin saltos internos
+  // y con un salto de línea al final de cada uno
+  function downloadBatch() {
+    if (!batch.length) return;
+    const content = batch
+      .map((p) => p.replace(/\s*\n+\s*/g, " ").trim())
+      .filter(Boolean)
+      .map((p) => `${p}\n`)
+      .join("");
+    const url = URL.createObjectURL(new Blob([content], { type: "text/plain;charset=utf-8" }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `prompts-lote-${new Date().toISOString().slice(0, 10)}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast.success(`Lote descargado (${batch.length} prompts)`);
   }
 
   async function copy() {
@@ -501,6 +527,21 @@ export default function Home() {
                   ] as SelectKey[]
                 ).map((k) => renderSelect(select(k)))}
               </div>
+              <div className="flex items-center justify-between gap-3 rounded-lg border p-3">
+                <div className="space-y-0.5">
+                  <Label htmlFor="isFluxMode" className="leading-tight">
+                    Modo FLUX (Optimizado para lotes)
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    Prompt en una sola línea, textos entre comillas dobles y sin etiquetas sueltas.
+                  </p>
+                </div>
+                <Switch
+                  id="isFluxMode"
+                  checked={isFluxMode}
+                  onCheckedChange={setIsFluxMode}
+                />
+              </div>
               <div className="flex flex-col gap-2 sm:flex-row">
                 <Button
                   type="button"
@@ -540,6 +581,25 @@ export default function Home() {
             >
               Copiar al portapapeles
             </Button>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={downloadBatch}
+                disabled={!batch.length}
+              >
+                <Download className="size-4" />
+                Descargar Lote (.txt) ({batch.length})
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={() => setBatch([])}
+                disabled={!batch.length}
+              >
+                <Trash2 className="size-4" />
+                Vaciar lote
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>
