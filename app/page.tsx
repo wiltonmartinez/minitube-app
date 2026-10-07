@@ -1,6 +1,6 @@
 "use client";
 
-import { Dices, Download, Shuffle, Trash2 } from "lucide-react";
+import { Dices, Download, FileArchive, Shuffle, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -465,6 +465,17 @@ export default function Home() {
     else toast.success(`Lote listo: ${ok.length} prompts. Pulsa "Descargar Lote (.txt)".`);
   }
 
+  function saveBlob(blob: Blob, filename: string) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
   // Una línea por prompt (Automatic1111 lee una imagen por línea): sin saltos internos
   // y con un salto de línea al final de cada uno
   function downloadBatch() {
@@ -474,15 +485,31 @@ export default function Home() {
       .filter(Boolean)
       .map((p) => `${p}\n`)
       .join("");
-    const url = URL.createObjectURL(new Blob([content], { type: "text/plain;charset=utf-8" }));
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `prompts-lote-${new Date().toISOString().slice(0, 10)}.txt`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    saveBlob(
+      new Blob([content], { type: "text/plain;charset=utf-8" }),
+      `prompts-lote-${new Date().toISOString().slice(0, 10)}.txt`,
+    );
     toast.success(`Lote descargado (${batch.length} prompts)`);
+  }
+
+  // ZIP con un archivo .txt por prompt (prompt-01.txt, prompt-02.txt, ...)
+  async function downloadZip() {
+    const prompts = batch.map((p) => p.trim()).filter(Boolean);
+    if (!prompts.length) return;
+    try {
+      // Se carga solo al usarlo para no aumentar el peso inicial de la página
+      const { default: JSZip } = await import("jszip");
+      const zip = new JSZip();
+      const width = Math.max(2, String(prompts.length).length);
+      prompts.forEach((p, i) => {
+        zip.file(`prompt-${String(i + 1).padStart(width, "0")}.txt`, `${p}\n`);
+      });
+      const blob = await zip.generateAsync({ type: "blob", compression: "DEFLATE" });
+      saveBlob(blob, `prompts-${new Date().toISOString().slice(0, 10)}.zip`);
+      toast.success(`ZIP descargado (${prompts.length} archivos .txt)`);
+    } catch {
+      toast.error("No se pudo crear el ZIP");
+    }
   }
 
   async function copy() {
@@ -694,7 +721,7 @@ export default function Home() {
             >
               Copiar al portapapeles
             </Button>
-            <div className="flex flex-col gap-2 sm:flex-row">
+            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
               <Button
                 variant="outline"
                 className="flex-1"
@@ -703,6 +730,15 @@ export default function Home() {
               >
                 <Download className="size-4" />
                 Descargar Lote (.txt) ({batch.length})
+              </Button>
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={downloadZip}
+                disabled={!batch.length}
+              >
+                <FileArchive className="size-4" />
+                Descargar ZIP (.txt separados)
               </Button>
               <Button
                 variant="ghost"
