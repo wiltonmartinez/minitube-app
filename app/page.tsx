@@ -1,7 +1,6 @@
 "use client";
 
-import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -23,38 +22,6 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 
 const OTRO = "OTRO";
-const NINGUNA = "__ninguna__";
-
-type AssetKey =
-  | "modelos"
-  | "errores"
-  | "soluciones"
-  | "mediosPago"
-  | "procedimiento"
-  | "branding";
-type Asset = { name: string; path: string };
-type AssetsData = Record<AssetKey, Asset[]>;
-
-const ASSET_FIELDS: { key: AssetKey; label: string }[] = [
-  { key: "modelos", label: "Imagen de Modelo" },
-  { key: "errores", label: "Imagen de Error" },
-  { key: "soluciones", label: "Imagen de Solución" },
-  { key: "branding", label: "Imagen de Branding (logo)" },
-  { key: "mediosPago", label: "Imagen de Medio de Pago" },
-  { key: "procedimiento", label: "Imagen de Procedimiento" },
-];
-
-const NO_ASSETS: AssetsData = {
-  modelos: [],
-  errores: [],
-  soluciones: [],
-  mediosPago: [],
-  procedimiento: [],
-  branding: [],
-};
-
-// Midjourney necesita URLs públicas: define NEXT_PUBLIC_ASSETS_BASE_URL al publicar o usar un túnel
-const ASSETS_BASE_URL = process.env.NEXT_PUBLIC_ASSETS_BASE_URL;
 
 const MARCAS = ["Epson", "Canon"];
 const ERRORES = [
@@ -228,23 +195,6 @@ export default function Home() {
   const [form, setForm] = useState<FormState>(INITIAL);
   const [result, setResult] = useState("");
   const [loading, setLoading] = useState(false);
-  const [assets, setAssets] = useState<AssetsData>(NO_ASSETS);
-  const [imagenes, setImagenes] = useState<Record<AssetKey, string | null>>({
-    modelos: null,
-    errores: null,
-    soluciones: null,
-    mediosPago: null,
-    procedimiento: null,
-    branding: null,
-  });
-
-  useEffect(() => {
-    fetch("/api/assets")
-      .then((r) => (r.ok ? r.json() : Promise.reject(new Error("assets"))))
-      .then((data: AssetsData) => setAssets({ ...NO_ASSETS, ...data }))
-      .catch(() => toast.error("No se pudieron cargar las imágenes de Assets"));
-  }, []);
-
   const update = (key: keyof FormState, value: string) =>
     setForm((f) => ({ ...f, [key]: value }));
 
@@ -277,8 +227,6 @@ export default function Home() {
         ? modelo
         : `${form.marca} ${modelo}`.trim();
 
-      const base = (ASSETS_BASE_URL || window.location.origin).replace(/\/$/, "");
-
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -290,12 +238,6 @@ export default function Home() {
           marco: form.marco,
           idioma: form.idioma,
           badges: form.badges,
-          imagenes: Object.fromEntries(
-            Object.entries(imagenes).map(([k, path]) => [
-              k,
-              path ? `${base}${path}` : null,
-            ]),
-          ),
         }),
       });
       const text = await res.text();
@@ -356,7 +298,7 @@ export default function Home() {
           Generador de prompts para miniaturas de YouTube
         </h1>
         <p className="mt-2 text-muted-foreground">
-          Plantillas para el servicio de reset remoto asistido de impresoras, listas para Midjourney v6.
+          Plantillas para el servicio de reset remoto asistido de impresoras, listas para Google Gemini (Imagen 3).
         </p>
       </header>
 
@@ -419,54 +361,6 @@ export default function Home() {
                     onChange={(e) => update("badges", e.target.value)}
                   />
                 </div>
-                <div className="space-y-3 md:col-span-2">
-                  <p className="text-sm font-medium">
-                    Imágenes de referencia (opcionales)
-                  </p>
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                    {ASSET_FIELDS.map(({ key, label }) => {
-                      const selected = assets[key].find((a) => a.path === imagenes[key]);
-                      return (
-                        <div key={key} className="space-y-2">
-                          <Label htmlFor={`img-${key}`}>{label}</Label>
-                          <div className="flex items-center gap-2">
-                            <Select
-                              value={imagenes[key] ?? NINGUNA}
-                              onValueChange={(v) =>
-                                setImagenes((im) => ({
-                                  ...im,
-                                  [key]: v === NINGUNA ? null : v,
-                                }))
-                              }
-                            >
-                              <SelectTrigger id={`img-${key}`} className="w-full min-w-0">
-                                <SelectValue placeholder="Ninguna" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value={NINGUNA}>Ninguna</SelectItem>
-                                {assets[key].map((a) => (
-                                  <SelectItem key={a.path} value={a.path}>
-                                    {a.name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            {selected && (
-                              <Image
-                                src={selected.path}
-                                alt={selected.name}
-                                width={40}
-                                height={40}
-                                unoptimized
-                                className="size-10 shrink-0 rounded border bg-white object-contain"
-                              />
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
               </div>
               <Button type="submit" className="w-full" disabled={loading}>
                 {loading ? "Generando..." : "Generar prompt"}
@@ -478,7 +372,7 @@ export default function Home() {
         <Card>
           <CardHeader>
             <CardTitle>Prompt generado</CardTitle>
-            <CardDescription>Listo para pegar en Midjourney.</CardDescription>
+            <CardDescription>Listo para pegar en Google Gemini.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <Textarea
