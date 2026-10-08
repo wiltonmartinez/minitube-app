@@ -9,6 +9,16 @@ export type Cambio = {
 
 export const CHANGELOG: Cambio[] = [
   {
+    version: "3.5.0",
+    fecha: "2026-10-08",
+    titulo: "Todo al azar excepto marca, modelo y error",
+    cambios: [
+      "«Generar al Azar» y el lote al azar sortean ahora TODO salvo marca, modelo y error: persona (arquetipo o personalización), profesión, plano, marco, idioma, gafas, postura o accesorio, paleta y badge.",
+      "Antes plano, idioma y género/edad eran fijos en el azar; ahora también cambian.",
+      "Nuevos candados 🔒 en Plano, Idioma, Modo del personaje y Rostro; los campos bloqueados siguen sin cambiar.",
+    ],
+  },
+  {
     version: "3.4.0",
     fecha: "2026-10-08",
     titulo: "10 arquetipos de mujeres latinas de 20 a 30 años",

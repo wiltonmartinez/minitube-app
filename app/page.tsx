@@ -11,7 +11,7 @@ import { urlAPng } from "@/lib/imagen-cliente";
 import { useCatalogo } from "@/lib/use-catalogo";
 import { ListsEditor } from "@/components/lists-editor";
 import { useListas } from "@/lib/use-listas";
-import { aplicarAzar, sorteoRespetandoBloqueos } from "@/lib/azar";
+import { aplicarTodoAlAzar, sorteoRespetandoBloqueos } from "@/lib/azar";
 import {
   ALEATORIO,
   CAMPOS_FORMA,
@@ -154,18 +154,33 @@ const baseUrl = () =>
 const MAX_BATCH = 50;
 const pick = <T,>(list: readonly T[]) => list[Math.floor(Math.random() * list.length)];
 
-// Campos que varían al azar (incluida la paleta de colores 3D). Fijos: marca, modelo, error, plano, género, edad e idioma.
-function randomVariables(profesiones: readonly string[]) {
+// «Todo al azar»: sorteo completo de TODO salvo el bloque 1 (marca, modelo y error). Las opciones que tienen «🎲 Aleatorio»
+// se ponen en Aleatorio (así se re-sortean solas); el resto recibe un valor concreto. Los candados 🔒 se respetan aparte.
+function azarTotal(profesiones: readonly string[]): FormState_Azar {
   return {
-    genero: pick(GENEROS), // cada generación rota género, edad y etnia (salvo candado)
+    genero: pick(GENEROS),
     edad: pick(EDADES),
     etnia: pick(ETNIAS),
     profesion: pick(profesiones),
     marco: pick(MARCOS).es,
-    badge: pick(BADGES_REALES), // nunca "Ninguno"
-    paleta: pick(PALETAS_FIJAS),
+    plano: pick(PLANOS).es,
+    idioma: pick(IDIOMAS),
+    modoPersonaje: pick(MODOS_PERSONAJE),
+    modoRostro: pick(MODOS_ROSTRO),
+    gafas: GAFAS_ALEATORIAS,
+    accesorio: ACCESORIO_ALEATORIO,
+    badge: BADGE_ALEATORIO, // nunca resuelve a «Ninguno»
+    paleta: PALETA_ALEATORIA,
+    arquetipo: ARQUETIPO_ALEATORIO,
+    pers: { ...SELECCION_INICIAL },
   };
 }
+
+type FormState_Azar = Pick<
+  FormState,
+  | "genero" | "edad" | "etnia" | "profesion" | "marco" | "plano" | "idioma" | "modoPersonaje" | "modoRostro"
+  | "gafas" | "accesorio" | "badge" | "paleta" | "arquetipo" | "pers"
+>;
 
 function Block({
   step,
@@ -446,11 +461,10 @@ export default function Home() {
     return true;
   }
 
-  // Cambia al azar los campos variables (etnia, profesión y su perfil, marco, badge); el prompt se actualiza solo
+  // «Generar al Azar»: TODO al azar salvo el bloque 1 (marca, modelo y error); los candados 🔒 no cambian
   function randomizeFields() {
-    // las variables bloqueadas no cambian; badge y paleta en «Aleatorio» conservan esa opción (se re-sortean aparte)
-    setForm((f) => aplicarAzar(f, randomVariables(profesiones), locks, BADGE_ALEATORIO, PALETA_ALEATORIA));
-    sortear(); // si paleta, gafas o badge están en "Aleatorio", se vuelven a sortear
+    setForm((f) => aplicarTodoAlAzar(f, azarTotal(profesiones), locks));
+    sortear(); // re-sortea gafas, postura, arquetipo, personaje, paleta y badge que estén en «Aleatorio»
   }
 
   // Guarda el prompt actual en el lote descargable
@@ -461,8 +475,8 @@ export default function Home() {
     toast.success(`Añadido al lote (${batch.length + 1})`);
   }
 
-  // N prompts con Bloque 1, plano, género, edad e idioma fijos (se usan los valores actuales);
-  // varían etnia, profesión (y con ella el Bloque 3), marco, paleta de colores y badge
+  // N prompts con el bloque 1 fijo (marca, modelo y error). TODO lo demás se sortea en cada prompt (salvo candados 🔒):
+  // persona, profesión, plano, marco, idioma, gafas, postura o accesorio, paleta y badge.
   function generateRandomBatch() {
     if (!validate()) return;
     const total = Math.floor(Number(batchCount));
@@ -473,31 +487,26 @@ export default function Home() {
     const prompts: GeneratedPrompt[] = [];
     let uArq = sorteoArquetipoDistinto(sorteo.ua);
     for (let n = 0; n < total; n++) {
-      const r = randomVariables(profesiones);
-      // Variables bloqueadas: conservan el valor actual en todos los prompts del lote
-      if (locks.etnia) r.etnia = form.etnia;
-      if (locks.genero) r.genero = form.genero;
-      if (locks.edad) r.edad = form.edad;
-      if (locks.profesion) r.profesion = form.profesion;
-      if (locks.marco) r.marco = form.marco as typeof r.marco;
-      // Arquetipo físico: distinto del anterior en cada prompt del lote (salvo candado o «Ninguno»)
-      const arqLote = !modoArq ? ARQUETIPO_NINGUNO : locks.arquetipo ? arquetipoEf : resolverArquetipo(form.arquetipo, uArq);
+      const f = aplicarTodoAlAzar(form, azarTotal(profesiones), locks);
+      const conArquetipo = f.modoPersonaje === "Arquetipo listo";
+      const arquetipo = conArquetipo ? resolverArquetipo(f.arquetipo, uArq) : ARQUETIPO_NINGUNO; // distinto del anterior
       uArq = sorteoArquetipoDistinto(uArq);
       prompts.push(
         generatePrompt(
           {
-            ...form,
-            ...r,
-            catalogo,
-            paleta: locks.paleta ? paletaEf : resolverPaleta(PALETA_ALEATORIA), // cada prompt, con su propia paleta (salvo bloqueo)
-            gafas: locks.gafas ? gafasEf : resolverGafas(form.gafas),
-            badge: locks.badge ? badgeEf : resolverBadge(BADGE_ALEATORIO), // el lote siempre lleva un badge real
-            accesorio: locks.accesorio ? accesorioEf : resolverAccesorio(form.accesorio, r.profesion), // según el perfil de ese prompt
-            listas,
-            // Personalización armónica propia de cada prompt (género, edad y etnia ya vienen en `r`)
-            personaje: resolverPersonaje(listas, form.pers, { genero: r.genero, edad: r.edad, etnia: r.etnia }, form.modoRostro),
-            arquetipo: arqLote,
+            ...f,
+            marca: form.marca,
+            modelo: form.modelo,
             error: errorFinal,
+            catalogo,
+            listas,
+            paleta: resolverPaleta(f.paleta),
+            gafas: resolverGafas(f.gafas),
+            badge: resolverBadge(f.badge), // el lote siempre lleva un badge real
+            accesorio: resolverAccesorio(f.accesorio, f.profesion), // según el perfil de ese prompt
+            // Personalización armónica propia de cada prompt
+            personaje: resolverPersonaje(listas, f.pers, { genero: f.genero, edad: f.edad, etnia: f.etnia }, f.modoRostro),
+            arquetipo,
           },
           { baseUrl: baseUrl() },
         ),
@@ -696,6 +705,7 @@ export default function Home() {
                   options={MODOS_PERSONAJE}
                   onChange={(v) => set("modoPersonaje", v as FormState["modoPersonaje"])}
                   className="md:col-span-2"
+                  {...lockProps("modoPersonaje")}
                 />
                 {modoArq ? (
                   <>
@@ -750,6 +760,7 @@ export default function Home() {
                       options={MODOS_ROSTRO}
                       onChange={(v) => set("modoRostro", v as ModoRostro)}
                       className="md:col-span-2"
+                      {...lockProps("modoRostro")}
                     />
                     {form.modoRostro === "Estilo predefinido" ? (
                       <>
@@ -870,6 +881,7 @@ export default function Home() {
                   options={PLANOS.map((p) => p.es)}
                   onChange={(v) => set("plano", v)}
                   className="md:col-span-2"
+                  {...lockProps("plano")}
                 />
                 <SelectField
                   id="marco"
@@ -887,6 +899,7 @@ export default function Home() {
                   options={IDIOMAS}
                   onChange={(v) => set("idioma", v as Idioma)}
                   className="md:col-span-2"
+                  {...lockProps("idioma")}
                 />
                 <SelectField
                   id="badge"
@@ -932,14 +945,15 @@ export default function Home() {
                 </Button>
               </div>
               <p className="-mt-2 text-xs text-muted-foreground">
-                El prompt se actualiza solo al cambiar cualquier campo. «Generar al Azar» varía etnia, profesión
-                (controlador maestro), marco, paleta de colores y badge; «Añadir al lote» guarda el prompt actual para descargarlo.
+                El prompt se actualiza solo al cambiar cualquier campo. «Generar al Azar» sortea TODO menos marca, modelo y error
+                (persona, profesión, plano, marco, idioma, gafas, postura, paleta y badge); los campos con candado 🔒 no cambian.
+                «Añadir al lote» guarda el prompt actual para descargarlo.
               </p>
 
               <div className="space-y-2 rounded-lg border p-3">
                 <Label htmlFor="batchCount">Lote al azar</Label>
                 <p className="text-xs text-muted-foreground">
-                  Fijos: bloque 1, plano, género, edad e idioma. Varían: etnia, profesión (controlador maestro), marco, paleta de colores y badge.
+                  Fijos: marca, modelo y error. Todo lo demás se sortea en cada prompt (salvo los campos con candado 🔒).
                 </p>
                 <div className="flex flex-col gap-2 sm:flex-row">
                   <Input
