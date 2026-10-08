@@ -89,6 +89,7 @@ import {
   PALETA_ALEATORIA,
   PLANOS,
   generatePrompt,
+  marcoCompatible,
   resolverAccesorio,
   resolverBadge,
   resolverGafas,
@@ -376,6 +377,7 @@ export default function Home() {
   const edadEf = arq ? arq.edad : form.edad;
   const etniaEf = arq ? arq.etnia : form.etnia;
   const nivel = nivelPlano(form.plano);
+  const marcoOk = marcoCompatible(form.marco, perfil.en.scene);
   // Personalización concreta (modo «Personalizar»): lo elegido a mano se respeta, lo aleatorio es armónico
   const persEf = useMemo(
     () => resolverPersonaje(listas, form.pers, { genero: generoEf, edad: edadEf, etnia: etniaEf }, form.modoRostro, sorteo.up),
@@ -928,6 +930,11 @@ export default function Home() {
                   className="md:col-span-2"
                   {...lockProps("marco")}
                 />
+                {marcoOk.ajustado && (
+                  <p className="-mt-2 text-xs text-amber-500 md:col-span-2">
+                    El marco y el fondo no pueden ser de la misma familia de color (cálidos o fríos): el prompt usa «{marcoOk.es}».
+                  </p>
+                )}
                 <SelectField
                   id="idioma"
                   label="Idioma"

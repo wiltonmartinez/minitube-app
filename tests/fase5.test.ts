@@ -123,7 +123,7 @@ describe("Fase 5 · la emoción cambia, el resto de reglas no", () => {
       for (const texto3d of [true, false]) {
         const api = buildApiPrompt(base({ emocion: e }), { texto3d });
         for (const t of [
-          "empty lower-left area of the frame",
+          "eyes looking toward the empty lower-left corner of the frame, slightly above it, not at the camera",
           "never look at the camera",
           "Exactly one hand holds a modern smartphone",
           "no logos, brand names, printed text or emblems",

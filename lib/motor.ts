@@ -20,6 +20,20 @@ import {
   type PromptInput,
 } from "@/lib/prompt-config";
 import { ARQUETIPOS_ALTA, PLANO_ALTA, PROFESIONES_ALTA, type Prioridad } from "@/lib/prioridad";
+import { auditarPrompt } from "@/lib/prohibidos";
+
+/**
+ * Instrucciones de composición que TexTube aplica POR CÓDIGO sobre la imagen (la imagen se genera SIN texto).
+ * Viven aquí, en MiniTube, para que TexTube no tenga copia de las reglas de miniatura.
+ */
+export const COMPOSICION = {
+  ancho: 1280,
+  alto: 720,
+  marcaDeAgua: { texto: "ResetEnLinea.com", esquina: "inferior-izquierda", opacidad: 0.35 },
+  ventanaError: { esquina: "inferior-izquierda" },
+  zonasLibres: ["inferior-izquierda", "inferior-derecha"],
+  textoPrincipal: { evitarEsquina: "inferior-derecha", estilo: "3d-contorno-sombra-alto-contraste" },
+} as const;
 
 // MOTOR DE MINIATURAS (única fuente de verdad): a partir de Marca, Modelo y Error decide la persona, la escena y
 // arma los dos prompts con las MISMAS funciones que usa el panel web. La API pública (/api/v1/thumbnail) solo llama aquí.
@@ -80,6 +94,14 @@ export function validarSolicitud(cuerpo: unknown): Validacion {
     else campos.push("semilla");
   }
 
+  // Palabras que nunca deben llegar a un prompt de imagen (WhatsApp, teléfonos, «reparar», «tutorial»)
+  const conPalabraProhibida: string[] = [];
+  for (const campo of ["marca", "modelo", "error"] as const) {
+    if (typeof c[campo] === "string" && auditarPrompt(c[campo] as string).length && !campos.includes(campo)) {
+      campos.push(campo);
+      conPalabraProhibida.push(campo);
+    }
+  }
   if (campos.length) {
     const detalle: Record<string, string> = {
       cuerpo: "el cuerpo",
@@ -90,7 +112,8 @@ export function validarSolicitud(cuerpo: unknown): Validacion {
       generarImagen: "generarImagen (debe ser verdadero o falso)",
       semilla: "semilla (número entero entre 0 y 2147483647)",
     };
-    return { ok: false, mensaje: `Datos inválidos o incompletos: ${campos.map((k) => detalle[k] ?? k).join("; ")}.`, campos };
+    const describir = (k: string) => (conPalabraProhibida.includes(k) ? `${k} (contiene una palabra no permitida en prompts de imagen)` : (detalle[k] ?? k));
+    return { ok: false, mensaje: `Datos inválidos o incompletos: ${campos.map(describir).join("; ")}.`, campos };
   }
   return { ok: true, solicitud: { marca: normalizarMarca(marca), modelo, error, enfoque, generarImagen, semilla } };
 }

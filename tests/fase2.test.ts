@@ -43,8 +43,7 @@ describe("Fase 2 · sin porcentajes en las reglas espaciales", () => {
   });
   it("la mirada se describe con el espacio: esquina inferior izquierda, un poco más arriba, sin mirar cámara, mano ni abajo", () => {
     const api = buildApiPrompt(base(), { texto3d: true });
-    expect(api).toContain("empty lower-left area of the frame");
-    expect(api).toContain("just above the very corner");
+    expect(api).toContain("eyes looking toward the empty lower-left corner of the frame, slightly above it, not at the camera");
     expect(api).toMatch(/never look at the camera/);
     expect(api).toMatch(/never look downward/);
     const gemini = buildPrompt(base());

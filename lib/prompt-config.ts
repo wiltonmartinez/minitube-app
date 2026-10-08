@@ -723,7 +723,7 @@ export const PERFILES: Record<Profesion, Perfil> = {
       hands: MANOS.rostro.en,
       hands1: MANOS.rostro.en1,
       scene: "a technician's desk with glowing LED lights",
-      props: "a repair workbench with small tools, boxes of spare parts and ink bottles on shelves",
+      props: "a technician's workbench with small tools, boxes of spare parts and ink bottles on shelves",
     },
   },
   "Técnico de computadores": {
@@ -807,6 +807,37 @@ export const MARCOS = [
   { es: "Marco de rayos eléctricos azules", en: "a border of blue electric lightning" },
   { es: "Marco grueso rojo con borde blanco y sombra 3D", en: "a thick red border with a white edge and a 3D drop shadow" },
 ] as const;
+
+/* ───────── Marco y fondo: nunca de la misma familia de color (cálidos vs. fríos) ───────── */
+export type FamiliaColor = "calido" | "frio" | "neutro";
+const PALABRAS_CALIDAS = /\b(red|yellow|orange|gold|golden|amber|magenta|pink|fire)\b/i;
+const PALABRAS_FRIAS = /\b(blue|bluish|cool|cyan|teal|purple|violet|green|cold)\b/i;
+
+/** Familia de color de un texto en inglés: cálida, fría o neutra (sin color o con las dos familias a la vez). */
+export function familiaColor(texto: string): FamiliaColor {
+  const calido = PALABRAS_CALIDAS.test(texto);
+  const frio = PALABRAS_FRIAS.test(texto);
+  return calido === frio ? "neutro" : calido ? "calido" : "frio";
+}
+
+/**
+ * Devuelve un marco compatible con el fondo: si el marco elegido es de la misma familia (cálida o fría) que la
+ * iluminación del escenario, se cambia por el siguiente de la lista que no lo sea. Los marcos o fondos neutros no chocan.
+ */
+export function marcoCompatible(marcoEs: string, escena: string): { es: string; en: string; ajustado: boolean } {
+  const lista = MARCOS as readonly { es: string; en: string }[];
+  const idx = Math.max(0, lista.findIndex((m) => m.es === marcoEs));
+  const fondo = familiaColor(escena);
+  const choca = (m: { en: string }) => {
+    const f = familiaColor(m.en);
+    return f !== "neutro" && fondo !== "neutro" && f === fondo;
+  };
+  for (let k = 0; k < lista.length; k++) {
+    const m = lista[(idx + k) % lista.length];
+    if (!choca(m)) return { es: m.es, en: m.en, ajustado: k > 0 };
+  }
+  return { es: lista[idx].es, en: lista[idx].en, ajustado: false };
+}
 
 export const IDIOMAS = ["Español", "Inglés", "Portugués", "Francés"] as const;
 export type Idioma = (typeof IDIOMAS)[number];
@@ -1151,14 +1182,14 @@ export const EMOCIONES_AB: Record<
   alivio: {
     nombre: "Alivio",
     faceEn:
-      "an expression of sudden, intense relief, eyes wide open and bright, eyebrows lifted, mouth open in a big exhale or a wide astonished smile, as if the problem has just been solved",
+      "an expression of sudden, intense relief and joy, eyes wide open and bright, eyebrows lifted, mouth open in a big exhale or a wide joyful smile, as if the problem has just been solved",
     afectoEs: "por el alivio",
     afectoEn: "with relief",
     objetoEn: "the place where the solution appears",
     expresionEs:
       "REGLA ESTRICTA DE EXPRESIÓN: Está absolutamente prohibido generar expresiones de tristeza, llanto, pucheros, lástima o resignación pasiva. Prohibido posturas relajadas como manos en la cintura o brazos cruzados. El personaje debe mostrar alivio intenso y activo, como si el problema se acabara de resolver: ojos muy abiertos y brillantes, cejas elevadas y boca abierta en una gran exhalación o sonrisa de asombro.",
     expresionEn:
-      "The face shows intense, active relief, as if the problem has just been solved: eyes wide open and bright, eyebrows lifted, mouth open in a big exhale or an astonished smile. Never sadness, crying, pouting, self-pity or passive resignation, and never relaxed poses such as hands on hips or crossed arms.",
+      "The face shows intense, active relief and joy, as if the problem has just been solved: eyes wide open and bright, eyebrows lifted, mouth open in a big exhale or a joyful smile. Never sadness, crying, pouting, self-pity or passive resignation, and never relaxed poses such as hands on hips or crossed arms.",
   },
 };
 
@@ -1208,6 +1239,19 @@ export function accesorioDePostura(postura: string, actual: string): string {
   return "Manos a la cabeza (sin objeto)";
 }
 export const ACCESORIO_NINGUNO = "Ninguno";
+
+/**
+ * Las frases de postura hablan de «frustración» y «desesperación» (variante de pánico). En las variantes de sorpresa o alivio
+ * se sustituyen por la emoción correspondiente para que la postura no contradiga a la cara.
+ */
+export function ajustarPosturaAEmocion(p: Postura, emocion?: EmocionAB): Postura {
+  if (!emocion || emocion === "panico") return p;
+  const en = emocion === "alivio" ? { desperation: "relief", frustration: "joy" } : { desperation: "shock", frustration: "surprise" };
+  const es = emocion === "alivio" ? { desesperacion: "alivio", frustracion: "alegría" } : { desesperacion: "asombro", frustracion: "sorpresa" };
+  const aEn = (t: string) => t.replace(/desperation/g, en.desperation).replace(/frustration/g, en.frustration);
+  const aEs = (t: string) => t.replace(/desesperación/g, es.desesperacion).replace(/frustración/g, es.frustracion);
+  return { ...p, manosEn: aEn(p.manosEn), manosEs: aEs(p.manosEs), reglasEn: p.reglasEn.map(aEn), reglas: p.reglas.map(aEs) };
+}
 export const ACCESORIOS_MANO = ["Cable USB negro", "Teléfono celular", "Portátil", "Tablet"];
 /** Postura que corresponde al valor del campo accesorio (el campo accesorio es la única fuente de estado). */
 export const posturaDe = (accesorio: string) =>
@@ -1229,11 +1273,11 @@ export function cerebroPostura(accesorio: string, impresora = "selected printer"
       manosEs: "Las dos manos escribiendo en una laptop abierta sobre la mesa",
       manosEn: "both hands typing on the keyboard of a single open laptop resting on the table in front of the person",
       reglasEn: [
-        "Both hands are typing on the keyboard of a single open laptop resting on the table in front of the person, in the right-center part of the frame, well away from both lower corners. The laptop is seen from the side or from behind, with a plain lid that has no logo, and no screen content is legible. The person keeps typing while staring in panic at the empty space, never at the keyboard or the screen. No hand touches the head, nose, eyes or face and no hand holds any other object, so the person has exactly two hands.",
+        "Both hands are typing on the keyboard of a single open laptop resting on the table in front of the person, in the right-center part of the frame, well away from both lower corners. The laptop is seen from the side or from behind, with a plain lid that has no logo, and no screen content is legible. The person keeps typing while staring wide-eyed at the empty space, never at the keyboard or the screen. No hand touches the head, nose, eyes or face and no hand holds any other object, so the person has exactly two hands.",
       ],
       reglas: [
         ACCESORIOS[accesorio].es,
-        "POSTURA ESCRIBIENDO EN LAPTOP: las DOS manos están sobre el teclado de UNA sola laptop abierta, escribiendo con tensión. La laptop está sobre la mesa delante del personaje, en la parte derecha-central del encuadre y lejos de las dos esquinas inferiores (nunca en el área de montaje libre de la esquina inferior izquierda ni en la esquina inferior derecha), vista de lado o por detrás, con la tapa lisa sin logotipos y sin contenido legible en la pantalla. El personaje sigue escribiendo mientras mira aterrado hacia el espacio vacío, NUNCA hacia el teclado ni la pantalla. PROHIBIDO que una mano vaya a la cabeza, a la nariz, a los ojos o cubra el rostro, y prohibido sostener otro objeto.",
+        "POSTURA ESCRIBIENDO EN LAPTOP: las DOS manos están sobre el teclado de UNA sola laptop abierta, escribiendo con tensión. La laptop está sobre la mesa delante del personaje, en la parte derecha-central del encuadre y lejos de las dos esquinas inferiores (nunca en el área de montaje libre de la esquina inferior izquierda ni en la esquina inferior derecha), vista de lado o por detrás, con la tapa lisa sin logotipos y sin contenido legible en la pantalla. El personaje sigue escribiendo mientras mira con los ojos muy abiertos hacia el espacio vacío, NUNCA hacia el teclado ni la pantalla. PROHIBIDO que una mano vaya a la cabeza, a la nariz, a los ojos o cubra el rostro, y prohibido sostener otro objeto.",
       ],
     };
   }
@@ -1358,7 +1402,7 @@ export const REGLA_YOUTUBE =
 // Branding: la ropa y los accesorios del personaje no llevan logos ni marcas; la marca y el modelo solo van
 // en los textos 3D (somos un servicio técnico independiente, no la marca oficial).
 export const REGLA_BRANDING =
-  "REGLA DE BRANDING (ANTI-LOGOTIPOS DE MARCA): PROHIBICIÓN ABSOLUTA DE LOGOTIPOS: Está estrictamente prohibido que el personaje lleve camisetas, gorras, uniformes o accesorios con logotipos, nombres o marcas comerciales (especialmente \"EPSON\", \"Canon\" o similares). La ropa del personaje debe ser completamente neutra, genérica, de color sólido (como una camisa formal sencilla o un suéter sin marcas visibles). USO EXCLUSIVO DEL TEXTO 3D: La marca y el modelo (ej. \"EPSON L3110\") solo deben aparecer en los bloques de texto 3D flotantes gigantes de la miniatura para identificar el equipo a reparar, pero NUNCA en la indumentaria del personaje. Esto es fundamental para dejar claro que somos un servicio técnico independiente y no la marca oficial.";
+  "REGLA DE BRANDING (ANTI-LOGOTIPOS DE MARCA): PROHIBICIÓN ABSOLUTA DE LOGOTIPOS: Está estrictamente prohibido que el personaje lleve camisetas, gorras, uniformes o accesorios con logotipos, nombres o marcas comerciales (especialmente \"EPSON\", \"Canon\" o similares). La ropa del personaje debe ser completamente neutra, genérica, de color sólido (como una camisa formal sencilla o un suéter sin marcas visibles). USO EXCLUSIVO DEL TEXTO 3D: La marca y el modelo (ej. \"EPSON L3110\") solo deben aparecer en los bloques de texto 3D flotantes gigantes de la miniatura para identificar el equipo del servicio, pero NUNCA en la indumentaria del personaje. Esto es fundamental para dejar claro que somos un servicio técnico independiente y no la marca oficial.";
 
 // Estética del personaje: solo aplica cuando el personaje es una mujer.
 export const ESTETICA_MUJER =
@@ -1390,14 +1434,14 @@ function preparar(i: PromptInput, referencia = false) {
   const mujer = arq ? arq.genero === "Mujer" : i.genero === "Mujer";
   const printer = printerFullName(i.marca, i.modelo);
   const errorText = i.error.toUpperCase();
-  const marco = MARCOS.find((m) => m.es === i.marco)?.en ?? "a thin neon border";
+  const marco = marcoCompatible(i.marco, perfil.en.scene).en; // nunca de la misma familia de color que el fondo
   const plano = (PLANOS.find((p) => p.es === i.plano) ?? PLANOS[0]).en;
 
   // Gafas: "Ninguna" no inyecta nada. Si se elige un par, se quitan las gafas que pudiera traer la
   // vestimenta del perfil (p. ej. "…and black-framed glasses") para no duplicarlas ni contradecirlas.
   const gafasText = GAFAS[i.gafas] ?? "";
   // Accesorio en las manos: con cable o teléfono, una mano lo sostiene y la otra conserva el gesto (variante de una mano)
-  const postura = cerebroPostura(i.accesorio, printer); // el cerebro decide la postura de AMBAS manos
+  const postura = ajustarPosturaAEmocion(cerebroPostura(i.accesorio, printer), i.emocion); // el cerebro decide la postura de AMBAS manos
   const hands = postura.manosEn;
   const clothingBase = mujer ? perfil.en.clothing.f : perfil.en.clothing.m;
   const clothing = gafasText
@@ -1503,7 +1547,7 @@ export function generatePrompt(input: PromptInput, options: { baseUrl?: string }
    Con «texto3d» activado incluye los textos 3D y el badge (idioma del bloque 4); desactivado pide la imagen SIN
    texto y deja las zonas libres para postproducción. El prompt de Gemini (buildPrompt) no cambia de formato. */
 const MIRADA_API =
-  "The character's eyes are wide open and bulging with panic, and the head is turned so the stare is fixed firmly on the empty lower-left area of the frame, aimed just above the very corner, toward the upper edge of that empty space, as if staring at something terrifying there. The eyes never look at the camera, never look at the hand, the phone, the cable, the laptop, the tablet, the printer or the keyboard, and never look downward. The line of sight clearly connects the stressed face with that empty space.";
+  "The character's eyes are wide open and bulging with panic, with the eyes looking toward the empty lower-left corner of the frame, slightly above it, not at the camera, as if staring at something terrifying there, and the head is turned toward that empty space. The eyes never look at the camera, never look at the hand, the phone, the cable, the laptop, the tablet, the printer or the keyboard, and never look downward. The line of sight clearly connects the stressed face with that empty space.";
 const ANATOMIA_API =
   "Flawless human anatomy: exactly one person with exactly two arms and two hands, five fingers on each hand, no extra hands, no phantom limbs, no duplicated arms. The hands look completely natural with perfect proportions.";
 const EXPRESION_API =
@@ -1551,7 +1595,7 @@ export function buildApiPrompt(i: PromptInput, opts: { texto3d: boolean; referen
         "Do not render any text, letters, numbers, logos, badges or labels anywhere in the image. Keep the upper area of the frame clean and uncluttered so titles and badges can be added later in post-production.",
       ];
 
-  const negativos = `Avoid: extra hands, extra arms, extra or missing fingers, deformed hands, distorted faces, duplicate people, logos or brand names on the clothing, any object or hand in the lower-left corner, any element in the lower-right corner, blurry or low-quality rendering, ${t ? "misspelled text, any watermark other than the specified one," : "any text at all,"} and glowing neon effects, holograms or floating icons over the environment.`;
+  const negativos = `Avoid: extra hands, extra arms, extra or missing fingers, deformed hands, distorted faces, duplicate people, logos or brand names on the clothing, any other logos, any object or hand in the lower-left corner, any element in the lower-right corner, blurry or low-quality rendering, ${t ? "misspelled text, any watermark other than the specified one," : "any text at all,"} and glowing neon effects, holograms or floating icons over the environment.`;
 
   return [
     "Hyper-realistic cinematic photograph for a YouTube thumbnail, 16:9 widescreen, shot on a full-frame camera with an 85mm lens, shallow depth of field, dramatic high-contrast lighting, ultra-detailed skin and fabric textures, vivid saturated colors.",

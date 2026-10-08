@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { VERSION_API, crearId, respuestaError, verificarToken } from "@/lib/api-v1";
 import { ErrorProveedor, enviarACola, esCuotaAgotada } from "@/lib/fal-cola";
 import { imagenSimulada } from "@/lib/fal-helpers";
-import { planificar, validarSolicitud } from "@/lib/motor";
+import { COMPOSICION, planificar, validarSolicitud } from "@/lib/motor";
 import { elegirRuta } from "@/lib/prioridad";
 
 // POST /api/v1/thumbnail — MiniTube decide la prioridad, arma el prompt y (si se pide) genera la imagen.
@@ -37,6 +37,7 @@ export async function POST(req: Request) {
     emocion: plan.emocion,
     promptImagen: plan.promptImagen,
     promptGemini: plan.promptGemini,
+    composicion: COMPOSICION, // lo que TexTube aplica por código (marca de agua, ventana de error, zonas libres)
   };
 
   // Pruebas locales de errores (nunca en producción): «x-minitube-simular: cuota | proveedor»
