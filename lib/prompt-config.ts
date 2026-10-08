@@ -674,9 +674,17 @@ export function resolverAccesorio(seleccion: string, profesion: string, u: numbe
 }
 
 /* ───────── Mirada: regla global (todas las profesiones) ───────── */
-export const MIRADA_ES = "Ojos muy abiertos, mirada fija y tensa hacia el área libre inferior izquierda (ventana del error)";
+export const MIRADA_ES = "Cabeza y ojos desorbitados hacia el sector medio-izquierdo libre, 18%-23% más arriba que la esquina inferior (nunca en el objeto que sostiene)";
 const MIRADA_REGLA =
-  "DIRECCIÓN VISUAL ABSOLUTA (MIRADA HACIA EL ESPACIO DE ERROR): Sin importar si el personaje sostiene un cable USB, un teléfono celular o tiene las manos en la cabeza, sus ojos deben estar OBLIGATORIAMENTE ABIERTOS (muy abiertos) y dirigidos con una mirada fija y de tensión hacia el sector inferior izquierdo de la imagen, exactamente hacia el área de espacio negativo reservada para la ventana del error. La línea visual debe conectar directamente el rostro estresado del personaje con ese espacio vacío. Nunca mira a la cámara, ni al objeto que sostiene, ni a la pantalla del teléfono, ni hacia otro lado; refleja estrés extremo o pánico.";
+  "DIRECCIÓN DE LA VISTA AJUSTADA (MIRADA HACIA EL VACÍO, ELEVADA 18%-23%): Los ojos del personaje y la orientación de la cabeza deben mirar hacia la zona izquierda, pero con un ajuste de elevación de 18% a 23% más arriba que la esquina inferior absoluta (el ajuste anterior de 10%-15% más un 8% adicional hacia arriba), apuntando hacia el sector medio-izquierdo de la imagen, donde el espacio sigue estando despejado pero ligeramente más elevado (la parte alta del área libre de la esquina inferior izquierda). La mirada debe ser desorbitada, con los ojos muy abiertos y llena de pánico, fija y proyectada exactamente hacia esa área libre. Sin importar si el personaje sostiene un accesorio (celular o cable USB) o tiene las manos en la cabeza, tiene PROHIBICIÓN ABSOLUTA de mirar el accesorio en la mano, y tampoco mira a la cámara.";
+
+// Comportamiento del accesorio (solo cable USB o teléfono): objeto pasivo, la atención va al espacio del error
+export const ACCESORIO_COMPORTAMIENTO =
+  "COMPORTAMIENTO DEL ACCESORIO: El teléfono celular o el cable USB solo se sostiene de manera secundaria en una mano o cerca del cuerpo, de forma pasiva, mientras toda la atención visual y la expresión de horror del rostro están enfocadas exclusivamente hacia el espacio libre inferior izquierdo.";
+
+// Anatomía: directiva negativa estricta contra extremidades de más
+export const ANATOMIA_ES =
+  "ANATOMÍA PERFECTA Y OBLIGATORIA: El personaje debe tener exactamente dos brazos y dos manos normales, sin extremidades fantasma ni manos de más. Está absolutamente prohibido generar extremidades extra, dedos de más, manos flotantes o múltiples brazos superpuestos. Las manos deben interactuar de forma coherente y realista con el entorno o accesorio; si sostiene un celular o cable, este es pasivo y nunca es observado por los ojos.";
 
 // Reglas restrictivas globales: se inyectan SIEMPRE al final del prompt
 // (orden: expresión → prohibición visual). La composición espacial va en la sección Marketing 3D.
@@ -753,10 +761,12 @@ export function buildPrompt(i: PromptInput): string {
     `On the right side of the frame, a ${ETNIA_EN[i.etnia].replace("{n}", mujer ? "woman" : "man")} ${EDAD_EN[i.edad]}, working as ${/^[aeiou]/i.test(perfil.en.role) ? "an" : "a"} ${perfil.en.role}, wearing ${clothing}, with ${perfil.en.emotion}, and ${hands}.`,
     ...(gafasText ? [gafasText] : []),
     ...(accesorio ? [accesorio.es] : []),
+    ...(accesorio?.unaMano ? [ACCESORIO_COMPORTAMIENTO] : []),
     REGLA_BRANDING,
     MIRADA_REGLA,
     ...(mujer ? [ESTETICA_MUJER] : []),
     "The person is anatomically correct: exactly one person, exactly two arms, two hands with five fingers each, one symmetrical face and natural proportions.",
+    ANATOMIA_ES,
     setting,
     `Massive 3D typography with volume, beveled edges, thick dark outlines and strong shadows, perfectly legible and sharp: the giant word "RESET" in ${color1}, "${errorText}" in ${color2}, and "${printer.toUpperCase()}" in ${color3}.`,
     badgeSentence,

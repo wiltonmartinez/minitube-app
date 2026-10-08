@@ -1,7 +1,9 @@
 "use client";
 
 import { Dices, Download, FileArchive, Trash2 } from "lucide-react";
+import Link from "next/link";
 import { useMemo, useState } from "react";
+import { COMMIT, VERSION } from "@/lib/changelog";
 import { CatalogEditor } from "@/components/catalog-editor";
 import { useCatalogo } from "@/lib/use-catalogo";
 import { toast } from "sonner";
@@ -464,6 +466,11 @@ export default function Home() {
         </h1>
         <p className="mt-2 text-muted-foreground">
           Servicio de reset remoto asistido de impresoras: prompts fotográficos hiperrealistas y coherentes.
+        </p>
+        <p className="mt-2 text-xs text-muted-foreground">
+          <Link href="/cambios" className="underline-offset-2 hover:underline">
+            v{VERSION} · {COMMIT} · ver cambios
+          </Link>
         </p>
       </header>
 
