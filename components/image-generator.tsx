@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { CreditosFal } from "@/components/creditos-fal";
 import { crearVariantes, type LetraAB } from "@/lib/ab";
 import {
   CLAVE_HISTORIAL,
@@ -341,6 +342,7 @@ export function ImageGenerator({
   return (
     <section className="space-y-3 rounded-lg border p-4">
       <h3 className="text-sm font-semibold">Generar imagen con IA</h3>
+      <CreditosFal />
 
       <div className="space-y-2">
         <Label htmlFor="modelo-ia">Modelo de IA</Label>

@@ -41,3 +41,20 @@ export function sorteoRespetandoBloqueos<S extends Record<string, unknown>>(
   }
   return out;
 }
+
+/**
+ * «Todo al azar»: aplica un sorteo COMPLETO `r` al formulario `f`, salvo lo que tenga candado 🔒.
+ * Solo se cambian las claves que trae `r`; el bloque 1 (marca, modelo, error) nunca va en `r`, así que no se toca.
+ * `pers` (los campos del personaje) se decide campo por campo con los candados «pers.<campo>».
+ */
+export function aplicarTodoAlAzar<F extends { pers: Record<string, string> }>(f: F, r: Partial<F> & { pers: Record<string, string> }, locks: Bloqueos): F {
+  const salida: Record<string, unknown> = { ...f };
+  for (const k of Object.keys(r)) {
+    if (k === "pers") continue;
+    if (!locks[k]) salida[k] = (r as Record<string, unknown>)[k];
+  }
+  const pers: Record<string, string> = {};
+  for (const c of Object.keys(f.pers)) pers[c] = locks[`pers.${c}`] ? f.pers[c] : (r.pers[c] ?? f.pers[c]);
+  salida.pers = pers;
+  return salida as F;
+}
