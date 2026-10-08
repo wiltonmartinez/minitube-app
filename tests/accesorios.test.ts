@@ -13,6 +13,10 @@ import {
   buildPrompt,
   cerebroPostura,
   posturaDe,
+  accesorioDePostura,
+  POSTURA_ACCESORIO,
+  POSTURA_CABEZA,
+  POSTURA_OPCIONES,
   resolverAccesorio,
   type PromptInput,
 } from "@/lib/prompt-config";
@@ -36,11 +40,11 @@ const base = (extra: Partial<PromptInput> = {}): PromptInput => ({
   ...extra,
 });
 
-const TODOS = [...ACCESORIOS_MANO, "Manos en la impresora", "Manos a la cabeza (sin objeto)"];
+const TODOS = [...ACCESORIOS_MANO, "Manos en la impresora", "Escribiendo en una laptop", "Manos a la cabeza (sin objeto)"];
 
 describe("Accesorios · portátil y tablet", () => {
   it("el catálogo tiene 5 opciones y la frase exacta de cada accesorio", () => {
-    expect(ACCESORIOS_FIJOS).toEqual(["Cable USB negro", "Teléfono celular", "Portátil", "Tablet", "Manos en la impresora", "Manos a la cabeza (sin objeto)"]);
+    expect(ACCESORIOS_FIJOS).toEqual(["Cable USB negro", "Teléfono celular", "Portátil", "Tablet", "Manos en la impresora", "Escribiendo en una laptop", "Manos a la cabeza (sin objeto)"]);
     expect(ACCESORIOS_MANO).toEqual(["Cable USB negro", "Teléfono celular", "Portátil", "Tablet"]);
     expect(ACCESORIOS["Portátil"].unaMano).toBe(true);
     expect(ACCESORIOS["Tablet"].unaMano).toBe(true);
@@ -58,7 +62,7 @@ describe("Accesorios · portátil y tablet", () => {
     }
   });
   it("cada prompt (Gemini y API) tiene exactamente una postura, con y sin texto 3D", () => {
-    const etiquetas = ["POSTURA CON CELULAR", "POSTURA CON CABLE USB", "POSTURA CON PORTÁTIL", "POSTURA CON TABLET", "POSTURA CON IMPRESORA", "POSTURA MANOS A LA CABEZA"];
+    const etiquetas = ["POSTURA CON CELULAR", "POSTURA CON CABLE USB", "POSTURA CON PORTÁTIL", "POSTURA CON TABLET", "POSTURA CON IMPRESORA", "POSTURA ESCRIBIENDO EN LAPTOP", "POSTURA MANOS A LA CABEZA"];
     for (const nombre of Object.keys(ARQUETIPOS)) {
       for (const a of TODOS) {
         const g = buildPrompt(base({ arquetipo: nombre, accesorio: a }));
@@ -68,7 +72,8 @@ describe("Accesorios · portátil y tablet", () => {
           const objeto = (p.match(/Exactly one hand holds/g) ?? []).length;
           const cabeza = (p.match(/Both hands are placed on the sides of the head/g) ?? []).length;
           const impresora = (p.match(/Both hands touch the very same single/g) ?? []).length;
-          expect(objeto + cabeza + impresora).toBe(1);
+          const teclea = (p.match(/Both hands are typing on the keyboard/g) ?? []).length;
+          expect(objeto + cabeza + impresora + teclea).toBe(1);
         }
       }
     }
@@ -87,7 +92,7 @@ describe("Accesorios · portátil y tablet", () => {
   it("la mirada prohíbe mirar cualquier accesorio y las esquinas inferiores siguen libres", () => {
     for (const a of ACCESORIOS_MANO) {
       const api = buildApiPrompt(base({ accesorio: a }), { texto3d: true });
-      expect(api).toContain("the hand, the phone, the cable, the laptop, the tablet or the printer");
+      expect(api).toContain("the hand, the phone, the cable, the laptop, the tablet, the printer or the keyboard");
       expect(api).toContain("lower-left corner of the frame is completely empty");
       expect(api).toContain("lower-right corner free of important elements");
       const g = buildPrompt(base({ accesorio: a }));
@@ -97,11 +102,11 @@ describe("Accesorios · portátil y tablet", () => {
       expect(cerebroPostura(a).reglasEn.join(" ")).toContain("away from the lower corners");
     }
   });
-  it("el sorteo «según perfil» reparte entre las 6 opciones con probabilidades que suman 1", () => {
+  it("el sorteo «según perfil» reparte entre las 7 opciones con probabilidades que suman 1", () => {
     expect(PESOS_TECNICO.reduce((a, b) => a + b, 0)).toBeCloseTo(1);
     expect(PESOS_GENERAL.reduce((a, b) => a + b, 0)).toBeCloseTo(1);
-    expect(PESOS_TECNICO).toHaveLength(6);
-    expect(PESOS_GENERAL).toHaveLength(6);
+    expect(PESOS_TECNICO).toHaveLength(7);
+    expect(PESOS_GENERAL).toHaveLength(7);
     for (const perfil of ["Técnico de Impresoras", "Recepcionista"]) {
       const cuenta: Record<string, number> = {};
       const N = 20000;
@@ -154,7 +159,44 @@ describe("Accesorios · portátil y tablet", () => {
   });
   it("la mirada nunca va a la impresora ni a las manos", () => {
     const api = buildApiPrompt(base({ accesorio: "Manos en la impresora" }), { texto3d: false });
-    expect(api).toContain("the tablet or the printer, and never look downward");
-    expect(buildPrompt(base({ accesorio: "Manos en la impresora" }))).toContain("la impresora, la mano, hacia abajo o a la cámara");
+    expect(api).toContain("the tablet, the printer or the keyboard, and never look downward");
+    expect(buildPrompt(base({ accesorio: "Manos en la impresora" }))).toContain("la impresora, el teclado, la mano, hacia abajo o a la cámara");
+  });
+
+  it("escribiendo en una laptop: las dos manos teclean en UNA laptop y la mirada no va al teclado", () => {
+    const p = cerebroPostura("Escribiendo en una laptop");
+    expect(p.estado).toBe("escribiendo");
+    expect(p.manosEn).toContain("both hands typing on the keyboard of a single open laptop");
+    expect(p.manosEn).not.toMatch(/head|hair/);
+    expect(p.reglasEn.join(" ")).toContain("never at the keyboard or the screen");
+    expect(p.reglasEn.join(" ")).toContain("no logo");
+    expect(p.reglas.join(" ")).toContain("NUNCA hacia el teclado ni la pantalla");
+    expect(p.reglas.join(" ")).toMatch(/PROHIBIDO que una mano vaya a la cabeza/);
+    expect(posturaDe("Escribiendo en una laptop")).toBe("Escribiendo en una laptop");
+    expect(posturaDe("Escribiendo en una laptop")).not.toBe(posturaDe("Portátil"));
+  });
+  it("en los prompts: laptop abierta sobre la mesa, lejos de las esquinas, sin impresoras en primer plano", () => {
+    const b = base({ accesorio: "Escribiendo en una laptop" });
+    const api = buildApiPrompt(b, { texto3d: true });
+    expect(api).toContain("Both hands are typing on the keyboard of a single open laptop");
+    expect(api).toContain("well away from both lower corners");
+    expect(api).toContain("There are no printers in the foreground.");
+    expect(api).toContain("lower-left corner of the frame is completely empty");
+    expect(api).toContain("lower-right corner free of important elements");
+    expect(api).not.toContain("Both hands are placed on the sides of the head");
+    expect(api).not.toContain("Exactly one hand holds");
+    const g = buildPrompt(b);
+    expect(g).toContain("POSTURA ESCRIBIENDO EN LAPTOP");
+    expect(g).toContain("PROHIBIDO generar impresoras en primer plano o en la esquina inferior izquierda:");
+    expect(g).toContain("ÁREA DE MONTAJE LIBRE");
+  });
+  it("accesorioDePostura convierte cada postura en su valor de accesorio y la ida y vuelta es coherente", () => {
+    for (const post of POSTURA_OPCIONES) {
+      const acc = accesorioDePostura(post, "Tablet");
+      expect(posturaDe(acc)).toBe(post);
+    }
+    expect(accesorioDePostura(POSTURA_ACCESORIO, "Tablet")).toBe("Tablet"); // conserva el accesorio válido
+    expect(accesorioDePostura(POSTURA_ACCESORIO, "Manos en la impresora")).toBe("Cable USB negro");
+    expect(accesorioDePostura(POSTURA_CABEZA, "Tablet")).toBe("Manos a la cabeza (sin objeto)");
   });
 });

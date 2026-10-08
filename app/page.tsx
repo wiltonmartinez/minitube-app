@@ -58,7 +58,8 @@ import {
   posturaDe,
   POSTURA_ACCESORIO,
   POSTURA_IMPRESORA,
-  ACCESORIO_IMPRESORA,
+  POSTURA_ESCRIBIENDO,
+  accesorioDePostura,
   POSTURA_ALEATORIA,
   POSTURA_CABEZA,
   POSTURA_OPCIONES,
@@ -807,20 +808,7 @@ export default function Home() {
                   label="Postura de las manos"
                   value={posturaDe(form.accesorio)}
                   options={POSTURA_OPCIONES}
-                  onChange={(v) =>
-                    set(
-                      "accesorio",
-                      v === POSTURA_ALEATORIA
-                        ? ACCESORIO_ALEATORIO
-                        : v === POSTURA_CABEZA
-                          ? "Manos a la cabeza (sin objeto)"
-                          : v === POSTURA_IMPRESORA
-                            ? ACCESORIO_IMPRESORA
-                          : ACCESORIOS_MANO.includes(form.accesorio)
-                            ? form.accesorio
-                            : ACCESORIOS_MANO[0],
-                    )
-                  }
+                  onChange={(v) => set("accesorio", accesorioDePostura(v, form.accesorio))}
                   className="md:col-span-2"
                   {...lockProps("accesorio")}
                 />
@@ -838,6 +826,8 @@ export default function Home() {
                     "Manos a la cabeza: las dos manos van a los lados de la cabeza; el accesorio queda forzado a «Ninguno» y bloqueado."}
                   {posturaDe(form.accesorio) === POSTURA_IMPRESORA &&
                     "Las dos manos tocan la misma impresora del modelo seleccionado (sobre la mesa, lejos de las esquinas inferiores); el accesorio queda forzado a «Ninguno» y bloqueado."}
+                  {posturaDe(form.accesorio) === POSTURA_ESCRIBIENDO &&
+                    "Las dos manos escriben en una laptop abierta sobre la mesa (lejos de las esquinas inferiores); el personaje mira al vacío, no al teclado. El accesorio queda forzado a «Ninguno» y bloqueado."}
                   {posturaDe(form.accesorio) === POSTURA_ALEATORIA &&
                     `Sorteado ahora (${form.profesion}): ${ACCESORIOS[accesorioEf].corto}. La postura de ambas manos se decide automáticamente.`}
                   {posturaDe(form.accesorio) === POSTURA_ACCESORIO &&

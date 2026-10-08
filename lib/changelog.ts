@@ -9,6 +9,16 @@ export type Cambio = {
 
 export const CHANGELOG: Cambio[] = [
   {
+    version: "3.3.0",
+    fecha: "2026-10-08",
+    titulo: "Postura: escribiendo en una laptop",
+    cambios: [
+      "Nueva postura «Escribiendo en una laptop»: las dos manos teclean en UNA laptop abierta sobre la mesa, a la derecha-centro del encuadre y lejos de las esquinas inferiores, con la tapa lisa y sin logos.",
+      "El personaje escribe mientras mira aterrado al espacio vacío; la mirada nunca va al teclado ni a la pantalla.",
+      "El accesorio queda forzado a «Ninguno» y bloqueado; el sorteo «según perfil» reparte ahora entre 7 opciones.",
+    ],
+  },
+  {
     version: "3.2.0",
     fecha: "2026-10-08",
     titulo: "Gafas elegantes metálicas",
