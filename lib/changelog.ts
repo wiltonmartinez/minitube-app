@@ -9,6 +9,49 @@ export type Cambio = {
 
 export const CHANGELOG: Cambio[] = [
   {
+    version: "1.9.0",
+    fecha: "2026-10-08",
+    titulo: "Banco de 12 arquetipos físicos aleatorios",
+    cambios: [
+      "Nuevo banco de 12 arquetipos radicalmente distintos (calvo con barba tupida, joven asiático, rubia europea, afrodescendiente rapado a los lados, latina de rizos, mujer canosa recogida, bigote y ondulado…).",
+      "Cada generación sortea UN arquetipo y lo inyecta como descripción completa del personaje; nunca repite el mismo dos veces seguidas (ni en el lote).",
+      "Selector «Arquetipo físico» con candado; «Ninguno» devuelve el control a los selectores manuales.",
+      "Las gafas siguen controladas por su propio menú (aleatorias, pueden salir sin gafas).",
+    ],
+  },
+  {
+    version: "1.8.0",
+    fecha: "2026-10-08",
+    titulo: "Más diversidad y doble acción corporal prohibida",
+    cambios: [
+      "El cabello sorteado ahora combina estilo y color (negro, castaño, rubio, pelirrojo…); se añade «Calvo».",
+      "Variación de identidad obligatoria: texto reforzado (barba o sin ella, gorra o sin ella, rostros distintos).",
+      "Prohibición de doble acción corporal: con accesorio, la otra mano va firme sobre la mesa o estirada a un lado; nunca agarrando la cabeza.",
+      "Mirada fija y alta a la izquierda (~15% sobre la esquina inferior); prohibido mirar celular, mano o hacia abajo.",
+    ],
+  },
+  {
+    version: "1.7.0",
+    fecha: "2026-10-08",
+    titulo: "Identidad única del personaje",
+    cambios: [
+      "Cada generación rota género, edad (ahora hasta 56-65) y etnia (se añaden caucásica, afrodescendiente, asiática del Este, sudasiática y árabe).",
+      "Nuevos selectores aleatorios de Cabello (corto, rizado, recogido, lacio, trenzas, con gorra lisa sin logos…) y Rasgos faciales (estructura del rostro, barba, pecas…).",
+      "Regla de identidad única en el prompt: prohibido repetir la misma persona o rostros similares.",
+      "Candados también en Género, Edad, Cabello y Rasgos; el lote al azar diversifica cada prompt.",
+    ],
+  },
+  {
+    version: "1.6.0",
+    fecha: "2026-10-08",
+    titulo: "Postura limpia con accesorio y mirada alta",
+    cambios: [
+      "Con cable USB o teléfono, la mano libre se apoya en la mesa o gesticula a un lado: prohibido tocarse la nariz, los ojos o cubrirse el rostro.",
+      "Mirada fija y alta a la izquierda (~15% sobre la esquina inferior); prohibido mirar abajo, la mano, el celular o la cámara.",
+      "Anatomía: dos brazos y dos manos con proporciones perfectas.",
+    ],
+  },
+  {
     version: "1.5.1",
     fecha: "2026-10-08",
     titulo: "Mirada 8% más arriba",

@@ -35,11 +35,12 @@ export const ERRORES = [
 /* ───────── Bloque 2: Perfil demográfico ───────── */
 export const GENEROS = ["Mujer", "Hombre"] as const;
 
-export const EDADES = ["Joven 18-25", "Adulto Joven 30-40", "Adulto Mayor 45-55"] as const;
+export const EDADES = ["Joven 18-25", "Adulto Joven 30-40", "Adulto Mayor 45-55", "Adulto Maduro 56-65"] as const;
 const EDAD_EN: Record<(typeof EDADES)[number], string> = {
   "Joven 18-25": "aged 18 to 25",
   "Adulto Joven 30-40": "aged 30 to 40",
   "Adulto Mayor 45-55": "aged 45 to 55",
+  "Adulto Maduro 56-65": "aged 56 to 65",
 };
 
 export const ETNIAS = [
@@ -50,6 +51,11 @@ export const ETNIAS = [
   "Blanca/Mediterránea Cono Sur",
   "Afro-Latina",
   "Rasgos Nativos/Indígenas",
+  "Caucásica/Europea",
+  "Afrodescendiente",
+  "Asiática del Este",
+  "Sudasiática",
+  "Medio Oriente/Árabe",
 ] as const;
 // "{n}" se sustituye por "woman" o "man"
 const ETNIA_EN: Record<(typeof ETNIAS)[number], string> = {
@@ -60,7 +66,162 @@ const ETNIA_EN: Record<(typeof ETNIAS)[number], string> = {
   "Blanca/Mediterránea Cono Sur": "white Latin American {n} from the Southern Cone with Mediterranean features",
   "Afro-Latina": "Afro-Latin {n}",
   "Rasgos Nativos/Indígenas": "Latin American {n} with Native/Indigenous features",
+  "Caucásica/Europea": "Caucasian {n} of European descent",
+  Afrodescendiente: "Black {n} of African descent",
+  "Asiática del Este": "East Asian {n}",
+  Sudasiática: "South Asian {n}",
+  "Medio Oriente/Árabe": "Middle Eastern {n} of Arab descent",
 };
+
+/* ───────── Diversidad del personaje: cabello y estructura facial ─────────
+   Cada generación rota género, edad, etnia, cabello y rasgos faciales para que NUNCA salga la misma persona.
+   g: "f" solo mujer · "m" solo hombre · "x" ambos. */
+type Rasgo = { es: string; en: string; g: "f" | "m" | "x" };
+export const CABELLOS: Rasgo[] = [
+  { es: "Cabello corto", en: "short cropped hair", g: "x" },
+  { es: "Cabello rizado", en: "voluminous curly hair", g: "x" },
+  { es: "Cabello recogido", en: "hair pulled back and tied up", g: "x" },
+  { es: "Cabello lacio", en: "straight hair falling past the ears", g: "x" },
+  { es: "Cabello largo ondulado", en: "long wavy hair", g: "f" },
+  { es: "Trenzas", en: "neat braids", g: "x" },
+  { es: "Con gorra lisa", en: "short hair under a plain solid-color cap with no logo, text or brand marks", g: "x" },
+  { es: "Rapado", en: "a closely shaved head", g: "m" },
+  { es: "Calvo", en: "a completely bald head", g: "m" },
+  { es: "Cabello canoso", en: "short gray-streaked hair", g: "x" },
+];
+export const RASGOS: Rasgo[] = [
+  { es: "Rostro ovalado y suave", en: "an oval face with soft features", g: "x" },
+  { es: "Mandíbula marcada y pómulos altos", en: "a strong angular jawline and high cheekbones", g: "x" },
+  { es: "Rostro redondo de mejillas llenas", en: "a round face with full cheeks", g: "x" },
+  { es: "Rostro alargado y nariz prominente", en: "a long narrow face with a prominent nose", g: "x" },
+  { es: "Mentón cuadrado y frente amplia", en: "a square chin and a broad forehead", g: "x" },
+  { es: "Rostro en corazón y mentón puntiagudo", en: "a heart-shaped face with a pointed chin", g: "x" },
+  { es: "Ojos separados y nariz ancha", en: "wide-set eyes and a broad nose", g: "x" },
+  { es: "Ojos hundidos y mentón definido", en: "deep-set eyes and a defined chin", g: "x" },
+  { es: "Barba recortada", en: "a neatly trimmed beard", g: "m" },
+  { es: "Barba de unos días", en: "light stubble", g: "m" },
+  { es: "Pecas marcadas", en: "visible freckles across the nose and cheeks", g: "x" },
+];
+// Colores de cabello: el sorteo «Aleatorio» combina estilo + color (salvo rapado, calvo y canoso)
+const COLORES_PELO = [
+  { es: "negro", en: "jet black" },
+  { es: "castaño oscuro", en: "dark brown" },
+  { es: "castaño claro", en: "light chestnut brown" },
+  { es: "rubio", en: "blond" },
+  { es: "pelirrojo", en: "auburn red" },
+  { es: "castaño cobrizo", en: "copper brown" },
+];
+const SIN_COLOR = new Set(["Rapado", "Calvo", "Cabello canoso"]);
+export const ALEATORIO_RASGO = "🎲 Aleatorio";
+export const CABELLO_OPCIONES = [ALEATORIO_RASGO, ...CABELLOS.map((c) => c.es)];
+export const RASGOS_OPCIONES = [ALEATORIO_RASGO, ...RASGOS.map((r) => r.es)];
+
+const validos = (lista: Rasgo[], genero: string) => lista.filter((r) => r.g === "x" || r.g === (genero === "Mujer" ? "f" : "m"));
+
+/** Devuelve el rasgo concreto: el elegido o, si es «Aleatorio», uno válido para el género según `u` en [0,1). */
+export function resolverRasgo(lista: Rasgo[], seleccion: string, genero: string, u: number = Math.random()): string {
+  if (seleccion !== ALEATORIO_RASGO) return seleccion;
+  const v = validos(lista, genero);
+  return v[Math.min(v.length - 1, Math.floor(u * v.length))].es;
+}
+
+/** Cabello concreto. Si es «Aleatorio» devuelve «estilo|color» (el color deriva del mismo número del sorteo). */
+export function resolverCabello(seleccion: string, genero: string, u: number = Math.random()): string {
+  const estilo = resolverRasgo(CABELLOS, seleccion, genero, u);
+  if (seleccion !== ALEATORIO_RASGO || SIN_COLOR.has(estilo)) return estilo;
+  const color = COLORES_PELO[Math.floor(((u * 9973) % 1) * COLORES_PELO.length)];
+  return `${estilo}|${color.es}`;
+}
+/** Texto legible («Cabello rizado, castaño oscuro») de un cabello resuelto. */
+export const cabelloLegible = (c: string) => c.replace("|", ", ");
+
+/* ───────── Banco de arquetipos físicos (aleatoriedad real) ─────────
+   12 perfiles radicalmente distintos entre sí. Al generar, se sortea UNO y se inyecta de forma absoluta en el
+   prompt como descripción completa del personaje (género, etnia, edad, cabello y rostro), de modo que cada
+   imagen sea físicamente otra persona. Las gafas NO forman parte del arquetipo: las controla el menú de gafas. */
+export type Arquetipo = { genero: (typeof GENEROS)[number]; edad: string; en: string };
+export const ARQUETIPOS: Record<string, Arquetipo> = {
+  "Hombre maduro calvo con barba tupida": {
+    genero: "Hombre",
+    edad: "50-60",
+    en: "mature bald Latin man aged 50 to 60 with a thick, bushy gray-flecked beard, heavy dark eyebrows, a broad nose and deep laugh lines",
+  },
+  "Joven asiático de cabello lacio y corte moderno": {
+    genero: "Hombre",
+    edad: "20-25",
+    en: "young East Asian man aged 20 to 25 with straight black hair in a modern textured undercut with side-swept fringe, a slim angular face and fair skin",
+  },
+  "Mujer rubia de rasgos europeos": {
+    genero: "Mujer",
+    edad: "30-40",
+    en: "blonde woman of European features aged 30 to 40 with shoulder-length straight golden hair, light blue eyes, high cheekbones and a narrow nose",
+  },
+  "Hombre afrodescendiente de cabello corto y rapado a los lados": {
+    genero: "Hombre",
+    edad: "30-40",
+    en: "Black man of African descent aged 30 to 40 with short dark hair on top and shaved sides in a sharp fade, deep brown skin and a strong square jaw",
+  },
+  "Mujer latina de cabello rizado abundante": {
+    genero: "Mujer",
+    edad: "25-35",
+    en: "Latina woman aged 25 to 35 with abundant voluminous dark curly hair, warm olive-tan skin, large expressive brown eyes and full cheeks",
+  },
+  "Hombre joven caucásico de rostro redondo": {
+    genero: "Hombre",
+    edad: "20-28",
+    en: "young Caucasian man aged 20 to 28 with a round face, light freckles, short messy red-brown hair and pale skin",
+  },
+  "Mujer madura de cabello canoso recogido": {
+    genero: "Mujer",
+    edad: "56-65",
+    en: "mature woman aged 56 to 65 with silver-gray hair gathered back in a neat low bun, fine wrinkles, a soft oval face and gentle hazel eyes",
+  },
+  "Hombre con bigote y cabello castaño ondulado": {
+    genero: "Hombre",
+    edad: "30-40",
+    en: "man aged 30 to 40 with a full dark mustache and wavy chestnut-brown hair swept back, tan skin and a prominent nose",
+  },
+  "Mujer sudasiática de cabello largo y lacio": {
+    genero: "Mujer",
+    edad: "20-30",
+    en: "South Asian woman aged 20 to 30 with very long straight jet-black hair, warm brown skin, defined arched eyebrows and large dark eyes",
+  },
+  "Mujer afrodescendiente con trenzas": {
+    genero: "Mujer",
+    edad: "30-40",
+    en: "Black woman of African descent aged 30 to 40 with long box braids, rich dark skin, high cheekbones and a bright wide face",
+  },
+  "Hombre de Medio Oriente con barba recortada": {
+    genero: "Hombre",
+    edad: "35-45",
+    en: "Middle Eastern man of Arab descent aged 35 to 45 with a neatly trimmed black beard, short dark hair with a receding hairline and olive skin",
+  },
+  "Mujer asiática del Este de cabello corto": {
+    genero: "Mujer",
+    edad: "35-45",
+    en: "East Asian woman aged 35 to 45 with a short chin-length black bob haircut, smooth fair skin and a soft round face",
+  },
+};
+export const ARQUETIPOS_LISTA = Object.keys(ARQUETIPOS);
+export const ARQUETIPO_ALEATORIO = "🎲 Aleatorio (arquetipo)";
+export const ARQUETIPO_NINGUNO = "Ninguno (usar selectores manuales)";
+export const ARQUETIPO_OPCIONES = [ARQUETIPO_ALEATORIO, ARQUETIPO_NINGUNO, ...ARQUETIPOS_LISTA];
+
+/** Arquetipo concreto: el elegido (o «Ninguno») o, si es «Aleatorio», el que corresponde a `u` en [0,1). */
+export function resolverArquetipo(seleccion: string, u: number = Math.random()): string {
+  if (seleccion !== ARQUETIPO_ALEATORIO) return seleccion;
+  return ARQUETIPOS_LISTA[Math.min(ARQUETIPOS_LISTA.length - 1, Math.floor(u * ARQUETIPOS_LISTA.length))];
+}
+/** Número de sorteo cuyo arquetipo es DISTINTO del anterior (evita repetir la misma persona dos veces seguidas). */
+export function sorteoArquetipoDistinto(uPrevio: number): number {
+  const n = ARQUETIPOS_LISTA.length;
+  const previo = Math.min(n - 1, Math.floor(uPrevio * n));
+  const nuevo = (previo + 1 + Math.floor(Math.random() * (n - 1))) % n;
+  return (nuevo + 0.5) / n;
+}
+
+export const IDENTIDAD_ES =
+  "VARIACIÓN DE IDENTIDAD OBLIGATORIA: Está prohibido repetir el mismo tipo de rostro o a la misma persona. Los rasgos descritos (género, etnia, edad, cabello, barba o sin ella, gorra o sin ella, y estructura facial) definen a una persona totalmente distinta de cualquier otra imagen: cada imagen debe parecer una persona totalmente diferente, con una estructura facial propia.";
 
 /* ───────── Bloque 3: Controlador Maestro ─────────
    El usuario solo elige la profesión; el resto se autocompleta y se bloquea. */
@@ -599,6 +760,11 @@ export type PromptInput = {
   gafas: string;
   accesorio: string;
   paleta: string;
+  /** Cabello y rasgos faciales concretos (etiquetas de CABELLOS / RASGOS). */
+  cabello: string;
+  rasgos: string;
+  /** Arquetipo físico concreto (clave de ARQUETIPOS) o «Ninguno»: si existe, define por completo la apariencia. */
+  arquetipo: string;
 };
 
 const ASPECT_SENTENCE =
@@ -674,17 +840,24 @@ export function resolverAccesorio(seleccion: string, profesion: string, u: numbe
 }
 
 /* ───────── Mirada: regla global (todas las profesiones) ───────── */
-export const MIRADA_ES = "Cabeza y ojos desorbitados hacia el sector medio-izquierdo libre, 18%-23% más arriba que la esquina inferior (nunca en el objeto que sostiene)";
+export const MIRADA_ES = "Ojos desorbitados y fijos en el sector medio-izquierdo elevado (~15% sobre la esquina inferior); nunca abajo, en la mano ni en la cámara";
 const MIRADA_REGLA =
-  "DIRECCIÓN DE LA VISTA AJUSTADA (MIRADA HACIA EL VACÍO, ELEVADA 18%-23%): Los ojos del personaje y la orientación de la cabeza deben mirar hacia la zona izquierda, pero con un ajuste de elevación de 18% a 23% más arriba que la esquina inferior absoluta (el ajuste anterior de 10%-15% más un 8% adicional hacia arriba), apuntando hacia el sector medio-izquierdo de la imagen, donde el espacio sigue estando despejado pero ligeramente más elevado (la parte alta del área libre de la esquina inferior izquierda). La mirada debe ser desorbitada, con los ojos muy abiertos y llena de pánico, fija y proyectada exactamente hacia esa área libre. Sin importar si el personaje sostiene un accesorio (celular o cable USB) o tiene las manos en la cabeza, tiene PROHIBICIÓN ABSOLUTA de mirar el accesorio en la mano, y tampoco mira a la cámara.";
+  "MIRADA FIJA Y ALTA HACIA LA IZQUIERDA (DIRECCIÓN ELEVADA HACIA EL ESPACIO DE ERROR): Los ojos del personaje deben estar abiertos, desorbitados por el pánico, y orientados obligatoriamente hacia el sector medio-izquierdo elevado de la imagen (a unos 15% por encima de la esquina inferior izquierda, justo donde está el espacio negativo), con la cabeza girada hacia ese sector. Los ojos tienen prohibido mirar el celular, el cable, la mano, hacia abajo o a la cámara; la línea visual debe conectar el rostro estresado con el espacio vacío del error.";
 
 // Comportamiento del accesorio (solo cable USB o teléfono): objeto pasivo, la atención va al espacio del error
 export const ACCESORIO_COMPORTAMIENTO =
   "COMPORTAMIENTO DEL ACCESORIO: El teléfono celular o el cable USB solo se sostiene de manera secundaria en una mano o cerca del cuerpo, de forma pasiva, mientras toda la atención visual y la expresión de horror del rostro están enfocadas exclusivamente hacia el espacio libre inferior izquierdo.";
 
+// Postura con accesorio: la mano libre nunca toca el rostro (evita manos múltiples y confusiones anatómicas)
+export const POSTURA_LIMPIA =
+  "PROHIBICIÓN DE DOBLE ACCIÓN CORPORAL: Si el personaje sostiene un accesorio (como un teléfono celular o un cable USB) en una mano, la otra mano debe estar apoyada firmemente sobre la mesa o estirada a un lado mostrando frustración. Está estrictamente prohibido que una mano se agarre la cabeza mientras la otra sostiene un objeto al mismo tiempo, y que cualquier mano toque la nariz, los ojos o cubra el rostro, ya que esto genera extremidades extra y confusión anatómica. Las manos deben ser exactamente dos y verse totalmente naturales.";
+export const MANO_LIBRE_ES = "Mano libre apoyada firmemente en la mesa o estirada a un lado mostrando frustración";
+const MANO_LIBRE_EN =
+  "the free hand resting firmly on the table or stretched out to the side showing frustration, never gripping the head and never touching the nose, eyes or face";
+
 // Anatomía: directiva negativa estricta contra extremidades de más
 export const ANATOMIA_ES =
-  "ANATOMÍA PERFECTA Y OBLIGATORIA: El personaje debe tener exactamente dos brazos y dos manos normales, sin extremidades fantasma ni manos de más. Está absolutamente prohibido generar extremidades extra, dedos de más, manos flotantes o múltiples brazos superpuestos. Las manos deben interactuar de forma coherente y realista con el entorno o accesorio; si sostiene un celular o cable, este es pasivo y nunca es observado por los ojos.";
+  "ANATOMÍA PERFECTA Y OBLIGATORIA: El personaje debe tener exactamente dos brazos y dos manos normales, con proporciones perfectas, sin extremidades fantasma ni manos de más. Está absolutamente prohibido generar extremidades extra, dedos de más, manos flotantes o múltiples brazos superpuestos. Las manos deben interactuar de forma coherente y realista con el entorno o accesorio; si sostiene un celular o cable, este es pasivo y nunca es observado por los ojos.";
 
 // Reglas restrictivas globales: se inyectan SIEMPRE al final del prompt
 // (orden: expresión → prohibición visual). La composición espacial va en la sección Marketing 3D.
@@ -725,7 +898,8 @@ export const REGLA_COMPOSICION =
 export function buildPrompt(i: PromptInput): string {
   const catalogo = i.catalogo ?? PERFILES;
   const perfil = catalogo[i.profesion] ?? Object.values(catalogo)[0] ?? PERFILES[PROFESIONES[0]];
-  const mujer = i.genero === "Mujer";
+  const arq = ARQUETIPOS[i.arquetipo];
+  const mujer = arq ? arq.genero === "Mujer" : i.genero === "Mujer";
   const printer = printerFullName(i.marca, i.modelo);
   const errorText = i.error.toUpperCase();
   const marco = MARCOS.find((m) => m.es === i.marco)?.en ?? "a thin neon border";
@@ -734,9 +908,14 @@ export function buildPrompt(i: PromptInput): string {
   // Gafas: "Ninguna" no inyecta nada. Si se elige un par, se quitan las gafas que pudiera traer la
   // vestimenta del perfil (p. ej. "…and black-framed glasses") para no duplicarlas ni contradecirlas.
   const gafasText = GAFAS[i.gafas] ?? "";
+  const [estiloCab, colorCab] = i.cabello.split("|");
+  const colorEn = COLORES_PELO.find((c) => c.es === colorCab)?.en;
+  const estiloEn = CABELLOS.find((c) => c.es === estiloCab)?.en ?? "";
+  const cabelloEn = colorEn ? `${estiloEn} in ${colorEn}` : estiloEn;
+  const rasgosEn = RASGOS.find((r) => r.es === i.rasgos)?.en ?? "";
   // Accesorio en las manos: con cable o teléfono, una mano lo sostiene y la otra conserva el gesto (variante de una mano)
   const accesorio = ACCESORIOS[i.accesorio];
-  const hands = accesorio?.unaMano ? perfil.en.hands1 : perfil.en.hands;
+  const hands = accesorio?.unaMano ? MANO_LIBRE_EN : perfil.en.hands;
   const clothingBase = mujer ? perfil.en.clothing.f : perfil.en.clothing.m;
   const clothing = gafasText
     ? clothingBase.replace(/\s+and\s+(?:black-framed\s+|relaxing\s+)?(?:eye)?glasses/i, "")
@@ -758,10 +937,12 @@ export function buildPrompt(i: PromptInput): string {
   const sentences = [
     "Hyper-realistic cinematic photograph for a YouTube thumbnail in 16:9 widescreen on a 1920x1080 pixel canvas, shot on a full-frame camera with an 85mm lens, shallow depth of field, dramatic high-contrast lighting, ultra-detailed skin and fabric textures, vivid saturated colors.",
     plano,
-    `On the right side of the frame, a ${ETNIA_EN[i.etnia].replace("{n}", mujer ? "woman" : "man")} ${EDAD_EN[i.edad]}, working as ${/^[aeiou]/i.test(perfil.en.role) ? "an" : "a"} ${perfil.en.role}, wearing ${clothing}, with ${perfil.en.emotion}, and ${hands}.`,
+    `On the right side of the frame, ${arq ? `a ${arq.en}` : `a ${ETNIA_EN[i.etnia].replace("{n}", mujer ? "woman" : "man")} ${EDAD_EN[i.edad]}`}, working as ${/^[aeiou]/i.test(perfil.en.role) ? "an" : "a"} ${perfil.en.role}, wearing ${clothing}, with ${perfil.en.emotion}, and ${hands}.`,
+    ...(!arq && (cabelloEn || rasgosEn) ? [`The character has ${[cabelloEn, rasgosEn].filter(Boolean).join(" and ")}.`] : []),
+    IDENTIDAD_ES,
     ...(gafasText ? [gafasText] : []),
     ...(accesorio ? [accesorio.es] : []),
-    ...(accesorio?.unaMano ? [ACCESORIO_COMPORTAMIENTO] : []),
+    ...(accesorio?.unaMano ? [ACCESORIO_COMPORTAMIENTO, POSTURA_LIMPIA] : []),
     REGLA_BRANDING,
     MIRADA_REGLA,
     ...(mujer ? [ESTETICA_MUJER] : []),

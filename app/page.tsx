@@ -29,6 +29,19 @@ import {
   ACCESORIOS,
   ACCESORIOS_OPCIONES,
   ACCESORIO_ALEATORIO,
+  ALEATORIO_RASGO,
+  ARQUETIPO_ALEATORIO,
+  ARQUETIPO_OPCIONES,
+  ARQUETIPOS,
+  resolverArquetipo,
+  sorteoArquetipoDistinto,
+  CABELLO_OPCIONES,
+  RASGOS,
+  RASGOS_OPCIONES,
+  resolverRasgo,
+  resolverCabello,
+  cabelloLegible,
+  MANO_LIBRE_ES,
   BADGES,
   BADGES_OPCIONES,
   BADGES_REALES,
@@ -72,6 +85,9 @@ type FormState = {
   etnia: (typeof ETNIAS)[number];
   gafas: string;
   accesorio: string;
+  cabello: string;
+  rasgos: string;
+  arquetipo: string;
   // Bloque 3 (solo el gatillo; el resto se deriva de PERFILES)
   profesion: Profesion;
   // Bloque 4
@@ -92,6 +108,9 @@ const INITIAL: FormState = {
   etnia: ETNIAS[0],
   gafas: GAFAS_OPCIONES[0],
   accesorio: ACCESORIO_ALEATORIO,
+  cabello: ALEATORIO_RASGO,
+  rasgos: ALEATORIO_RASGO,
+  arquetipo: ARQUETIPO_ALEATORIO,
   profesion: "",
   marco: MARCOS[0].es,
   plano: PLANOS[0].es, // Plano Detalle por defecto
@@ -110,6 +129,8 @@ const pick = <T,>(list: readonly T[]) => list[Math.floor(Math.random() * list.le
 // Campos que varían al azar (incluida la paleta de colores 3D). Fijos: marca, modelo, error, plano, género, edad e idioma.
 function randomVariables(profesiones: readonly string[]) {
   return {
+    genero: pick(GENEROS), // cada generación rota género, edad y etnia (salvo candado)
+    edad: pick(EDADES),
     etnia: pick(ETNIAS),
     profesion: pick(profesiones),
     marco: pick(MARCOS).es,
@@ -246,6 +267,9 @@ export default function Home() {
     gafas: GAFAS_ESTILOS[0],
     badge: BADGES_REALES[0],
     u: 0.5, // número del sorteo del accesorio (se interpreta según el perfil vigente)
+    uc: 0.5, // sorteo del cabello (se interpreta según el género vigente)
+    ur: 0.5, // sorteo de los rasgos faciales
+    ua: 0.5, // sorteo del arquetipo físico
   });
   // Candados: una variable bloqueada no cambia con el azar (ni con «Generar al Azar», ni con el lote, ni con el re-sorteo)
   const [locks, setLocks] = useState<Record<string, boolean>>({});
@@ -255,6 +279,9 @@ export default function Home() {
       gafas: locks.gafas ? s.gafas : resolverGafas(GAFAS_ALEATORIAS),
       badge: locks.badge ? s.badge : resolverBadge(BADGE_ALEATORIO),
       u: locks.accesorio ? s.u : Math.random(),
+      uc: locks.cabello ? s.uc : Math.random(),
+      ur: locks.rasgos ? s.ur : Math.random(),
+      ua: locks.arquetipo ? s.ua : sorteoArquetipoDistinto(s.ua), // nunca el mismo arquetipo dos veces seguidas
     }));
 
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) => {
@@ -270,12 +297,15 @@ export default function Home() {
   const gafasEf = form.gafas === GAFAS_ALEATORIAS ? sorteo.gafas : form.gafas;
   const badgeEf = form.badge === BADGE_ALEATORIO ? sorteo.badge : form.badge;
   const accesorioEf = resolverAccesorio(form.accesorio, form.profesion, sorteo.u);
+  const cabelloEf = resolverCabello(form.cabello, form.genero, sorteo.uc);
+  const rasgosEf = resolverRasgo(RASGOS, form.rasgos, form.genero, sorteo.ur);
+  const arquetipoEf = resolverArquetipo(form.arquetipo, sorteo.ua);
 
 
 
   // Manos mostradas: con cable o teléfono, una mano conserva el gesto y la otra sostiene el accesorio
   const acc = ACCESORIOS[accesorioEf];
-  const manosMostradas = acc?.unaMano ? `${perfil.manos1} + ${acc.corto}` : perfil.manos;
+  const manosMostradas = acc?.unaMano ? `${MANO_LIBRE_ES} + ${acc.corto}` : perfil.manos;
 
   // Si se elige un par de gafas, la vestimenta del perfil no las incluye (el prompt las quita para no duplicarlas)
   const vestimenta =
@@ -288,10 +318,21 @@ export default function Home() {
   const live = useMemo<GeneratedPrompt | null>(() => {
     if (!form.modelo.trim() || !errorFinal) return null; // faltan datos obligatorios
     return generatePrompt(
-      { ...form, catalogo, paleta: paletaEf, gafas: gafasEf, badge: badgeEf, accesorio: accesorioEf, error: errorFinal },
+      {
+        ...form,
+        catalogo,
+        paleta: paletaEf,
+        gafas: gafasEf,
+        badge: badgeEf,
+        accesorio: accesorioEf,
+        cabello: cabelloEf,
+        rasgos: rasgosEf,
+        arquetipo: arquetipoEf,
+        error: errorFinal,
+      },
       { baseUrl: baseUrl() },
     );
-  }, [form, catalogo, errorFinal, paletaEf, gafasEf, badgeEf, accesorioEf]);
+  }, [form, catalogo, errorFinal, paletaEf, gafasEf, badgeEf, accesorioEf, cabelloEf, rasgosEf, arquetipoEf]);
 
   // Alternar candado: al bloquear una opción «Aleatorio» se fija el valor sorteado en ese momento
   function toggleLock(key: string) {
@@ -303,6 +344,9 @@ export default function Home() {
       paleta: [PALETA_ALEATORIA, paletaEf],
       badge: [BADGE_ALEATORIO, badgeEf],
       accesorio: [ACCESORIO_ALEATORIO, accesorioEf],
+      cabello: [ALEATORIO_RASGO, cabelloEf],
+      rasgos: [ALEATORIO_RASGO, rasgosEf],
+      arquetipo: [ARQUETIPO_ALEATORIO, arquetipoEf],
     };
     const f = fijo[key];
     if (f && form[key as keyof FormState] === f[0]) setForm((x) => ({ ...x, [key]: f[1] }));
@@ -358,12 +402,18 @@ export default function Home() {
       return;
     }
     const prompts: GeneratedPrompt[] = [];
+    let uArq = sorteoArquetipoDistinto(sorteo.ua);
     for (let n = 0; n < total; n++) {
       const r = randomVariables(profesiones);
       // Variables bloqueadas: conservan el valor actual en todos los prompts del lote
       if (locks.etnia) r.etnia = form.etnia;
+      if (locks.genero) r.genero = form.genero;
+      if (locks.edad) r.edad = form.edad;
       if (locks.profesion) r.profesion = form.profesion;
       if (locks.marco) r.marco = form.marco as typeof r.marco;
+      // Arquetipo físico: distinto del anterior en cada prompt del lote (salvo candado o «Ninguno»)
+      const arq = locks.arquetipo ? arquetipoEf : resolverArquetipo(form.arquetipo, uArq);
+      uArq = sorteoArquetipoDistinto(uArq);
       prompts.push(
         generatePrompt(
           {
@@ -374,6 +424,9 @@ export default function Home() {
             gafas: locks.gafas ? gafasEf : resolverGafas(form.gafas),
             badge: locks.badge ? badgeEf : resolverBadge(BADGE_ALEATORIO), // el lote siempre lleva un badge real
             accesorio: locks.accesorio ? accesorioEf : resolverAccesorio(form.accesorio, r.profesion), // según el perfil de ese prompt
+            cabello: locks.cabello ? cabelloEf : resolverCabello(ALEATORIO_RASGO, r.genero), // identidad única por prompt
+            rasgos: locks.rasgos ? rasgosEf : resolverRasgo(RASGOS, ALEATORIO_RASGO, r.genero),
+            arquetipo: arq,
             error: errorFinal,
           },
           { baseUrl: baseUrl() },
@@ -539,11 +592,31 @@ export default function Home() {
                 description="Quién aparece en la miniatura."
               >
                 <SelectField
+                  id="arquetipo"
+                  label="Arquetipo físico (persona única)"
+                  value={form.arquetipo}
+                  options={ARQUETIPO_OPCIONES}
+                  onChange={(v) => set("arquetipo", v)}
+                  className="md:col-span-2"
+                  {...lockProps("arquetipo")}
+                />
+                <p className="-mt-2 text-xs text-muted-foreground md:col-span-2">
+                  {arquetipoEf in ARQUETIPOS ? (
+                    <>
+                      Arquetipo activo: <strong>{arquetipoEf}</strong>. Define género, etnia, edad, cabello y rostro; los
+                      selectores de abajo se ignoran. Elige «Ninguno» para usarlos.
+                    </>
+                  ) : (
+                    "Sin arquetipo: se usan los selectores manuales de género, edad, etnia, cabello y rasgos."
+                  )}
+                </p>
+                <SelectField
                   id="genero"
                   label="Género"
                   value={form.genero}
                   options={GENEROS}
                   onChange={(v) => set("genero", v as FormState["genero"])}
+                  {...lockProps("genero")}
                 />
                 <SelectField
                   id="edad"
@@ -551,6 +624,7 @@ export default function Home() {
                   value={form.edad}
                   options={EDADES}
                   onChange={(v) => set("edad", v as FormState["edad"])}
+                  {...lockProps("edad")}
                 />
                 <SelectField
                   id="etnia"
@@ -561,6 +635,27 @@ export default function Home() {
                   className="md:col-span-2"
                   {...lockProps("etnia")}
                 />
+                <SelectField
+                  id="cabello"
+                  label="Cabello"
+                  value={form.cabello}
+                  options={CABELLO_OPCIONES}
+                  onChange={(v) => set("cabello", v)}
+                  {...lockProps("cabello")}
+                />
+                <SelectField
+                  id="rasgos"
+                  label="Rasgos faciales"
+                  value={form.rasgos}
+                  options={RASGOS_OPCIONES}
+                  onChange={(v) => set("rasgos", v)}
+                  {...lockProps("rasgos")}
+                />
+                {(form.cabello === ALEATORIO_RASGO || form.rasgos === ALEATORIO_RASGO) && (
+                  <p className="-mt-2 text-xs text-muted-foreground md:col-span-2">
+                    Sorteado ahora: {cabelloLegible(cabelloEf)} · {rasgosEf}. Cada generación rota género, edad, etnia, cabello y rasgos.
+                  </p>
+                )}
                 <SelectField
                   id="gafas"
                   label="Gafas"
