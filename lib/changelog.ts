@@ -21,6 +21,8 @@ export const CHANGELOG: Cambio[] = [
       "Enrutador de prioridad: los plotters F570, F571, T3170 y T3170X (se reconocen aunque se escriban «SC-F570», «SureColor F571» o «sc t3170x») son prioridad ALTA: Seedream 5.0 Pro, plano detalle, mujer joven de 20 a 30 años, profesión de sublimación, vinilo o fotografía y plotters de la marca en el fondo.",
       "El resto de modelos son prioridad NORMAL con FLUX.2 Pro (≈ USD 0.03). Con MINITUBE_MODELO_NORMAL=manual no se genera nada y la API devuelve el prompt de Gemini (429).",
       "El panel web aplica y muestra la prioridad alta al escribir uno de esos plotters en el bloque 1: bloquea plano, modo y modelo de IA y limita profesión y arquetipo.",
+      "Reglas del prompt de imagen: mirada «eyes looking toward the empty lower-left corner of the frame, slightly above it, not at the camera» (sin porcentajes), emoción por enfoque (pánico o desesperación / alivio o alegría), prohibidas las palabras WhatsApp, teléfonos, «reparar» y «tutorial» (también se rechazan en la API), y marco y fondo nunca de la misma familia de color (cálidos vs. fríos).",
+      "La imagen se genera sin texto ni marca de agua; la API entrega en «composicion» la marca de agua «ResetEnLinea.com», la ventana de error y las zonas libres para que TexTube las aplique por código.",
     ],
   },
   {

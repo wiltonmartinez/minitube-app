@@ -35,6 +35,13 @@ Con `MINITUBE_MODELO_NORMAL=manual`, la prioridad normal no genera imagen: respo
 
 Devuelve `estado`: `en_cola`, `generando` o `completado` (con `imagen`). Consultar cada 3–5 segundos.
 
+## Composición (para TexTube)
+
+La imagen se genera **sin texto**. El campo `composicion` de la respuesta indica lo que se agrega por código: tamaño final
+1280×720, marca de agua `ResetEnLinea.com` translúcida en la esquina inferior izquierda, ventana de error en esa misma
+esquina, zonas que deben quedar libres (inferior izquierda e inferior derecha) y estilo del texto principal (3D, contorno,
+sombra y alto contraste, lejos de la esquina inferior derecha).
+
 ## Errores
 
 ```json
