@@ -76,6 +76,7 @@ import {
   resolverGafas,
   resolverPaleta,
   type GeneratedPrompt,
+  type PromptInput,
   type Idioma,
   type Profesion,
 } from "@/lib/prompt-config";
@@ -328,10 +329,10 @@ export default function Home() {
 
   // Autogeneración reactiva: el prompt se recalcula en cada render en que cambia CUALQUIER variable del
   // formulario (error, gafas, paleta, badge, perfil…). useMemo lo deriva sin estado extra ni render de más.
-  const live = useMemo<GeneratedPrompt | null>(() => {
-    if (!form.modelo.trim() || !errorFinal) return null; // faltan datos obligatorios
-    return generatePrompt(
-      {
+  // Entrada común del prompt de Gemini y del prompt de la API de imágenes (null si faltan datos obligatorios)
+  const entrada = useMemo<PromptInput | null>(() => {
+    if (!form.modelo.trim() || !errorFinal) return null;
+    return {
         ...form,
         genero: generoEf,
         edad: edadEf,
@@ -345,10 +346,14 @@ export default function Home() {
         rasgos: rasgosEf,
         arquetipo: arquetipoEf,
         error: errorFinal,
-      },
-      { baseUrl: baseUrl() },
-    );
+    };
   }, [form, catalogo, errorFinal, paletaEf, gafasEf, badgeEf, accesorioEf, cabelloEf, rasgosEf, arquetipoEf, generoEf, edadEf, etniaEf]);
+
+  // Prompt para copiar a Gemini (formato de siempre)
+  const live = useMemo<GeneratedPrompt | null>(
+    () => (entrada ? generatePrompt(entrada, { baseUrl: baseUrl() }) : null),
+    [entrada],
+  );
 
   // Alternar candado: al bloquear una opción «Aleatorio» se fija el valor sorteado en ese momento
   function toggleLock(key: string) {
@@ -885,7 +890,7 @@ export default function Home() {
             <Button variant="secondary" className="w-full" onClick={copy} disabled={!live}>
               Copiar al portapapeles
             </Button>
-            <ImageGenerator prompt={live?.promptText ?? ""} />
+            <ImageGenerator entrada={entrada} />
             <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
               <Button
                 variant="outline"

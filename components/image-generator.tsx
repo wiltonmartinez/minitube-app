@@ -1,10 +1,12 @@
 "use client";
 
 import { Download, ImageIcon, Loader2 } from "lucide-react";
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -12,6 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { buildApiPrompt, type PromptInput } from "@/lib/prompt-config";
 import { ASPECTO, MODELOS, MODELO_POR_DEFECTO, buscarModelo, type ModeloId } from "@/lib/image-models";
 
 type Estado = "reposo" | "generando" | "listo" | "error";
@@ -21,9 +24,10 @@ const SONDEO_MS = 2_000;
 
 const pausa = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-/** Genera la imagen del prompt actual con el modelo elegido (o una simulación si no hay FAL_KEY). */
-export function ImageGenerator({ prompt }: { prompt: string }) {
+/** Genera la imagen con el modelo elegido (o una simulación si no hay FAL_KEY). Envía el prompt en inglés de la API. */
+export function ImageGenerator({ entrada }: { entrada: PromptInput | null }) {
   const [modeloId, setModeloId] = useState<ModeloId>(MODELO_POR_DEFECTO);
+  const [texto3d, setTexto3d] = useState(false);
   const [estado, setEstado] = useState<Estado>("reposo");
   const [mensaje, setMensaje] = useState("");
   const [imagenUrl, setImagenUrl] = useState<string | null>(null);
@@ -33,6 +37,13 @@ export function ImageGenerator({ prompt }: { prompt: string }) {
   const intento = useRef(0);
 
   const modelo = buscarModelo(modeloId)!;
+  // Prompt en inglés para la API; se actualiza solo con cada cambio del formulario o del interruptor
+  const prompt = useMemo(() => (entrada ? buildApiPrompt(entrada, { texto3d }) : ""), [entrada, texto3d]);
+
+  function elegirModelo(id: ModeloId) {
+    setModeloId(id);
+    setTexto3d(buscarModelo(id)!.textoEnImagen); // recomendado solo con los modelos que escriben bien el texto
+  }
 
   async function generar() {
     if (!prompt) return;
@@ -120,7 +131,7 @@ export function ImageGenerator({ prompt }: { prompt: string }) {
 
       <div className="space-y-2">
         <Label htmlFor="modelo-ia">Modelo de IA</Label>
-        <Select value={modeloId} onValueChange={(v) => setModeloId(v as ModeloId)}>
+        <Select value={modeloId} onValueChange={(v) => elegirModelo(v as ModeloId)}>
           <SelectTrigger id="modelo-ia" className="w-full">
             <SelectValue />
           </SelectTrigger>
@@ -136,6 +147,27 @@ export function ImageGenerator({ prompt }: { prompt: string }) {
           {modelo.descripcion} Formato {ASPECTO} ({modelo.resolucion}). <strong>{modelo.costoTexto}.</strong>
         </p>
       </div>
+
+      <div className="flex items-start gap-3 rounded-md border p-3">
+        <Switch id="texto3d" checked={texto3d} onCheckedChange={setTexto3d} />
+        <div className="space-y-1">
+          <Label htmlFor="texto3d">Texto 3D dentro de la imagen</Label>
+          <p className="text-xs text-muted-foreground">
+            {texto3d
+              ? "Activado: la imagen incluye los textos 3D (RESET, error y modelo), el badge y la marca de agua."
+              : "Desactivado: la imagen se pide SIN texto, con las zonas libres para ponerlo después."}{" "}
+            {!modelo.textoEnImagen && texto3d && (
+              <span className="text-amber-500">Este modelo suele escribir mal el texto; se recomienda desactivarlo.</span>
+            )}
+            {modelo.textoEnImagen && !texto3d && "Recomendado activarlo con este modelo."}
+          </p>
+        </div>
+      </div>
+
+      <details className="rounded-md border p-3 text-sm">
+        <summary className="cursor-pointer text-muted-foreground">Ver el prompt que se envía a la API (inglés)</summary>
+        <Textarea readOnly value={prompt} className="mt-2 min-h-[200px] font-mono text-xs" />
+      </details>
 
       <Button className="w-full" onClick={generar} disabled={!prompt || estado === "generando"}>
         {estado === "generando" ? <Loader2 className="size-4 animate-spin" /> : <ImageIcon className="size-4" />}

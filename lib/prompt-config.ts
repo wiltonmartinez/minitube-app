@@ -913,9 +913,10 @@ export function resolverAccesorio(seleccion: string, profesion: string, u: numbe
 }
 
 /* ───────── Mirada: regla global (todas las profesiones) ───────── */
-export const MIRADA_ES = "Ojos desorbitados y fijos en el sector medio-izquierdo elevado (~15% sobre la esquina inferior); nunca abajo, en la mano ni en la cámara";
+export const MIRADA_ES =
+  "Ojos desorbitados y fijos hacia el vacío inferior izquierdo, un poco por encima de la esquina; nunca abajo, en la mano ni en la cámara";
 const MIRADA_REGLA =
-  "MIRADA FIJA Y ALTA HACIA LA IZQUIERDA (DIRECCIÓN ELEVADA HACIA EL ESPACIO DE ERROR): Los ojos del personaje deben estar abiertos, desorbitados por el pánico, y orientados obligatoriamente hacia el sector medio-izquierdo elevado de la imagen (a unos 15% por encima de la esquina inferior izquierda, justo donde está el espacio negativo), con la cabeza girada hacia ese sector. Los ojos tienen prohibido mirar el celular, el cable, la mano, hacia abajo o a la cámara; la línea visual debe conectar el rostro estresado con el espacio vacío del error.";
+  "MIRADA FIJA Y ALTA HACIA LA IZQUIERDA (DIRECCIÓN ELEVADA HACIA EL ESPACIO DE ERROR): Los ojos del personaje deben estar abiertos, desorbitados por el pánico, y orientados obligatoriamente hacia el sector medio-izquierdo de la imagen, un poco por encima de la esquina inferior izquierda, en el borde alto del espacio vacío reservado para el error, con la cabeza girada hacia ese sector. Los ojos tienen prohibido mirar el celular, el cable, la mano, hacia abajo o a la cámara; la línea visual debe conectar el rostro estresado con el espacio vacío del error.";
 
 /* ───────── Cerebro de Postura (máquina de estados, anatomía exacta de 2 manos) ─────────
    Lógica MUTUAMENTE EXCLUYENTE: el accesorio fija la postura de AMBAS manos; nunca se combinan dos acciones.
@@ -932,6 +933,8 @@ export type Postura = {
   manosEn: string;
   /** Frases del prompt (en español) que describen la postura, sin ambigüedad */
   reglas: string[];
+  /** Lo mismo en inglés, para el prompt que se envía a la API de imágenes */
+  reglasEn: string[];
 };
 
 export const POSTURA_ALEATORIA = "🎲 Aleatorio (según perfil)";
@@ -952,6 +955,9 @@ export function cerebroPostura(accesorio: string): Postura {
       manosEs: "Una mano sostiene el celular abajo; la otra, apoyada en la mesa o gesticulando a un lado",
       manosEn:
         "exactly one hand holding a modern smartphone in the lower part of the frame while the other hand rests firmly on the table or gestures in frustration to the side",
+      reglasEn: [
+        "Exactly one hand holds a modern smartphone with its screen on, low in the frame and passively, while the other hand rests firmly on the table or gestures in frustration to the side. No hand touches the head, nose, eyes or face while the phone is in hand, so the person has exactly two hands.",
+      ],
       reglas: [
         ACCESORIOS[accesorio].es,
         "POSTURA CON CELULAR: exactamente UNA mano sostiene el teléfono en la parte baja de la toma, de forma pasiva y secundaria, y la OTRA mano está apoyada firmemente sobre la mesa o gesticulando de frustración a un lado. PROHIBIDO que una mano vaya a la cabeza, a la nariz, a los ojos o cubra el rostro mientras hay un celular en la mano, para que no sobren extremidades.",
@@ -965,6 +971,9 @@ export function cerebroPostura(accesorio: string): Postura {
       manosEs: "Una mano sostiene el cable frente a la cámara; la otra, descansa o gesticula a un lado",
       manosEn:
         "exactly one hand holding a black USB cable up in front of the camera while the other hand rests on the table or gestures to the side",
+      reglasEn: [
+        "Exactly one hand holds a black USB cable up in front of the camera, passively, while the other hand rests on the table or gestures to the side in frustration. No hand touches the head, nose, eyes or face while the cable is in hand, so the person has exactly two hands.",
+      ],
       reglas: [
         ACCESORIOS[accesorio].es,
         "POSTURA CON CABLE USB: exactamente UNA mano sostiene el cable frente a la cámara, de forma pasiva y secundaria, y la OTRA mano descansa apoyada o gesticula de frustración a un lado. PROHIBIDO que una mano vaya a la cabeza, a la nariz, a los ojos o cubra el rostro mientras hay un cable en la mano.",
@@ -977,6 +986,9 @@ export function cerebroPostura(accesorio: string): Postura {
     accesorio: "Manos a la cabeza (sin objeto)",
     manosEs: "Las dos manos a los lados de la cabeza con desesperación (sin accesorio)",
     manosEn: "both hands placed on the sides of the head in desperation, with no object in either hand",
+    reglasEn: [
+      "Both hands are placed on the sides of the head in desperation, and there is no object in the frame: no phone, no cable, nothing floating in the lower part of the image.",
+    ],
     reglas: [
       ACCESORIOS["Manos a la cabeza (sin objeto)"].es,
       "POSTURA MANOS A LA CABEZA: las DOS manos van exclusivamente a los lados de la cabeza con desesperación. No hay ningún accesorio ni objeto en la toma: ni celular, ni cable, ni nada flotando en la parte baja.",
@@ -994,7 +1006,7 @@ export const REGLA_EXPRESION =
   "REGLA ESTRICTA DE EXPRESIÓN: Está absolutamente prohibido generar expresiones de tristeza, llanto, pucheros, lástima o resignación pasiva. Prohibido posturas relajadas como manos en la cintura o brazos cruzados. El personaje debe mostrar niveles extremos de tensión facial, estrés activo o pánico urgente.";
 
 export const PROHIBICION_VISUAL =
-  "PROHIBICIÓN VISUAL EXPRESA: Está estrictamente prohibido generar luces de neón saliendo de los dispositivos, escudos de seguridad holográficos, íconos flotantes o gráficos 3D superpuestos sobre el entorno. El entorno físico debe ser 100% realista, crudo y fotográfico, sin efectos de 'magia digital' ni hologramas.";
+  "PROHIBICIÓN VISUAL EXPRESA: Está estrictamente prohibido generar luces de neón saliendo de los dispositivos, escudos de seguridad holográficos, íconos flotantes o gráficos 3D superpuestos sobre el entorno. El entorno físico debe ser totalmente realista, crudo y fotográfico, sin efectos de 'magia digital' ni hologramas.";
 
 // Regla de composición espacial ESTRICTA: va dentro de la sección de Composición / Marketing 3D,
 // justo después de los textos 3D y el badge. Refiere al área libre de la esquina inferior izquierda.
@@ -1017,14 +1029,15 @@ export const ESTETICA_MUJER =
   "ESTÉTICA DEL PERSONAJE: Todas las mujeres generadas deben ser extremadamente hermosas, de rasgos muy atractivos y altamente fotogénicos, sin importar su origen étnico, manteniendo siempre la expresión de alta tensión, pánico o estrés requerida.";
 
 export const REGLA_COMPOSICION =
-  "REGLA DE COMPOSICIÓN ESPACIAL ESTRICTA: La composición del lienzo debe estar dividida. Todos los textos gigantes 3D principales y el badge flotante deben agruparse obligatoriamente en un lateral o en la mitad superior de la imagen, lejos de la esquina inferior izquierda, que debe estar 100% DESPEJADA Y VISIBLE (solo contiene la marca de agua sutil). Está absolutamente prohibido que cualquier letra, sombra, personaje o elemento 3D cruce, tape o se superponga sobre esa zona. El área libre es sagrada y debe quedar limpia.";
+  "REGLA DE COMPOSICIÓN ESPACIAL ESTRICTA: La composición del lienzo debe estar dividida. Todos los textos gigantes 3D principales y el badge flotante deben agruparse obligatoriamente en un lateral o en la mitad superior de la imagen, lejos de la esquina inferior izquierda, que debe estar completamente DESPEJADA Y VISIBLE (solo contiene la marca de agua sutil). Está absolutamente prohibido que cualquier letra, sombra, personaje o elemento 3D cruce, tape o se superponga sobre esa zona. El área libre es sagrada y debe quedar limpia.";
 
 /**
  * Recoge los valores de los 4 bloques y devuelve UN solo prompt fotográfico hiperrealista.
  * Los datos del Bloque 1 (marca, modelo, error) se inyectan dentro del entorno (fondo estructural)
  * definido por el perfil del Bloque 3, dejando la esquina inferior izquierda como espacio negativo.
  */
-export function buildPrompt(i: PromptInput): string {
+/** Datos comunes de los dos prompts (el de Gemini y el de la API de imágenes). */
+function preparar(i: PromptInput) {
   const catalogo = i.catalogo ?? PERFILES;
   const perfil = catalogo[i.profesion] ?? Object.values(catalogo)[0] ?? PERFILES[PROFESIONES[0]];
   const arq = ARQUETIPOS[i.arquetipo];
@@ -1059,6 +1072,16 @@ export function buildPrompt(i: PromptInput): string {
     ? `A floating 3D badge in the composition reading "${badge.textos[i.idioma]}", with a small ${badge.icon} icon (${badge.emoji}) integrated inside the badge itself, with the same massive, legible typography.`
     : "No badges or extra labels in the composition.";
 
+  const personaje = `On the right side of the frame, ${arq ? `a ${ETNIA_EN[arq.etnia].replace("{n}", mujer ? "woman" : "man")} aged ${arq.edadAnios}, with ${arq.cabello.en}, ${arq.rasgosFaciales.forma}, ${arq.rasgosFaciales.ojos}, ${arq.rasgosFaciales.cejas}, ${arq.rasgosFaciales.nariz} and ${arq.rasgosFaciales.boca}` : `a ${ETNIA_EN[i.etnia].replace("{n}", mujer ? "woman" : "man")} ${EDAD_EN[i.edad]}`}, working as ${/^[aeiou]/i.test(perfil.en.role) ? "an" : "a"} ${perfil.en.role}, wearing ${clothing}, with ${perfil.en.emotion}, and ${hands}.`;
+  const rasgosExtra = !arq && (cabelloEn || rasgosEn) ? `The character has ${[cabelloEn, rasgosEn].filter(Boolean).join(" and ")}.` : "";
+  return {
+    perfil, arq, mujer, printer, errorText, marco, plano, gafasText, postura, color1, color2, color3, badge, badgeSentence, personaje, rasgosExtra,
+  };
+}
+
+export function buildPrompt(i: PromptInput): string {
+  const { perfil, mujer, printer, errorText, marco, plano, gafasText, postura, color1, color2, color3, badge, badgeSentence, personaje, rasgosExtra } = preparar(i);
+
   // Entorno contextual (Fondo Estructural del Bloque 3): detalles del trabajo de la profesión + impresoras reales de la
   // marca elegida al fondo desenfocado; el primer plano y el área de montaje (esquina inferior izquierda) quedan libres.
   const setting = `The setting is ${perfil.en.scene}, with subtle but realistic details of the character's daily workplace in the soft-focus background, such as ${perfil.en.props}. On the desks and shelves of this blurred background there are also real, physical ${i.marca} printers (recognizable ${i.marca} printer silhouettes, slightly out of focus, with no legible logos or brand text on them), giving the immediate visual impression that the character is a customer who uses ${i.marca} printers in their daily work. ${PROHIBICION_IMPRESORAS} ${AREA_MONTAJE_ES}`;
@@ -1066,8 +1089,8 @@ export function buildPrompt(i: PromptInput): string {
   const sentences = [
     "Hyper-realistic cinematic photograph for a YouTube thumbnail in 16:9 widescreen on a 1920x1080 pixel canvas, shot on a full-frame camera with an 85mm lens, shallow depth of field, dramatic high-contrast lighting, ultra-detailed skin and fabric textures, vivid saturated colors.",
     plano,
-    `On the right side of the frame, ${arq ? `a ${ETNIA_EN[arq.etnia].replace("{n}", mujer ? "woman" : "man")} aged ${arq.edadAnios}, with ${arq.cabello.en}, ${arq.rasgosFaciales.forma}, ${arq.rasgosFaciales.ojos}, ${arq.rasgosFaciales.cejas}, ${arq.rasgosFaciales.nariz} and ${arq.rasgosFaciales.boca}` : `a ${ETNIA_EN[i.etnia].replace("{n}", mujer ? "woman" : "man")} ${EDAD_EN[i.edad]}`}, working as ${/^[aeiou]/i.test(perfil.en.role) ? "an" : "a"} ${perfil.en.role}, wearing ${clothing}, with ${perfil.en.emotion}, and ${hands}.`,
-    ...(!arq && (cabelloEn || rasgosEn) ? [`The character has ${[cabelloEn, rasgosEn].filter(Boolean).join(" and ")}.`] : []),
+    personaje,
+    ...(rasgosExtra ? [rasgosExtra] : []),
     IDENTIDAD_ES,
     ...(gafasText ? [gafasText] : []),
     ...postura.reglas,
@@ -1111,4 +1134,71 @@ export function generatePrompt(input: PromptInput, options: { baseUrl?: string }
     promptText: buildPrompt(input),
     errorImageUrl: path ? `${base}${path}` : null,
   };
+}
+
+/* ───────── Prompt para la API de imágenes (Fase 2) ─────────
+   Todo en inglés (mejor adherencia en los modelos) y sin porcentajes: solo descripciones espaciales.
+   Con «texto3d» activado incluye los textos 3D y el badge (idioma del bloque 4); desactivado pide la imagen SIN
+   texto y deja las zonas libres para postproducción. El prompt de Gemini (buildPrompt) no cambia de formato. */
+const MIRADA_API =
+  "The character's eyes are wide open and bulging with panic, and the head is turned so the stare is fixed firmly on the empty lower-left area of the frame, aimed just above the very corner, toward the upper edge of that empty space, as if staring at something terrifying there. The eyes never look at the camera, never look at the hand, the phone or the cable, and never look downward. The line of sight clearly connects the stressed face with that empty space.";
+const ANATOMIA_API =
+  "Flawless human anatomy: exactly one person with exactly two arms and two hands, five fingers on each hand, no extra hands, no phantom limbs, no duplicated arms. The hands look completely natural with perfect proportions.";
+const EXPRESION_API =
+  "The face shows extreme tension, active stress or urgent panic. Never sadness, crying, pouting, self-pity or passive resignation, and never relaxed poses such as hands on hips or crossed arms.";
+const REALISMO_API =
+  "The physical environment is fully realistic, raw and photographic: no neon light coming out of devices, no holographic shields, no floating icons and no overlaid 3D graphics.";
+const YOUTUBE_API =
+  "Keep the lower-right corner free of important elements and text, because YouTube's video-duration label covers it, and keep every element away from the extreme corners. Nothing overlaps chaotically.";
+
+export function buildApiPrompt(i: PromptInput, opts: { texto3d: boolean }): string {
+  const c = preparar(i);
+  const t = opts.texto3d;
+  const marcoEn = c.marco.charAt(0).toUpperCase() + c.marco.slice(1);
+
+  const escena = `The setting is ${c.perfil.en.scene}, with realistic details of the character's workplace softly blurred in the background, such as ${c.perfil.en.props}. Real physical ${i.marca} printers sit on shelves and tables in the blurred background, slightly out of focus, with no legible logos or text on them. There are no printers in the foreground.`;
+  const esquina = t
+    ? `The lower-left corner of the frame is completely empty negative space: only a clean, softly blurred background, with no objects, no hands, no printers and no graphics. In that corner, and only there, add a tiny, subtle, semi-transparent, elegant typographic watermark reading "${MARCA_AGUA_TEXTO}", slightly inset from the edges, with no box and no icon.`
+    : "The lower-left corner of the frame is completely empty negative space: only a clean, softly blurred background, with no objects, no hands, no printers, no graphics and no text, kept clean for post-production.";
+  const ropa = t
+    ? `The character's clothing is completely plain, generic and solid-colored, with no logos, brand names, printed text or emblems on shirts, caps, uniforms or accessories. The printer brand and model appear only inside the giant 3D text blocks, never on the clothing.`
+    : "The character's clothing is completely plain, generic and solid-colored, with no logos, brand names, printed text or emblems on shirts, caps, uniforms or accessories.";
+
+  const textos = t
+    ? [
+        `Massive 3D typography with volume, beveled edges, thick dark outlines and strong shadows, perfectly legible and sharp: the giant word "RESET" in ${c.color1}, "${c.errorText}" in ${c.color2}, and "${c.printer.toUpperCase()}" in ${c.color3}. Group the main 3D texts and the badge in the upper half or along the top, away from the lower-left corner and from the lower-right corner.`,
+        c.badgeSentence,
+        ...(c.badge
+          ? [
+              "The badge sits on a solid rectangular plaque or rounded pill-shaped background in a bright solid color that contrasts strongly with its letters, like a premium advertising label. No floating letters without a background and no circular shapes.",
+            ]
+          : []),
+        "Every quoted text is rendered exactly as written, letter by letter, with no spelling mistakes or invented characters, and there is no other text in the image except the tiny watermark.",
+      ]
+    : [
+        "Do not render any text, letters, numbers, logos, badges or labels anywhere in the image. Keep the upper area of the frame clean and uncluttered so titles and badges can be added later in post-production.",
+      ];
+
+  const negativos = `Avoid: extra hands, extra arms, extra or missing fingers, deformed hands, distorted faces, duplicate people, logos or brand names on the clothing, any object or hand in the lower-left corner, any element in the lower-right corner, blurry or low-quality rendering, ${t ? "misspelled text, any watermark other than the specified one," : "any text at all,"} and glowing neon effects, holograms or floating icons over the environment.`;
+
+  return [
+    "Hyper-realistic cinematic photograph for a YouTube thumbnail, 16:9 widescreen, shot on a full-frame camera with an 85mm lens, shallow depth of field, dramatic high-contrast lighting, ultra-detailed skin and fabric textures, vivid saturated colors.",
+    c.plano,
+    c.personaje,
+    ...(c.rasgosExtra ? [c.rasgosExtra] : []),
+    "Every image shows a completely different person: a unique face and a unique facial structure.",
+    ...(c.gafasText ? [c.gafasText] : []),
+    ...c.postura.reglasEn,
+    MIRADA_API,
+    ANATOMIA_API,
+    EXPRESION_API,
+    ropa,
+    escena,
+    esquina,
+    ...textos,
+    YOUTUBE_API,
+    REALISMO_API,
+    `${marcoEn} frames the entire image.`,
+    negativos,
+  ].join(" ");
 }
