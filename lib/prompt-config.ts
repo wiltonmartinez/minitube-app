@@ -674,9 +674,9 @@ export function resolverAccesorio(seleccion: string, profesion: string, u: numbe
 }
 
 /* ───────── Mirada: regla global (todas las profesiones) ───────── */
-export const MIRADA_ES = "Clavada fijamente en el centro del área libre inferior izquierda";
+export const MIRADA_ES = "Ojos muy abiertos, mirada fija y tensa hacia el área libre inferior izquierda (ventana del error)";
 const MIRADA_REGLA =
-  "El personaje debe reflejar estrés extremo o pánico, manteniendo sus ojos muy abiertos y con la mirada clavada fijamente en el centro exacto del área libre de la esquina inferior izquierda, ignorando por completo la cámara.";
+  "DIRECCIÓN VISUAL ABSOLUTA (MIRADA HACIA EL ESPACIO DE ERROR): Sin importar si el personaje sostiene un cable USB, un teléfono celular o tiene las manos en la cabeza, sus ojos deben estar OBLIGATORIAMENTE ABIERTOS (muy abiertos) y dirigidos con una mirada fija y de tensión hacia el sector inferior izquierdo de la imagen, exactamente hacia el área de espacio negativo reservada para la ventana del error. La línea visual debe conectar directamente el rostro estresado del personaje con ese espacio vacío. Nunca mira a la cámara, ni al objeto que sostiene, ni a la pantalla del teléfono, ni hacia otro lado; refleja estrés extremo o pánico.";
 
 // Reglas restrictivas globales: se inyectan SIEMPRE al final del prompt
 // (orden: expresión → prohibición visual). La composición espacial va en la sección Marketing 3D.
