@@ -1,18 +1,20 @@
 {
   "name": "minitube",
-  "version": "1.9.0",
+  "version": "3.4.0",
   "private": true,
   "scripts": {
     "dev": "next dev -p 3100",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "gen:error-images": "node scripts/gen-error-images.mjs"
+    "gen:error-images": "node scripts/gen-error-images.mjs",
+    "test": "vitest run"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^4.0.74",
     "@ai-sdk/google": "^4.0.90",
     "@ai-sdk/react": "^4.0.133",
+    "@fal-ai/client": "^1.10.1",
     "ai": "^7.0.130",
     "class-variance-authority": "^0.7.1",
     "cn": "^0.4.0",
@@ -30,12 +32,13 @@
   },
   "devDependencies": {
     "@tailwindcss/turbopack": "^4",
-    "@types/node": "^20",
+    "@types/node": "^24.19.1",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.4.0",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^5.0.3"
   }
 }

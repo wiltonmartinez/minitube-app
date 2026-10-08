@@ -5,7 +5,27 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { COMMIT, VERSION } from "@/lib/changelog";
 import { CatalogEditor } from "@/components/catalog-editor";
+import { ImageGenerator } from "@/components/image-generator";
+import { nombresLote, type LoteItem } from "@/lib/lote";
+import { urlAPng } from "@/lib/imagen-cliente";
 import { useCatalogo } from "@/lib/use-catalogo";
+import { ListsEditor } from "@/components/lists-editor";
+import { useListas } from "@/lib/use-listas";
+import { aplicarAzar, sorteoRespetandoBloqueos } from "@/lib/azar";
+import {
+  ALEATORIO,
+  CAMPOS_FORMA,
+  MODOS_ROSTRO,
+  NOMBRE_LISTA,
+  SELECCION_INICIAL,
+  avisosCoherencia,
+  nivelPlano,
+  opcionesMenu,
+  resolverPersonaje,
+  type CampoLista,
+  type ModoRostro,
+  type Seleccion,
+} from "@/lib/rostro";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -27,21 +47,24 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import {
   ACCESORIOS,
-  ACCESORIOS_OPCIONES,
   ACCESORIO_ALEATORIO,
-  ALEATORIO_RASGO,
+  ARQUETIPO_NINGUNO,
   ARQUETIPO_ALEATORIO,
   ARQUETIPO_OPCIONES,
   ARQUETIPOS,
   resolverArquetipo,
   sorteoArquetipoDistinto,
-  CABELLO_OPCIONES,
-  RASGOS,
-  RASGOS_OPCIONES,
-  resolverRasgo,
-  resolverCabello,
-  cabelloLegible,
-  MANO_LIBRE_ES,
+  cerebroPostura,
+  posturaDe,
+  POSTURA_ACCESORIO,
+  POSTURA_IMPRESORA,
+  POSTURA_ESCRIBIENDO,
+  accesorioDePostura,
+  POSTURA_ALEATORIA,
+  POSTURA_CABEZA,
+  POSTURA_OPCIONES,
+  ACCESORIO_NINGUNO,
+  ACCESORIOS_MANO,
   BADGES,
   BADGES_OPCIONES,
   BADGES_REALES,
@@ -69,9 +92,12 @@ import {
   resolverGafas,
   resolverPaleta,
   type GeneratedPrompt,
+  type PromptInput,
   type Idioma,
   type Profesion,
 } from "@/lib/prompt-config";
+
+const MODOS_PERSONAJE = ["Arquetipo listo", "Personalizar"] as const;
 
 type FormState = {
   // Bloque 1
@@ -85,8 +111,9 @@ type FormState = {
   etnia: (typeof ETNIAS)[number];
   gafas: string;
   accesorio: string;
-  cabello: string;
-  rasgos: string;
+  modoPersonaje: (typeof MODOS_PERSONAJE)[number];
+  modoRostro: ModoRostro;
+  pers: Seleccion;
   arquetipo: string;
   // Bloque 3 (solo el gatillo; el resto se deriva de PERFILES)
   profesion: Profesion;
@@ -108,8 +135,9 @@ const INITIAL: FormState = {
   etnia: ETNIAS[0],
   gafas: GAFAS_OPCIONES[0],
   accesorio: ACCESORIO_ALEATORIO,
-  cabello: ALEATORIO_RASGO,
-  rasgos: ALEATORIO_RASGO,
+  modoPersonaje: MODOS_PERSONAJE[0],
+  modoRostro: MODOS_ROSTRO[0],
+  pers: SELECCION_INICIAL,
   arquetipo: ARQUETIPO_ALEATORIO,
   profesion: "",
   marco: MARCOS[0].es,
@@ -190,6 +218,7 @@ function SelectField({
   className,
   locked,
   onToggleLock,
+  disabled,
 }: {
   id: string;
   label: string;
@@ -199,6 +228,7 @@ function SelectField({
   className?: string;
   locked?: boolean;
   onToggleLock?: () => void;
+  disabled?: boolean;
 }) {
   return (
     <div className={`space-y-2 ${className ?? ""}`}>
@@ -206,7 +236,7 @@ function SelectField({
         <Label htmlFor={id}>{label}</Label>
         {onToggleLock && <LockButton locked={!!locked} onClick={onToggleLock} label={label} />}
       </div>
-      <Select value={value} onValueChange={onChange}>
+      <Select value={value} onValueChange={onChange} disabled={disabled}>
         <SelectTrigger id={id} className="w-full">
           <SelectValue placeholder="Selecciona..." />
         </SelectTrigger>
@@ -249,6 +279,7 @@ function ReadOnlyField({
 export default function Home() {
   const { catalogo, guardar: guardarCatalogo, personalizado } = useCatalogo();
   const profesiones = useMemo(() => Object.keys(catalogo), [catalogo]);
+  const { listas, modificadas, guardar: guardarLista } = useListas();
   const [mostrarEditor, setMostrarEditor] = useState(false);
   const [formBase, setForm] = useState<FormState>(INITIAL);
   // Si la profesión elegida ya no existe en el catálogo (editada/eliminada), se usa la primera
@@ -257,7 +288,7 @@ export default function Home() {
     [formBase, catalogo, profesiones],
   );
   // Resultados generados, acumulados para descargar como lote (.txt o ZIP)
-  const [batch, setBatch] = useState<GeneratedPrompt[]>([]);
+  const [batch, setBatch] = useState<LoteItem[]>([]);
   const [batchCount, setBatchCount] = useState("10");
   // Resultado del último sorteo de las opciones "🎲 Aleatorio" (paleta, gafas y badge). Se vuelve a sortear
   // en cada ciclo de autogeneración provocado por un selector o un botón (cualquier cambio de menú,
@@ -267,22 +298,27 @@ export default function Home() {
     gafas: GAFAS_ESTILOS[0],
     badge: BADGES_REALES[0],
     u: 0.5, // número del sorteo del accesorio (se interpreta según el perfil vigente)
-    uc: 0.5, // sorteo del cabello (se interpreta según el género vigente)
-    ur: 0.5, // sorteo de los rasgos faciales
+    up: 0.5, // sorteo de la personalización (rostro, cabello y cuerpo)
     ua: 0.5, // sorteo del arquetipo físico
   });
   // Candados: una variable bloqueada no cambia con el azar (ni con «Generar al Azar», ni con el lote, ni con el re-sorteo)
   const [locks, setLocks] = useState<Record<string, boolean>>({});
   const sortear = () =>
-    setSorteo((s) => ({
-      paleta: locks.paleta ? s.paleta : resolverPaleta(PALETA_ALEATORIA),
-      gafas: locks.gafas ? s.gafas : resolverGafas(GAFAS_ALEATORIAS),
-      badge: locks.badge ? s.badge : resolverBadge(BADGE_ALEATORIO),
-      u: locks.accesorio ? s.u : Math.random(),
-      uc: locks.cabello ? s.uc : Math.random(),
-      ur: locks.rasgos ? s.ur : Math.random(),
-      ua: locks.arquetipo ? s.ua : sorteoArquetipoDistinto(s.ua), // nunca el mismo arquetipo dos veces seguidas
-    }));
+    setSorteo((s) =>
+      sorteoRespetandoBloqueos(
+        s,
+        {
+          paleta: resolverPaleta(PALETA_ALEATORIA),
+          gafas: resolverGafas(GAFAS_ALEATORIAS),
+          badge: resolverBadge(BADGE_ALEATORIO),
+          u: Math.random(),
+          up: Math.random(),
+          ua: sorteoArquetipoDistinto(s.ua), // nunca el mismo arquetipo dos veces seguidas
+        },
+        locks,
+        { paleta: "paleta", gafas: "gafas", badge: "badge", u: "accesorio", ua: "arquetipo" },
+      ),
+    );
 
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) => {
     setForm((f) => ({ ...f, [key]: value }));
@@ -297,15 +333,25 @@ export default function Home() {
   const gafasEf = form.gafas === GAFAS_ALEATORIAS ? sorteo.gafas : form.gafas;
   const badgeEf = form.badge === BADGE_ALEATORIO ? sorteo.badge : form.badge;
   const accesorioEf = resolverAccesorio(form.accesorio, form.profesion, sorteo.u);
-  const cabelloEf = resolverCabello(form.cabello, form.genero, sorteo.uc);
-  const rasgosEf = resolverRasgo(RASGOS, form.rasgos, form.genero, sorteo.ur);
-  const arquetipoEf = resolverArquetipo(form.arquetipo, sorteo.ua);
+  const modoArq = form.modoPersonaje === "Arquetipo listo";
+  // Modo «Arquetipo listo»: el arquetipo lo define todo. Modo «Personalizar»: no hay arquetipo.
+  const arquetipoEf = modoArq ? resolverArquetipo(form.arquetipo, sorteo.ua) : ARQUETIPO_NINGUNO;
+  const arq = ARQUETIPOS[arquetipoEf];
+  // Single source of truth: con arquetipo, estos campos se DERIVAN de él; es imposible enviar contradicciones
+  const generoEf = arq ? arq.genero : form.genero;
+  const edadEf = arq ? arq.edad : form.edad;
+  const etniaEf = arq ? arq.etnia : form.etnia;
+  const nivel = nivelPlano(form.plano);
+  // Personalización concreta (modo «Personalizar»): lo elegido a mano se respeta, lo aleatorio es armónico
+  const persEf = useMemo(
+    () => resolverPersonaje(listas, form.pers, { genero: generoEf, edad: edadEf, etnia: etniaEf }, form.modoRostro, sorteo.up),
+    [listas, form.pers, generoEf, edadEf, etniaEf, form.modoRostro, sorteo.up],
+  );
 
 
 
   // Manos mostradas: con cable o teléfono, una mano conserva el gesto y la otra sostiene el accesorio
-  const acc = ACCESORIOS[accesorioEf];
-  const manosMostradas = acc?.unaMano ? `${MANO_LIBRE_ES} + ${acc.corto}` : perfil.manos;
+  const manosMostradas = cerebroPostura(accesorioEf).manosEs;
 
   // Si se elige un par de gafas, la vestimenta del perfil no las incluye (el prompt las quita para no duplicarlas)
   const vestimenta =
@@ -315,24 +361,31 @@ export default function Home() {
 
   // Autogeneración reactiva: el prompt se recalcula en cada render en que cambia CUALQUIER variable del
   // formulario (error, gafas, paleta, badge, perfil…). useMemo lo deriva sin estado extra ni render de más.
-  const live = useMemo<GeneratedPrompt | null>(() => {
-    if (!form.modelo.trim() || !errorFinal) return null; // faltan datos obligatorios
-    return generatePrompt(
-      {
+  // Entrada común del prompt de Gemini y del prompt de la API de imágenes (null si faltan datos obligatorios)
+  const entrada = useMemo<PromptInput | null>(() => {
+    if (!form.modelo.trim() || !errorFinal) return null;
+    return {
         ...form,
+        genero: generoEf,
+        edad: edadEf,
+        etnia: etniaEf,
         catalogo,
         paleta: paletaEf,
         gafas: gafasEf,
         badge: badgeEf,
         accesorio: accesorioEf,
-        cabello: cabelloEf,
-        rasgos: rasgosEf,
+        personaje: persEf,
+        listas,
         arquetipo: arquetipoEf,
         error: errorFinal,
-      },
-      { baseUrl: baseUrl() },
-    );
-  }, [form, catalogo, errorFinal, paletaEf, gafasEf, badgeEf, accesorioEf, cabelloEf, rasgosEf, arquetipoEf]);
+    };
+  }, [form, catalogo, errorFinal, paletaEf, gafasEf, badgeEf, accesorioEf, persEf, listas, arquetipoEf, generoEf, edadEf, etniaEf]);
+
+  // Prompt para copiar a Gemini (formato de siempre)
+  const live = useMemo<GeneratedPrompt | null>(
+    () => (entrada ? generatePrompt(entrada, { baseUrl: baseUrl() }) : null),
+    [entrada],
+  );
 
   // Alternar candado: al bloquear una opción «Aleatorio» se fija el valor sorteado en ese momento
   function toggleLock(key: string) {
@@ -344,16 +397,41 @@ export default function Home() {
       paleta: [PALETA_ALEATORIA, paletaEf],
       badge: [BADGE_ALEATORIO, badgeEf],
       accesorio: [ACCESORIO_ALEATORIO, accesorioEf],
-      cabello: [ALEATORIO_RASGO, cabelloEf],
-      rasgos: [ALEATORIO_RASGO, rasgosEf],
       arquetipo: [ARQUETIPO_ALEATORIO, arquetipoEf],
     };
     const f = fijo[key];
     if (f && form[key as keyof FormState] === f[0]) setForm((x) => ({ ...x, [key]: f[1] }));
+    // Campos del personaje («pers.forma», «pers.ojosColor»…): al bloquear «Aleatorio» se fija el valor sorteado
+    if (key.startsWith("pers.")) {
+      const c = key.slice(5) as CampoLista;
+      if (form.pers[c] === ALEATORIO && persEf[c]) setForm((x) => ({ ...x, pers: { ...x.pers, [c]: persEf[c] } }));
+    }
   }
   const lockProps = (key: string) => ({ locked: !!locks[key], onToggleLock: () => toggleLock(key) });
 
 
+
+  // Selector de un campo del personaje (con «Aleatorio», candado y el valor sorteado debajo)
+  function campoPers(campo: CampoLista, clase = "", desactivado = false) {
+    const opciones = opcionesMenu(listas, campo);
+    const valor = opciones.includes(form.pers[campo]) ? form.pers[campo] : ALEATORIO;
+    return (
+      <div key={campo} className={clase}>
+        <SelectField
+          id={`pers-${campo}`}
+          label={NOMBRE_LISTA[campo]}
+          value={valor}
+          options={opciones}
+          onChange={(v) => set("pers", { ...form.pers, [campo]: v })}
+          disabled={desactivado}
+          {...lockProps(`pers.${campo}`)}
+        />
+        {valor === ALEATORIO && !desactivado && persEf[campo] && (
+          <p className="mt-1 text-xs text-muted-foreground">Sorteado ahora: {persEf[campo]}</p>
+        )}
+      </div>
+    );
+  }
 
   // Valida los campos obligatorios para el lote al azar
   function validate() {
@@ -370,17 +448,8 @@ export default function Home() {
 
   // Cambia al azar los campos variables (etnia, profesión y su perfil, marco, badge); el prompt se actualiza solo
   function randomizeFields() {
-    setForm((f) => {
-      const r = randomVariables(profesiones);
-      for (const k of Object.keys(r) as (keyof typeof r)[]) if (locks[k]) delete r[k]; // bloqueado: no cambia
-      return {
-        ...f,
-        ...r,
-        // si el menú está en "Aleatorio" se conserva esa opción (se re-sortea); si no, se cambia a una concreta
-        badge: locks.badge || f.badge === BADGE_ALEATORIO ? f.badge : (r.badge ?? f.badge),
-        paleta: locks.paleta || f.paleta === PALETA_ALEATORIA ? f.paleta : (r.paleta ?? f.paleta),
-      };
-    });
+    // las variables bloqueadas no cambian; badge y paleta en «Aleatorio» conservan esa opción (se re-sortean aparte)
+    setForm((f) => aplicarAzar(f, randomVariables(profesiones), locks, BADGE_ALEATORIO, PALETA_ALEATORIA));
     sortear(); // si paleta, gafas o badge están en "Aleatorio", se vuelven a sortear
   }
 
@@ -412,7 +481,7 @@ export default function Home() {
       if (locks.profesion) r.profesion = form.profesion;
       if (locks.marco) r.marco = form.marco as typeof r.marco;
       // Arquetipo físico: distinto del anterior en cada prompt del lote (salvo candado o «Ninguno»)
-      const arq = locks.arquetipo ? arquetipoEf : resolverArquetipo(form.arquetipo, uArq);
+      const arqLote = !modoArq ? ARQUETIPO_NINGUNO : locks.arquetipo ? arquetipoEf : resolverArquetipo(form.arquetipo, uArq);
       uArq = sorteoArquetipoDistinto(uArq);
       prompts.push(
         generatePrompt(
@@ -424,9 +493,10 @@ export default function Home() {
             gafas: locks.gafas ? gafasEf : resolverGafas(form.gafas),
             badge: locks.badge ? badgeEf : resolverBadge(BADGE_ALEATORIO), // el lote siempre lleva un badge real
             accesorio: locks.accesorio ? accesorioEf : resolverAccesorio(form.accesorio, r.profesion), // según el perfil de ese prompt
-            cabello: locks.cabello ? cabelloEf : resolverCabello(ALEATORIO_RASGO, r.genero), // identidad única por prompt
-            rasgos: locks.rasgos ? rasgosEf : resolverRasgo(RASGOS, ALEATORIO_RASGO, r.genero),
-            arquetipo: arq,
+            listas,
+            // Personalización armónica propia de cada prompt (género, edad y etnia ya vienen en `r`)
+            personaje: resolverPersonaje(listas, form.pers, { genero: r.genero, edad: r.edad, etnia: r.etnia }, form.modoRostro),
+            arquetipo: arqLote,
             error: errorFinal,
           },
           { baseUrl: baseUrl() },
@@ -468,22 +538,47 @@ export default function Home() {
   async function downloadZip() {
     const items = batch.filter((g) => g.promptText.trim());
     if (!items.length) return;
-    const prompts = items.map((g) => g.promptText.trim());
     try {
       // Se carga solo al usarlo para no aumentar el peso inicial de la página
       const { default: JSZip } = await import("jszip");
       const zip = new JSZip();
-      const width = Math.max(2, String(prompts.length).length);
-      const manifest = prompts.map((p, i) => {
-        const file = `prompt-${String(i + 1).padStart(width, "0")}.txt`;
-        zip.file(file, `${p}\n`);
-        // Qué imagen de error corresponde a cada prompt
-        return { file, errorImageUrl: items[i].errorImageUrl };
-      });
+      const nombres = nombresLote(items);
+      let imagenes = 0;
+      let sinCopiar = 0;
+      const manifest = [];
+      for (let i = 0; i < items.length; i++) {
+        const it = items[i];
+        const n = nombres[i];
+        zip.file(n.txt, `${it.promptText.trim()}
+`);
+        if (n.api) zip.file(n.api, `${it.promptApi}
+`);
+        // Imagen generada: se convierte a PNG; si el navegador no deja copiarla, queda solo su dirección en el manifest
+        let imagen: string | null = null;
+        if (n.imagen && it.imagenUrl) {
+          try {
+            zip.file(n.imagen, await urlAPng(it.imagenUrl));
+            imagen = n.imagen;
+            imagenes++;
+          } catch {
+            sinCopiar++;
+          }
+        }
+        // Qué imagen de error corresponde a cada prompt (y qué imagen generada, si la hay)
+        manifest.push({
+          file: n.txt,
+          apiPromptFile: n.api ?? null,
+          etiqueta: it.etiqueta ?? null,
+          errorImageUrl: it.errorImageUrl,
+          imagen,
+          imagenUrl: imagen ? null : it.imagenUrl?.startsWith("https://") ? it.imagenUrl : null,
+        });
+      }
       zip.file("manifest.json", JSON.stringify(manifest, null, 2));
       const blob = await zip.generateAsync({ type: "blob", compression: "DEFLATE" });
       saveBlob(blob, `prompts-${new Date().toISOString().slice(0, 10)}.zip`);
-      toast.success(`ZIP descargado (${prompts.length} archivos .txt + manifest.json)`);
+      toast.success(`ZIP descargado (${items.length} prompts${imagenes ? ` + ${imagenes} imágenes` : ""} + manifest.json)`);
+      if (sinCopiar) toast.message(`${sinCopiar} imagen(es) no se pudieron copiar al ZIP: su dirección quedó en manifest.json`);
     } catch {
       toast.error("No se pudo crear el ZIP");
     }
@@ -541,7 +636,10 @@ export default function Home() {
                 {mostrarEditor ? "Cerrar editor de menús" : "⚙ Editar menús del panel maestro"}
               </Button>
               {mostrarEditor && (
-                <CatalogEditor catalogo={catalogo} personalizado={personalizado} onChange={guardarCatalogo} />
+                <>
+                  <CatalogEditor catalogo={catalogo} personalizado={personalizado} onChange={guardarCatalogo} />
+                  <ListsEditor listas={listas} modificadas={modificadas} onGuardar={guardarLista} />
+                </>
               )}
             </div>
             <form onSubmit={(e) => e.preventDefault()} className="space-y-4">
@@ -592,69 +690,100 @@ export default function Home() {
                 description="Quién aparece en la miniatura."
               >
                 <SelectField
-                  id="arquetipo"
-                  label="Arquetipo físico (persona única)"
-                  value={form.arquetipo}
-                  options={ARQUETIPO_OPCIONES}
-                  onChange={(v) => set("arquetipo", v)}
+                  id="modoPersonaje"
+                  label="Modo del personaje"
+                  value={form.modoPersonaje}
+                  options={MODOS_PERSONAJE}
+                  onChange={(v) => set("modoPersonaje", v as FormState["modoPersonaje"])}
                   className="md:col-span-2"
-                  {...lockProps("arquetipo")}
                 />
-                <p className="-mt-2 text-xs text-muted-foreground md:col-span-2">
-                  {arquetipoEf in ARQUETIPOS ? (
-                    <>
-                      Arquetipo activo: <strong>{arquetipoEf}</strong>. Define género, etnia, edad, cabello y rostro; los
-                      selectores de abajo se ignoran. Elige «Ninguno» para usarlos.
-                    </>
-                  ) : (
-                    "Sin arquetipo: se usan los selectores manuales de género, edad, etnia, cabello y rasgos."
-                  )}
-                </p>
-                <SelectField
-                  id="genero"
-                  label="Género"
-                  value={form.genero}
-                  options={GENEROS}
-                  onChange={(v) => set("genero", v as FormState["genero"])}
-                  {...lockProps("genero")}
-                />
-                <SelectField
-                  id="edad"
-                  label="Edad"
-                  value={form.edad}
-                  options={EDADES}
-                  onChange={(v) => set("edad", v as FormState["edad"])}
-                  {...lockProps("edad")}
-                />
-                <SelectField
-                  id="etnia"
-                  label="Etnia"
-                  value={form.etnia}
-                  options={ETNIAS}
-                  onChange={(v) => set("etnia", v as FormState["etnia"])}
-                  className="md:col-span-2"
-                  {...lockProps("etnia")}
-                />
-                <SelectField
-                  id="cabello"
-                  label="Cabello"
-                  value={form.cabello}
-                  options={CABELLO_OPCIONES}
-                  onChange={(v) => set("cabello", v)}
-                  {...lockProps("cabello")}
-                />
-                <SelectField
-                  id="rasgos"
-                  label="Rasgos faciales"
-                  value={form.rasgos}
-                  options={RASGOS_OPCIONES}
-                  onChange={(v) => set("rasgos", v)}
-                  {...lockProps("rasgos")}
-                />
-                {(form.cabello === ALEATORIO_RASGO || form.rasgos === ALEATORIO_RASGO) && (
-                  <p className="-mt-2 text-xs text-muted-foreground md:col-span-2">
-                    Sorteado ahora: {cabelloLegible(cabelloEf)} · {rasgosEf}. Cada generación rota género, edad, etnia, cabello y rasgos.
-                  </p>
+                {modoArq ? (
+                  <>
+                    <SelectField
+                      id="arquetipo"
+                      label="Arquetipo físico (persona única)"
+                      value={form.arquetipo}
+                      options={ARQUETIPO_OPCIONES}
+                      onChange={(v) => set("arquetipo", v)}
+                      className="md:col-span-2"
+                      {...lockProps("arquetipo")}
+                    />
+                    {arq && (
+                      <p className="-mt-2 text-xs text-muted-foreground md:col-span-2">
+                        Arquetipo activo: <strong>{arquetipoEf}</strong> — {arq.genero}, {arq.origen?.es ?? arq.etnia}, {arq.edad} ({arq.edadAnios.replace(" to ", "-")} años). {arq.cabello.es}. {arq.rasgosEs}. {arq.cuerpo.es}
+                        {nivel === "detalle" ? " (el plano detalle no muestra el cuerpo)" : nivel === "primer" ? " (el primer plano solo muestra los hombros)" : ""}.
+                        El arquetipo define todo; para elegir cada rasgo usa el modo «Personalizar».
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <SelectField
+                      id="genero"
+                      label="Género"
+                      value={form.genero}
+                      options={GENEROS}
+                      onChange={(v) => set("genero", v as FormState["genero"])}
+                      {...lockProps("genero")}
+                    />
+                    <SelectField
+                      id="edad"
+                      label="Edad"
+                      value={form.edad}
+                      options={EDADES}
+                      onChange={(v) => set("edad", v as FormState["edad"])}
+                      {...lockProps("edad")}
+                    />
+                    <SelectField
+                      id="etnia"
+                      label="Etnia"
+                      value={form.etnia}
+                      options={ETNIAS}
+                      onChange={(v) => set("etnia", v as FormState["etnia"])}
+                      className="md:col-span-2"
+                      {...lockProps("etnia")}
+                    />
+                    <SelectField
+                      id="modoRostro"
+                      label="Rostro"
+                      value={form.modoRostro}
+                      options={MODOS_ROSTRO}
+                      onChange={(v) => set("modoRostro", v as ModoRostro)}
+                      className="md:col-span-2"
+                    />
+                    {form.modoRostro === "Estilo predefinido" ? (
+                      <>
+                        {campoPers("estilo", "md:col-span-2")}
+                        <p className="-mt-2 text-xs text-muted-foreground md:col-span-2">
+                          El estilo rellena forma, ojos, cejas, nariz y labios automáticamente.
+                        </p>
+                        {CAMPOS_FORMA.map((c) => (
+                          <ReadOnlyField key={c} id={`ro-${c}`} label={NOMBRE_LISTA[c]} value={persEf[c]} />
+                        ))}
+                      </>
+                    ) : (
+                      CAMPOS_FORMA.map((c) => campoPers(c))
+                    )}
+                    {campoPers("ojosColor")}
+                    {campoPers("cabelloColor")}
+                    {campoPers("cabelloTipo")}
+                    {campoPers("cabelloLargo")}
+                    {generoEf !== "Mujer" && campoPers("vello")}
+                    {campoPers("complexion", "", nivel !== "medio")}
+                    {campoPers("hombros", "", nivel === "detalle")}
+                    {nivel !== "medio" && (
+                      <p className="-mt-2 text-xs text-muted-foreground md:col-span-2">
+                        {nivel === "detalle"
+                          ? "Plano detalle: solo rostro y manos, el cuerpo está desactivado."
+                          : "Primer plano: cabeza, cuello y hombros; la complexión está desactivada."}
+                      </p>
+                    )}
+                    {avisosCoherencia(listas, persEf, { genero: generoEf, edad: edadEf, etnia: etniaEf }).map((aviso) => (
+                      <p key={aviso} className="text-xs text-amber-500 md:col-span-2">
+                        Aviso: {aviso}
+                      </p>
+                    ))}
+                  </>
                 )}
                 <SelectField
                   id="gafas"
@@ -665,25 +794,45 @@ export default function Home() {
                   className="md:col-span-2"
                   {...lockProps("gafas")}
                 />
+                <p className="-mt-2 text-xs text-muted-foreground md:col-span-2">
+                  De pasta gruesa (estilo vidIQ): azules, rojas, amarillas, verde gamer o retro. Elegantes de montura metálica fina:
+                  doradas o plateadas.
+                </p>
                 {form.gafas === GAFAS_ALEATORIAS && (
                   <p className="-mt-2 text-xs text-muted-foreground md:col-span-2">
                     Sorteadas ahora: {gafasEf}. Se sortean de nuevo en cada cambio de menú (puede salir «Ninguna»).
                   </p>
                 )}
                 <SelectField
-                  id="accesorio"
-                  label="Accesorio en las manos"
-                  value={form.accesorio}
-                  options={ACCESORIOS_OPCIONES}
-                  onChange={(v) => set("accesorio", v)}
+                  id="postura"
+                  label="Postura de las manos"
+                  value={posturaDe(form.accesorio)}
+                  options={POSTURA_OPCIONES}
+                  onChange={(v) => set("accesorio", accesorioDePostura(v, form.accesorio))}
                   className="md:col-span-2"
                   {...lockProps("accesorio")}
                 />
-                {form.accesorio === ACCESORIO_ALEATORIO && (
-                  <p className="-mt-2 text-xs text-muted-foreground md:col-span-2">
-                    Sorteado ahora ({form.profesion}): {ACCESORIOS[accesorioEf].corto}. Se sortea de nuevo en cada cambio de menú.
-                  </p>
-                )}
+                <SelectField
+                  id="accesorio"
+                  label="Accesorio en la mano"
+                  value={posturaDe(form.accesorio) === POSTURA_ACCESORIO ? form.accesorio : ACCESORIOS_MANO.includes(accesorioEf) ? accesorioEf : ACCESORIO_NINGUNO}
+                  options={[ACCESORIO_NINGUNO, ...ACCESORIOS_MANO]}
+                  onChange={(v) => v !== ACCESORIO_NINGUNO && set("accesorio", v)}
+                  disabled={posturaDe(form.accesorio) !== POSTURA_ACCESORIO}
+                  className="md:col-span-2"
+                />
+                <p className="-mt-2 text-xs text-muted-foreground md:col-span-2">
+                  {posturaDe(form.accesorio) === POSTURA_CABEZA &&
+                    "Manos a la cabeza: las dos manos van a los lados de la cabeza; el accesorio queda forzado a «Ninguno» y bloqueado."}
+                  {posturaDe(form.accesorio) === POSTURA_IMPRESORA &&
+                    "Las dos manos tocan la misma impresora del modelo seleccionado (sobre la mesa, lejos de las esquinas inferiores); el accesorio queda forzado a «Ninguno» y bloqueado."}
+                  {posturaDe(form.accesorio) === POSTURA_ESCRIBIENDO &&
+                    "Las dos manos escriben en una laptop abierta sobre la mesa (lejos de las esquinas inferiores); el personaje mira al vacío, no al teclado. El accesorio queda forzado a «Ninguno» y bloqueado."}
+                  {posturaDe(form.accesorio) === POSTURA_ALEATORIA &&
+                    `Sorteado ahora (${form.profesion}): ${ACCESORIOS[accesorioEf].corto}. La postura de ambas manos se decide automáticamente.`}
+                  {posturaDe(form.accesorio) === POSTURA_ACCESORIO &&
+                    "Una mano sostiene el accesorio y la otra descansa o gesticula; tocarse la cabeza o la cara está prohibido."}
+                </p>
               </Block>
 
               <Block
@@ -703,7 +852,7 @@ export default function Home() {
                 <ReadOnlyField id="vestimenta" label="Vestimenta" value={vestimenta} {...lockProps("profesion")} />
                 <ReadOnlyField id="emocion" label="Emociones" value={perfil.emocion} {...lockProps("profesion")} />
                 <ReadOnlyField id="mirada" label="Mirada" value={MIRADA_ES} />
-                <ReadOnlyField id="manos" label="Manos" value={manosMostradas} {...lockProps("profesion")} />
+                <ReadOnlyField id="manos" label="Manos (según accesorio)" value={manosMostradas} />
                 <div className="md:col-span-2">
                   <ReadOnlyField id="fondo" label="Fondo estructural" value={perfil.fondo} {...lockProps("profesion")} />
                 </div>
@@ -835,6 +984,11 @@ export default function Home() {
             <Button variant="secondary" className="w-full" onClick={copy} disabled={!live}>
               Copiar al portapapeles
             </Button>
+            <ImageGenerator
+              entrada={entrada}
+              bloqueos={{ paleta: !!locks.paleta, badge: !!locks.badge }}
+              onAgregarAlLote={(items) => setBatch((b) => [...b, ...items])}
+            />
             <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
               <Button
                 variant="outline"
@@ -852,7 +1006,7 @@ export default function Home() {
                 disabled={!batch.length}
               >
                 <FileArchive className="size-4" />
-                Descargar ZIP (.txt separados)
+                Descargar ZIP (.txt + imágenes)
               </Button>
               <Button variant="ghost" onClick={() => setBatch([])} disabled={!batch.length}>
                 <Trash2 className="size-4" />

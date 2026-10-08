@@ -9,6 +9,86 @@ export type Cambio = {
 
 export const CHANGELOG: Cambio[] = [
   {
+    version: "3.4.0",
+    fecha: "2026-10-08",
+    titulo: "10 arquetipos de mujeres latinas de 20 a 30 años",
+    cambios: [
+      "Diez arquetipos nuevos de mujeres de 20 a 30 años de países distintos: México, Colombia (costa Caribe), Argentina, Chile, Perú, Venezuela, Cuba, Brasil, Ecuador y Costa Rica.",
+      "Cada una es diferente en cabello, rostro, ojos, piel y cuerpo, con belleza natural y armónica (atractivas pero reales, con textura de piel realista).",
+      "El prompt nombra el país de origen en lugar de una etnia genérica. Ahora hay 30 arquetipos.",
+    ],
+  },
+  {
+    version: "3.3.0",
+    fecha: "2026-10-08",
+    titulo: "Postura: escribiendo en una laptop",
+    cambios: [
+      "Nueva postura «Escribiendo en una laptop»: las dos manos teclean en UNA laptop abierta sobre la mesa, a la derecha-centro del encuadre y lejos de las esquinas inferiores, con la tapa lisa y sin logos.",
+      "El personaje escribe mientras mira aterrado al espacio vacío; la mirada nunca va al teclado ni a la pantalla.",
+      "El accesorio queda forzado a «Ninguno» y bloqueado; el sorteo «según perfil» reparte ahora entre 7 opciones.",
+    ],
+  },
+  {
+    version: "3.2.0",
+    fecha: "2026-10-08",
+    titulo: "Gafas elegantes metálicas",
+    cambios: [
+      "Nuevas gafas elegantes de montura metálica fina: doradas y plateadas, como alternativa sobria a las de pasta gruesa estilo vidIQ.",
+      "El sorteo «Aleatorio» incluye ahora los 7 estilos (o ninguna).",
+      "Las gafas del prompt de la API ahora van en inglés, con cristales claros para que los ojos se vean siempre y sin logos en la montura.",
+    ],
+  },
+  {
+    version: "3.1.0",
+    fecha: "2026-10-08",
+    titulo: "Más accesorios: portátil, tablet y manos en la impresora",
+    cambios: [
+      "Nuevos accesorios en la mano: portátil (cerrado, junto al pecho) y tablet (con la pantalla encendida, junto al pecho).",
+      "Nueva postura «Ambas manos en la impresora»: las dos manos tocan la MISMA impresora del modelo seleccionado, sobre la mesa y lejos de las esquinas inferiores (la única impresora que se ve de cerca; las demás siguen al fondo).",
+      "Mismas reglas anatómicas: una mano sostiene el objeto y la otra descansa o gesticula; prohibido tocarse la cabeza o la cara.",
+      "El sorteo «según perfil» reparte ahora entre 6 opciones (los perfiles técnicos tienden al cable, al portátil y a las manos en la impresora).",
+      "La mirada sigue prohibida hacia cualquier accesorio.",
+    ],
+  },
+  {
+    version: "3.0.0",
+    fecha: "2026-10-08",
+    titulo: "De generador de prompts a generador de miniaturas",
+    cambios: [
+      "Generación de imágenes 16:9 por API (fal.ai) con 4 modelos a elegir: GPT Image 2, Nano Banana Pro, Seedream 5.0 Pro y FLUX.2 Pro, con costo aproximado a la vista y descarga en PNG.",
+      "Modo simulación sin costo cuando no hay clave FAL_KEY, para probar toda la interfaz.",
+      "Prompt para la API en inglés, sin porcentajes (la mirada se describe con el espacio), con interruptor «Texto 3D dentro de la imagen» y restricciones negativas al final. El prompt para Gemini se conserva.",
+      "Bloque 2 rediseñado: «Arquetipo listo» (20 arquetipos de 20 a 70 años) o «Personalizar» (estilo facial o detalle completo: rostro, ojos, cejas, nariz, labios, cabello, vello, complexión y hombros), con validador de armonía y cuerpo según el plano (siempre de la cintura hacia arriba).",
+      "Listas del personaje editables desde «Editar menús del panel maestro».",
+      "Foto de referencia del personaje (Nano Banana Pro y FLUX.2 Pro), referencias guardadas e historial local de miniaturas.",
+      "Variantes A/B para «Probar y comparar» de YouTube Studio: pánico, sorpresa y alivio, con paleta y badge distintos (respetan los candados) y confirmación antes de gastar dinero real.",
+      "El lote (ZIP) puede incluir las imágenes generadas y el prompt enviado a la API.",
+      "Pruebas automáticas con Vitest (60 pruebas).",
+    ],
+  },
+  {
+    version: "2.0.0",
+    fecha: "2026-10-08",
+    titulo: "Motor de arquetipos paramétricos y sincronización estricta",
+    cambios: [
+      "Arquetipos estructurados (id, género, etnia, edad, cabello y rasgos faciales: forma de cara, ojos, cejas, nariz y boca) como fuente única de verdad.",
+      "Con un arquetipo activo (manual o con el azar), Género, Edad, Etnia, Cabello y Rasgos se sincronizan y se muestran bloqueados: no puede haber contradicciones.",
+      "Nuevo selector «Postura de las manos»: con «Manos a la cabeza» el accesorio se fuerza a «Ninguno» y se bloquea; con accesorio, solo cable USB o celular.",
+      "El prompt compone el personaje con todos los rasgos del arquetipo (cara, ojos, cejas, nariz y boca).",
+    ],
+  },
+  {
+    version: "1.10.0",
+    fecha: "2026-10-08",
+    titulo: "Cerebro de Postura (anatomía exacta de 2 manos)",
+    cambios: [
+      "Máquina de estados mutuamente excluyente: celular → una mano lo sostiene abajo y la otra se apoya o gesticula; cable USB → una mano lo sostiene frente a la cámara y la otra descansa; manos a la cabeza → las dos a los lados de la cabeza y sin accesorio.",
+      "Prohibido llevar una mano a la cabeza, nariz, ojos o rostro cuando hay un objeto en la mano.",
+      "Los gestos de manos por profesión ya no se usan en el prompt: la postura la decide solo el accesorio (campo «Manos» ahora refleja la postura).",
+      "Regla de oro de anatomía: exactamente dos brazos y dos manos, cero extras ni duplicaciones.",
+    ],
+  },
+  {
     version: "1.9.0",
     fecha: "2026-10-08",
     titulo: "Banco de 12 arquetipos físicos aleatorios",

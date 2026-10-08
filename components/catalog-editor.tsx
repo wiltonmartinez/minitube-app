@@ -14,13 +14,11 @@ type Catalogo = Record<string, Perfil>;
 const CAMPOS_ES: { k: "vestimenta" | "emocion" | "manos" | "manos1" | "fondo"; label: string }[] = [
   { k: "vestimenta", label: "Vestimenta (visible)" },
   { k: "emocion", label: "Emoción (visible)" },
-  { k: "manos", label: "Manos, dos manos (visible)" },
   { k: "fondo", label: "Fondo estructural (visible)" },
 ];
 const CAMPOS_EN: { k: "role" | "emotion" | "hands" | "hands1" | "scene" | "props"; label: string }[] = [
   { k: "role", label: "Profesión (EN, p. ej. «corporate assistant»)" },
   { k: "emotion", label: "Emoción (EN)" },
-  { k: "hands", label: "Manos, dos manos (EN)" },
   { k: "scene", label: "Escena de fondo (EN)" },
   { k: "props", label: "Detalles del lugar de trabajo (EN)" },
 ];
