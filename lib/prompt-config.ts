@@ -823,14 +823,30 @@ export const GAFAS: Record<string, string> = {
   "Amarillas llamativas": "Lleva puestas unas gafas de pasta gruesa de color amarillo intenso.",
   "Verde Gamer": "Lleva puestas unas gafas de pasta gruesa de color verde fluorescente.",
   "Retro Gruesas": "Lleva puestas unas gafas grandes de estilo retro con montura negra muy gruesa.",
+  // Elegantes de montura metálica fina (alternativa sobria a las de pasta)
+  "Elegantes metálicas doradas": "Lleva puestas unas gafas elegantes de montura metálica fina de color dorado pulido.",
+  "Elegantes metálicas plateadas": "Lleva puestas unas gafas elegantes de montura metálica fina de color plateado pulido.",
 };
-// Estilos de montura gruesa llamativa (todo menos "Ninguna")
+
+// Lo mismo en inglés para el prompt de la API (todo en inglés). Los cristales son claros para que los ojos se vean siempre.
+const LENTES_CLAROS_EN = "The lenses are clear and non-reflective so the eyes stay fully visible, and the frames carry no logos or text.";
+export const GAFAS_EN: Record<string, string> = {
+  Ninguna: "",
+  "Azules vidIQ": `The character wears very thick, bright electric-blue plastic-framed glasses. ${LENTES_CLAROS_EN}`,
+  "Rojas vibrantes": `The character wears thick neon-red plastic-framed glasses. ${LENTES_CLAROS_EN}`,
+  "Amarillas llamativas": `The character wears thick, intense yellow plastic-framed glasses. ${LENTES_CLAROS_EN}`,
+  "Verde Gamer": `The character wears thick, fluorescent green plastic-framed glasses. ${LENTES_CLAROS_EN}`,
+  "Retro Gruesas": `The character wears large retro-style glasses with very thick black plastic frames. ${LENTES_CLAROS_EN}`,
+  "Elegantes metálicas doradas": `The character wears elegant glasses with thin, polished gold metal frames. ${LENTES_CLAROS_EN}`,
+  "Elegantes metálicas plateadas": `The character wears elegant glasses with thin, polished silver metal frames. ${LENTES_CLAROS_EN}`,
+};
+// Estilos de gafas: 5 de pasta gruesa llamativa + 2 elegantes metálicas (todo menos "Ninguna")
 export const GAFAS_ESTILOS = Object.keys(GAFAS).filter((k) => GAFAS[k] !== "");
 
-// Opción dinámica: sortea entre los 5 estilos de montura gruesa Y también "Ninguna" (a veces sin gafas)
+// Opción dinámica: sortea entre los 7 estilos (de pasta y metálicas) Y también "Ninguna" (a veces sin gafas)
 export const GAFAS_ALEATORIAS = "🎲 Aleatorio";
 export const GAFAS_OPCIONES = [...Object.keys(GAFAS), GAFAS_ALEATORIAS];
-export const GAFAS_SORTEO = Object.keys(GAFAS); // 5 estilos + "Ninguna" (probabilidad uniforme)
+export const GAFAS_SORTEO = Object.keys(GAFAS); // 7 estilos + "Ninguna" (probabilidad uniforme)
 
 /** Devuelve unas gafas concretas: las elegidas o, si es "Aleatorio", una al azar de GAFAS_SORTEO (incluye "Ninguna"). */
 export function resolverGafas(seleccion: string, rnd: () => number = Math.random): string {
@@ -1262,7 +1278,7 @@ function preparar(i: PromptInput, referencia = false) {
         nivel,
       );
   return {
-    perfil, arq, mujer, printer, errorText, marco, plano, gafasText, postura, color1, color2, color3, badge, badgeSentence, personaje, rasgosExtra,
+    perfil, arq, mujer, printer, errorText, marco, plano, gafasText, gafasEn: GAFAS_EN[i.gafas] ?? "", postura, color1, color2, color3, badge, badgeSentence, personaje, rasgosExtra,
   };
 }
 
@@ -1392,7 +1408,7 @@ export function buildApiPrompt(i: PromptInput, opts: { texto3d: boolean; referen
           "Use the reference photos only for the identity of the person: copy the face, not the clothing, background, pose or expression of the photos. The final image keeps the framing, outfit, expression and hands described here.",
         ]
       : ["Every image shows a completely different person: a unique face and a unique facial structure."]),
-    ...(c.gafasText ? [c.gafasText] : []),
+    ...(c.gafasEn ? [c.gafasEn] : []),
     ...c.postura.reglasEn,
     miradaApi(i.emocion),
     ANATOMIA_API,

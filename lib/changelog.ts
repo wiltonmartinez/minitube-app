@@ -9,6 +9,16 @@ export type Cambio = {
 
 export const CHANGELOG: Cambio[] = [
   {
+    version: "3.2.0",
+    fecha: "2026-10-08",
+    titulo: "Gafas elegantes metálicas",
+    cambios: [
+      "Nuevas gafas elegantes de montura metálica fina: doradas y plateadas, como alternativa sobria a las de pasta gruesa estilo vidIQ.",
+      "El sorteo «Aleatorio» incluye ahora los 7 estilos (o ninguna).",
+      "Las gafas del prompt de la API ahora van en inglés, con cristales claros para que los ojos se vean siempre y sin logos en la montura.",
+    ],
+  },
+  {
     version: "3.1.0",
     fecha: "2026-10-08",
     titulo: "Más accesorios: portátil, tablet y manos en la impresora",

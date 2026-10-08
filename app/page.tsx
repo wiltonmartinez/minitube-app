@@ -793,6 +793,10 @@ export default function Home() {
                   className="md:col-span-2"
                   {...lockProps("gafas")}
                 />
+                <p className="-mt-2 text-xs text-muted-foreground md:col-span-2">
+                  De pasta gruesa (estilo vidIQ): azules, rojas, amarillas, verde gamer o retro. Elegantes de montura metálica fina:
+                  doradas o plateadas.
+                </p>
                 {form.gafas === GAFAS_ALEATORIAS && (
                   <p className="-mt-2 text-xs text-muted-foreground md:col-span-2">
                     Sorteadas ahora: {gafasEf}. Se sortean de nuevo en cada cambio de menú (puede salir «Ninguna»).
