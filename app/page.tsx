@@ -12,6 +12,7 @@ import { useCatalogo } from "@/lib/use-catalogo";
 import { ListsEditor } from "@/components/lists-editor";
 import { useListas } from "@/lib/use-listas";
 import { aplicarTodoAlAzar, sorteoRespetandoBloqueos } from "@/lib/azar";
+import { ARQUETIPOS_ALTA, PLANO_ALTA, PROFESIONES_ALTA, esPrioridadAlta } from "@/lib/prioridad";
 import {
   ALEATORIO,
   CAMPOS_FORMA,
@@ -52,6 +53,7 @@ import {
   ARQUETIPO_ALEATORIO,
   ARQUETIPO_OPCIONES,
   ARQUETIPOS,
+  ARQUETIPOS_LISTA,
   resolverArquetipo,
   sorteoArquetipoDistinto,
   cerebroPostura,
@@ -298,10 +300,27 @@ export default function Home() {
   const [mostrarEditor, setMostrarEditor] = useState(false);
   const [formBase, setForm] = useState<FormState>(INITIAL);
   // Si la profesión elegida ya no existe en el catálogo (editada/eliminada), se usa la primera
-  const form = useMemo(
-    () => (catalogo[formBase.profesion] ? formBase : { ...formBase, profesion: profesiones[0] }),
-    [formBase, catalogo, profesiones],
-  );
+  // PRIORIDAD ALTA (plotters F570, F571, T3170 y T3170X en el bloque 1): Seedream, plano detalle, mujer joven de 20 a 30 años
+  // y una profesión de gran formato. Se aplica sobre los valores efectivos; al cambiar de modelo se recuperan los elegidos.
+  const alta = esPrioridadAlta(formBase.modelo);
+  const profesionesAlta = useMemo(() => {
+    const permitidas = profesiones.filter((p) => (PROFESIONES_ALTA as readonly string[]).includes(p));
+    return permitidas.length ? permitidas : profesiones;
+  }, [profesiones]);
+  const profesionesEf = alta ? profesionesAlta : profesiones;
+  const poolArq: readonly string[] = alta ? ARQUETIPOS_ALTA : ARQUETIPOS_LISTA;
+  const form = useMemo(() => {
+    const f = catalogo[formBase.profesion] ? formBase : { ...formBase, profesion: profesiones[0] };
+    if (!alta) return f;
+    return {
+      ...f,
+      plano: PLANO_ALTA,
+      modoPersonaje: "Arquetipo listo" as const,
+      profesion: profesionesAlta.includes(f.profesion) ? f.profesion : profesionesAlta[0],
+      arquetipo: f.arquetipo === ARQUETIPO_ALEATORIO || ARQUETIPOS_ALTA.includes(f.arquetipo) ? f.arquetipo : ARQUETIPO_ALEATORIO,
+    };
+  }, [formBase, catalogo, profesiones, alta, profesionesAlta]);
+
   // Resultados generados, acumulados para descargar como lote (.txt o ZIP)
   const [batch, setBatch] = useState<LoteItem[]>([]);
   const [batchCount, setBatchCount] = useState("10");
@@ -328,7 +347,7 @@ export default function Home() {
           badge: resolverBadge(BADGE_ALEATORIO),
           u: Math.random(),
           up: Math.random(),
-          ua: sorteoArquetipoDistinto(s.ua), // nunca el mismo arquetipo dos veces seguidas
+          ua: sorteoArquetipoDistinto(s.ua, poolArq.length), // nunca el mismo arquetipo dos veces seguidas
         },
         locks,
         { paleta: "paleta", gafas: "gafas", badge: "badge", u: "accesorio", ua: "arquetipo" },
@@ -350,7 +369,7 @@ export default function Home() {
   const accesorioEf = resolverAccesorio(form.accesorio, form.profesion, sorteo.u);
   const modoArq = form.modoPersonaje === "Arquetipo listo";
   // Modo «Arquetipo listo»: el arquetipo lo define todo. Modo «Personalizar»: no hay arquetipo.
-  const arquetipoEf = modoArq ? resolverArquetipo(form.arquetipo, sorteo.ua) : ARQUETIPO_NINGUNO;
+  const arquetipoEf = modoArq ? resolverArquetipo(form.arquetipo, sorteo.ua, poolArq) : ARQUETIPO_NINGUNO;
   const arq = ARQUETIPOS[arquetipoEf];
   // Single source of truth: con arquetipo, estos campos se DERIVAN de él; es imposible enviar contradicciones
   const generoEf = arq ? arq.genero : form.genero;
@@ -392,9 +411,10 @@ export default function Home() {
         personaje: persEf,
         listas,
         arquetipo: arquetipoEf,
+        plotter: alta || undefined,
         error: errorFinal,
     };
-  }, [form, catalogo, errorFinal, paletaEf, gafasEf, badgeEf, accesorioEf, persEf, listas, arquetipoEf, generoEf, edadEf, etniaEf]);
+  }, [form, catalogo, errorFinal, paletaEf, gafasEf, badgeEf, accesorioEf, persEf, listas, arquetipoEf, generoEf, edadEf, etniaEf, alta]);
 
   // Prompt para copiar a Gemini (formato de siempre)
   const live = useMemo<GeneratedPrompt | null>(
@@ -463,7 +483,7 @@ export default function Home() {
 
   // «Generar al Azar»: TODO al azar salvo el bloque 1 (marca, modelo y error); los candados 🔒 no cambian
   function randomizeFields() {
-    setForm((f) => aplicarTodoAlAzar(f, azarTotal(profesiones), locks));
+    setForm((f) => aplicarTodoAlAzar(f, azarTotal(profesionesEf), locks));
     sortear(); // re-sortea gafas, postura, arquetipo, personaje, paleta y badge que estén en «Aleatorio»
   }
 
@@ -485,12 +505,19 @@ export default function Home() {
       return;
     }
     const prompts: GeneratedPrompt[] = [];
-    let uArq = sorteoArquetipoDistinto(sorteo.ua);
+    let uArq = sorteoArquetipoDistinto(sorteo.ua, poolArq.length);
     for (let n = 0; n < total; n++) {
-      const f = aplicarTodoAlAzar(form, azarTotal(profesiones), locks);
+      const f = aplicarTodoAlAzar(form, azarTotal(profesionesEf), locks);
+      if (alta) {
+        // prioridad alta: plano detalle, mujer joven (arquetipo del grupo) y profesión de gran formato, aunque haya candados
+        f.plano = PLANO_ALTA;
+        f.modoPersonaje = "Arquetipo listo";
+        if (!profesionesAlta.includes(f.profesion)) f.profesion = profesionesAlta[0];
+        if (f.arquetipo !== ARQUETIPO_ALEATORIO && !ARQUETIPOS_ALTA.includes(f.arquetipo)) f.arquetipo = ARQUETIPO_ALEATORIO;
+      }
       const conArquetipo = f.modoPersonaje === "Arquetipo listo";
-      const arquetipo = conArquetipo ? resolverArquetipo(f.arquetipo, uArq) : ARQUETIPO_NINGUNO; // distinto del anterior
-      uArq = sorteoArquetipoDistinto(uArq);
+      const arquetipo = conArquetipo ? resolverArquetipo(f.arquetipo, uArq, poolArq) : ARQUETIPO_NINGUNO; // distinto del anterior
+      uArq = sorteoArquetipoDistinto(uArq, poolArq.length);
       prompts.push(
         generatePrompt(
           {
@@ -507,6 +534,7 @@ export default function Home() {
             // Personalización armónica propia de cada prompt
             personaje: resolverPersonaje(listas, f.pers, { genero: f.genero, edad: f.edad, etnia: f.etnia }, f.modoRostro),
             arquetipo,
+            plotter: alta || undefined,
           },
           { baseUrl: baseUrl() },
         ),
@@ -672,6 +700,12 @@ export default function Home() {
                     value={form.modelo}
                     onChange={(e) => set("modelo", e.target.value)}
                   />
+                  {alta && (
+                    <p role="status" className="rounded-md border border-amber-500/60 bg-amber-500/10 p-2 text-xs text-amber-500">
+                      ⚡ <strong>Prioridad ALTA (plotter)</strong>: Seedream 5.0 Pro · Plano Detalle · mujer joven de 20 a 30 años ·
+                      profesión de gran formato (sublimación, vinilo o fotografía) · plotter de la marca en el fondo.
+                    </p>
+                  )}
                 </div>
                 <SelectField
                   id="error"
@@ -704,6 +738,7 @@ export default function Home() {
                   value={form.modoPersonaje}
                   options={MODOS_PERSONAJE}
                   onChange={(v) => set("modoPersonaje", v as FormState["modoPersonaje"])}
+                  disabled={alta}
                   className="md:col-span-2"
                   {...lockProps("modoPersonaje")}
                 />
@@ -713,7 +748,7 @@ export default function Home() {
                       id="arquetipo"
                       label="Arquetipo físico (persona única)"
                       value={form.arquetipo}
-                      options={ARQUETIPO_OPCIONES}
+                      options={alta ? [ARQUETIPO_ALEATORIO, ...ARQUETIPOS_ALTA] : ARQUETIPO_OPCIONES}
                       onChange={(v) => set("arquetipo", v)}
                       className="md:col-span-2"
                       {...lockProps("arquetipo")}
@@ -855,7 +890,7 @@ export default function Home() {
                   id="profesion"
                   label="Profesión"
                   value={form.profesion}
-                  options={profesiones}
+                  options={profesionesEf}
                   onChange={(v) => set("profesion", v as Profesion)}
                   className="md:col-span-2"
                   {...lockProps("profesion")}
@@ -880,6 +915,7 @@ export default function Home() {
                   value={form.plano}
                   options={PLANOS.map((p) => p.es)}
                   onChange={(v) => set("plano", v)}
+                  disabled={alta}
                   className="md:col-span-2"
                   {...lockProps("plano")}
                 />
@@ -1000,6 +1036,7 @@ export default function Home() {
             </Button>
             <ImageGenerator
               entrada={entrada}
+              modeloForzado={alta ? "seedream-5-pro" : undefined}
               bloqueos={{ paleta: !!locks.paleta, badge: !!locks.badge }}
               onAgregarAlLote={(items) => setBatch((b) => [...b, ...items])}
             />

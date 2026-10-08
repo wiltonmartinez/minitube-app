@@ -445,13 +445,12 @@ export const ARQUETIPO_NINGUNO = "Ninguno (usar selectores manuales)";
 export const ARQUETIPO_OPCIONES = [ARQUETIPO_ALEATORIO, ...ARQUETIPOS_LISTA];
 
 /** Arquetipo concreto: el elegido (o «Ninguno») o, si es «Aleatorio», el que corresponde a `u` en [0,1). */
-export function resolverArquetipo(seleccion: string, u: number = Math.random()): string {
+export function resolverArquetipo(seleccion: string, u: number = Math.random(), pool: readonly string[] = ARQUETIPOS_LISTA): string {
   if (seleccion !== ARQUETIPO_ALEATORIO) return seleccion;
-  return ARQUETIPOS_LISTA[Math.min(ARQUETIPOS_LISTA.length - 1, Math.floor(u * ARQUETIPOS_LISTA.length))];
+  return pool[Math.min(pool.length - 1, Math.floor(u * pool.length))];
 }
 /** Número de sorteo cuyo arquetipo es DISTINTO del anterior (evita repetir la misma persona dos veces seguidas). */
-export function sorteoArquetipoDistinto(uPrevio: number): number {
-  const n = ARQUETIPOS_LISTA.length;
+export function sorteoArquetipoDistinto(uPrevio: number, n: number = ARQUETIPOS_LISTA.length): number {
   const previo = Math.min(n - 1, Math.floor(uPrevio * n));
   const nuevo = (previo + 1 + Math.floor(Math.random() * (n - 1))) % n;
   return (nuevo + 0.5) / n;
@@ -1019,6 +1018,8 @@ export type PromptInput = {
   listas?: Listas;
   /** Emoción de una variante A/B (pánico, sorpresa o alivio). Si falta, manda la emoción del perfil. */
   emocion?: EmocionAB;
+  /** Equipo de gran formato (plotter): en el fondo desenfocado se ven plotters de la marca en vez de impresoras. */
+  plotter?: boolean;
   /** Arquetipo físico concreto (clave de ARQUETIPOS) o «Ninguno»: si existe, define por completo la apariencia. */
   arquetipo: string;
 };
@@ -1443,7 +1444,7 @@ export function buildPrompt(i: PromptInput): string {
 
   // Entorno contextual (Fondo Estructural del Bloque 3): detalles del trabajo de la profesión + impresoras reales de la
   // marca elegida al fondo desenfocado; el primer plano y el área de montaje (esquina inferior izquierda) quedan libres.
-  const setting = `The setting is ${perfil.en.scene}, with subtle but realistic details of the character's daily workplace in the soft-focus background, such as ${perfil.en.props}. On the desks and shelves of this blurred background there are also real, physical ${i.marca} printers (recognizable ${i.marca} printer silhouettes, slightly out of focus, with no legible logos or brand text on them), giving the immediate visual impression that the character is a customer who uses ${i.marca} printers in their daily work. ${postura.estado === "impresora" ? PROHIBICION_IMPRESORAS_MANOS : PROHIBICION_IMPRESORAS} ${AREA_MONTAJE_ES}`;
+  const setting = `The setting is ${perfil.en.scene}, with subtle but realistic details of the character's daily workplace in the soft-focus background, such as ${perfil.en.props}. ${i.plotter ? `In the blurred background there are also real, physical ${i.marca} large-format plotters (wide-format printers on their stands, recognizable ${i.marca} plotter silhouettes, slightly out of focus, with no legible logos or brand text on them), giving the immediate visual impression that the character is a customer who uses ${i.marca} large-format plotters in their daily work.` : `On the desks and shelves of this blurred background there are also real, physical ${i.marca} printers (recognizable ${i.marca} printer silhouettes, slightly out of focus, with no legible logos or brand text on them), giving the immediate visual impression that the character is a customer who uses ${i.marca} printers in their daily work.`} ${postura.estado === "impresora" ? PROHIBICION_IMPRESORAS_MANOS : PROHIBICION_IMPRESORAS} ${AREA_MONTAJE_ES}`;
 
   const sentences = [
     "Hyper-realistic cinematic photograph for a YouTube thumbnail in 16:9 widescreen on a 1920x1080 pixel canvas, shot on a full-frame camera with an 85mm lens, shallow depth of field, dramatic high-contrast lighting, ultra-detailed skin and fabric textures, vivid saturated colors.",
@@ -1527,7 +1528,7 @@ export function buildApiPrompt(i: PromptInput, opts: { texto3d: boolean; referen
   const t = opts.texto3d;
   const marcoEn = c.marco.charAt(0).toUpperCase() + c.marco.slice(1);
 
-  const escena = `The setting is ${c.perfil.en.scene}, with realistic details of the character's workplace softly blurred in the background, such as ${c.perfil.en.props}. Real physical ${i.marca} printers sit on shelves and tables in the blurred background, slightly out of focus, with no legible logos or text on them. ${c.postura.estado === "impresora" ? "The only printer in the foreground is the single one both hands are touching, on the table at the right-center of the frame and away from the lower corners; every other printer stays in the blurred background." : "There are no printers in the foreground."}`;
+  const escena = `The setting is ${c.perfil.en.scene}, with realistic details of the character's workplace softly blurred in the background, such as ${c.perfil.en.props}. ${i.plotter ? `Real physical ${i.marca} large-format plotters stand on their stands in the blurred background, slightly out of focus, with no legible logos or text on them.` : `Real physical ${i.marca} printers sit on shelves and tables in the blurred background, slightly out of focus, with no legible logos or text on them.`} ${c.postura.estado === "impresora" ? "The only printer in the foreground is the single one both hands are touching, on the table at the right-center of the frame and away from the lower corners; every other printer stays in the blurred background." : "There are no printers in the foreground."}`;
   const esquina = t
     ? `The lower-left corner of the frame is completely empty negative space: only a clean, softly blurred background, with no objects, no hands, no printers and no graphics. In that corner, and only there, add a tiny, subtle, semi-transparent, elegant typographic watermark reading "${MARCA_AGUA_TEXTO}", slightly inset from the edges, with no box and no icon.`
     : "The lower-left corner of the frame is completely empty negative space: only a clean, softly blurred background, with no objects, no hands, no printers, no graphics and no text, kept clean for post-production.";

@@ -22,6 +22,15 @@ Respuesta (200 o 202): `version`, `id`, `estado` (`completado` | `en_cola`), `pr
 - Con imagen real el estado es `en_cola` (HTTP 202) y hay que consultar el `id`.
 - Sin `FAL_KEY` responde en **modo simulación** (`simulacion: true`, imagen de prueba, costo 0).
 
+## Prioridad y modelo de IA
+
+| Prioridad | Cuándo | Modelo | Escena |
+|---|---|---|---|
+| `alta` | modelo F570, F571, T3170 o T3170X (se ignoran mayúsculas, espacios, guiones y prefijos como «SC-» o «SureColor») | Seedream 5.0 Pro (fal.ai) | plano detalle, mujer joven de 20 a 30 años, profesión de sublimación, vinilo o fotografía, plotter de la marca al fondo |
+| `normal` | cualquier otro modelo | FLUX.2 Pro (fal.ai) por defecto; `MINITUBE_MODELO_NORMAL` lo cambia | la que sortee el motor |
+
+Con `MINITUBE_MODELO_NORMAL=manual`, la prioridad normal no genera imagen: responde 429 con el `promptGemini`.
+
 ## GET /api/v1/thumbnail/{id}
 
 Devuelve `estado`: `en_cola`, `generando` o `completado` (con `imagen`). Consultar cada 3–5 segundos.

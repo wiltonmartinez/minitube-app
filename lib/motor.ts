@@ -19,6 +19,7 @@ import {
   type EmocionAB,
   type PromptInput,
 } from "@/lib/prompt-config";
+import { ARQUETIPOS_ALTA, PLANO_ALTA, PROFESIONES_ALTA, type Prioridad } from "@/lib/prioridad";
 
 // MOTOR DE MINIATURAS (única fuente de verdad): a partir de Marca, Modelo y Error decide la persona, la escena y
 // arma los dos prompts con las MISMAS funciones que usa el panel web. La API pública (/api/v1/thumbnail) solo llama aquí.
@@ -134,14 +135,16 @@ export type Plan = {
 const elegir = <T>(lista: readonly T[], rnd: () => number): T => lista[Math.floor(rnd() * lista.length)];
 
 /** Sortea la escena y arma los prompts. Misma semilla + mismos datos = mismo resultado. */
-export function planificar(s: Solicitud): Plan {
+export function planificar(s: Solicitud, prioridad: Prioridad = "normal"): Plan {
   const semilla = s.semilla ?? Math.floor(Math.random() * 2_147_483_647);
   const rnd = crearRnd(semilla);
 
-  const profesion = elegir(Object.keys(PERFILES), rnd);
-  const arquetipo = resolverArquetipo(ARQUETIPO_ALEATORIO, rnd());
+  // Prioridad ALTA (plotters): mujer joven de 20 a 30 años, plano detalle y una profesión de gran formato.
+  const alta = prioridad === "alta";
+  const profesion = alta ? elegir(PROFESIONES_ALTA, rnd) : elegir(Object.keys(PERFILES), rnd);
+  const arquetipo = alta ? resolverArquetipo(ARQUETIPO_ALEATORIO, rnd(), ARQUETIPOS_ALTA) : resolverArquetipo(ARQUETIPO_ALEATORIO, rnd());
   const a = ARQUETIPOS[arquetipo];
-  const plano = elegir(PLANOS, rnd).es;
+  const plano = alta ? PLANO_ALTA : elegir(PLANOS, rnd).es;
   const emocion: EmocionAB = s.enfoque === "solucion" ? "alivio" : "panico"; // error → pánico · solución → alivio
   const gafas = resolverGafas(GAFAS_ALEATORIAS, rnd);
   const accesorio = resolverAccesorio(ACCESORIO_ALEATORIO, profesion, rnd());
@@ -163,8 +166,8 @@ export function planificar(s: Solicitud): Plan {
     paleta: resolverPaleta(PALETA_ALEATORIA, rnd),
     arquetipo,
     emocion,
+    ...(alta ? { plotter: true } : {}),
   };
-
   return {
     semilla,
     entrada,

@@ -18,6 +18,9 @@ export const CHANGELOG: Cambio[] = [
       "Generación asíncrona por la cola de fal.ai: POST responde 202 con un id firmado y GET /api/v1/thumbnail/{id} consulta el estado.",
       "Errores en JSON y en español: 400 datos inválidos, 401 sin token, 429 cuota agotada (con el prompt de Gemini incluido), 502 fallo del proveedor.",
       "Misma escena con la misma semilla; enfoque «error» (pánico) o «solución» (alivio). Modo simulación sin FAL_KEY.",
+      "Enrutador de prioridad: los plotters F570, F571, T3170 y T3170X (se reconocen aunque se escriban «SC-F570», «SureColor F571» o «sc t3170x») son prioridad ALTA: Seedream 5.0 Pro, plano detalle, mujer joven de 20 a 30 años, profesión de sublimación, vinilo o fotografía y plotters de la marca en el fondo.",
+      "El resto de modelos son prioridad NORMAL con FLUX.2 Pro (≈ USD 0.03). Con MINITUBE_MODELO_NORMAL=manual no se genera nada y la API devuelve el prompt de Gemini (429).",
+      "El panel web aplica y muestra la prioridad alta al escribir uno de esos plotters en el bloque 1: bloquea plano, modo y modelo de IA y limita profesión y arquetipo.",
     ],
   },
   {

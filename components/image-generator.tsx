@@ -68,13 +68,17 @@ export function ImageGenerator({
   entrada,
   bloqueos,
   onAgregarAlLote,
+  modeloForzado,
 }: {
   entrada: PromptInput | null;
+  /** Prioridad alta (plotter): el modelo de IA queda fijado (Seedream 5.0 Pro) y no se puede cambiar */
+  modeloForzado?: ModeloId;
   /** Candados 🔒 de la paleta y el badge: las variantes A/B no los cambian */
   bloqueos: { paleta: boolean; badge: boolean };
   onAgregarAlLote: (items: LoteItem[]) => void;
 }) {
-  const [modeloId, setModeloId] = useState<ModeloId>(MODELO_POR_DEFECTO);
+  const [modeloElegido, setModeloElegido] = useState<ModeloId>(MODELO_POR_DEFECTO);
+  const modeloId = modeloForzado ?? modeloElegido;
   const [texto3d, setTexto3d] = useState(false);
   const [usarRef, setUsarRef] = useState(false);
   const [refs, setRefs] = useState<string[]>([]); // fotos de esta sesión (1024 px, solo en memoria)
@@ -110,7 +114,7 @@ export function ImageGenerator({
   const ocupado = estado === "generando" || variantes.some((v) => v.estado === "generando");
 
   function elegirModelo(id: ModeloId) {
-    setModeloId(id);
+    setModeloElegido(id);
     setTexto3d(buscarModelo(id)!.textoEnImagen); // recomendado solo con los modelos que escriben bien el texto
   }
 
@@ -346,7 +350,7 @@ export function ImageGenerator({
 
       <div className="space-y-2">
         <Label htmlFor="modelo-ia">Modelo de IA</Label>
-        <Select value={modeloId} onValueChange={(v) => elegirModelo(v as ModeloId)}>
+        <Select value={modeloId} onValueChange={(v) => elegirModelo(v as ModeloId)} disabled={!!modeloForzado}>
           <SelectTrigger id="modelo-ia" className="w-full">
             <SelectValue />
           </SelectTrigger>
@@ -361,6 +365,9 @@ export function ImageGenerator({
         <p className="text-xs text-muted-foreground">
           {modelo.descripcion} Formato {ASPECTO} ({modelo.resolucion}). <strong>{modelo.costoTexto}.</strong>
         </p>
+        {modeloForzado && (
+          <p className="text-xs text-amber-500">Prioridad alta (plotter): el modelo queda fijado en {modelo.nombre}.</p>
+        )}
       </div>
 
       <div className="flex items-start gap-3 rounded-md border p-3">

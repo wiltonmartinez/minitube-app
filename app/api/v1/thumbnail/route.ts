@@ -23,8 +23,8 @@ export async function POST(req: Request) {
   if (!v.ok) return respuestaError("DATOS_INVALIDOS", v.mensaje, 400, { campos: v.campos });
 
   const { solicitud } = v;
-  const plan = planificar(solicitud);
   const ruta = elegirRuta(solicitud.modelo);
+  const plan = planificar(solicitud, ruta.prioridad);
 
   const base = {
     version: VERSION_API,
@@ -49,6 +49,15 @@ export async function POST(req: Request) {
       { promptGemini: plan.promptGemini, prioridad: ruta.prioridad },
     );
   if (simular === "cuota") return sinCuota();
+  // Prioridad normal en modo «manual»: no se genera nada automáticamente, se devuelve el prompt para hacerlo a mano
+  if (solicitud.generarImagen && ruta.generacion === "manual") {
+    return respuestaError(
+      "CUOTA_AGOTADA",
+      "La generación automática de prioridad normal está desactivada (MINITUBE_MODELO_NORMAL=manual). No se usó ningún modelo de pago: guarda «promptGemini» y genera la imagen a mano.",
+      429,
+      { promptGemini: plan.promptGemini, prioridad: ruta.prioridad },
+    );
+  }
   if (simular === "proveedor") return respuestaError("FALLO_PROVEEDOR", "El proveedor de imágenes falló (simulado).", 502);
 
   if (!solicitud.generarImagen) {
