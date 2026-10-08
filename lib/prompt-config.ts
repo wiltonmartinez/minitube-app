@@ -90,6 +90,8 @@ export type Arquetipo = {
   cabello: { es: string; en: string };
   rasgosFaciales: { forma: string; ojos: string; cejas: string; nariz: string; boca: string };
   rasgosEs: string;
+  /** País de origen (opcional): `en` lleva «{n}» (woman/man) y sustituye a la etnia genérica en el prompt */
+  origen?: { es: string; en: string };
   /** Cuerpo (medio cuerpo hacia arriba): se usa según el plano */
   cuerpo: { complexion: string; hombros: string; es: string };
 };
@@ -314,6 +316,126 @@ export const ARQUETIPOS: Record<string, Arquetipo> = {
     cabello: { es: "Negro muy largo en una trenza", en: "very long black hair in a single thick braid" },
     rasgosFaciales: { forma: "a broad round face with high cheekbones", ojos: "dark almond-shaped eyes", cejas: "straight dark eyebrows", nariz: "a small broad nose", boca: "medium-full lips" },
     rasgosEs: "Rostro redondo con pómulos altos, ojos almendrados oscuros, nariz pequeña ancha",
+    cuerpo: { complexion: "an average build", hombros: "medium-width shoulders", es: "Complexión promedio, hombros medios" },
+  },
+  "Mujer mexicana de cabello castaño largo y ondulado": {
+    id: "mujer-mexicana",
+    genero: "Mujer",
+    etnia: "Mestiza Clara México",
+    edad: "Joven 18-25",
+    edadAnios: "23 to 28",
+    cabello: { es: "Castaño oscuro largo y ondulado con reflejos caramelo", en: "long wavy dark chestnut hair with soft caramel highlights" },
+    rasgosFaciales: { forma: "a heart-shaped face with high cheekbones and warm olive skin", ojos: "large expressive dark brown almond-shaped eyes with long lashes", cejas: "softly arched thick eyebrows", nariz: "a small straight nose", boca: "full lips" },
+    rasgosEs: "Rostro en corazón, pómulos altos, ojos grandes marrones, cejas arqueadas, labios llenos",
+    origen: { es: "Mexicana", en: "Mexican {n}" },
+    cuerpo: { complexion: "an athletic build", hombros: "medium-width shoulders", es: "Complexión atlética, hombros medios" },
+  },
+  "Mujer colombiana costeña de rizos dorados": {
+    id: "mujer-colombiana-costena",
+    genero: "Mujer",
+    etnia: "Colombiana Costa Caribe",
+    edad: "Joven 18-25",
+    edadAnios: "22 to 27",
+    cabello: { es: "Rizos voluminosos castaño dorado", en: "voluminous golden-brown curls" },
+    rasgosFaciales: { forma: "a round face with glowing warm tan skin", ojos: "bright honey-colored eyes", cejas: "well-defined dark eyebrows", nariz: "a rounded button nose", boca: "full, naturally smiling lips" },
+    rasgosEs: "Rostro redondo, piel canela luminosa, ojos color miel, nariz de botón, labios llenos",
+    origen: { es: "Colombiana de la costa Caribe", en: "Colombian {n} from the Caribbean coast" },
+    cuerpo: { complexion: "an average build", hombros: "medium-width shoulders", es: "Complexión promedio, hombros medios" },
+  },
+  "Mujer argentina de cabello castaño liso y ojos verdes": {
+    id: "mujer-argentina",
+    genero: "Mujer",
+    etnia: "Blanca/Mediterránea Cono Sur",
+    edad: "Joven 18-25",
+    edadAnios: "25 to 30",
+    cabello: { es: "Castaño claro largo y liso con raya al lado", en: "long straight light-brown hair with a side part" },
+    rasgosFaciales: { forma: "an oval face with a refined jawline and fair skin", ojos: "green-gray almond-shaped eyes", cejas: "neatly arched medium eyebrows", nariz: "a straight elegant nose", boca: "well-defined lips" },
+    rasgosEs: "Rostro ovalado, piel clara, ojos verde grisáceo, nariz recta elegante",
+    origen: { es: "Argentina", en: "Argentine {n} of Italian descent" },
+    cuerpo: { complexion: "a slim build", hombros: "narrow shoulders", es: "Complexión delgada, hombros estrechos" },
+  },
+  "Mujer chilena de cabello negro corto con flequillo": {
+    id: "mujer-chilena",
+    genero: "Mujer",
+    etnia: "Blanca/Mediterránea Cono Sur",
+    edad: "Joven 18-25",
+    edadAnios: "22 to 27",
+    cabello: { es: "Negro azabache a la altura de la mandíbula con flequillo", en: "sleek jet-black jaw-length hair with a straight fringe" },
+    rasgosFaciales: { forma: "a soft oval face with porcelain-light skin", ojos: "dark hazel eyes", cejas: "straight dark eyebrows", nariz: "a delicate small nose", boca: "softly defined lips" },
+    rasgosEs: "Rostro ovalado, piel muy clara, ojos avellana oscuro, cejas rectas, nariz delicada",
+    origen: { es: "Chilena", en: "Chilean {n}" },
+    cuerpo: { complexion: "a slim build", hombros: "narrow shoulders", es: "Complexión delgada, hombros estrechos" },
+  },
+  "Mujer peruana andina de trenza larga": {
+    id: "mujer-peruana",
+    genero: "Mujer",
+    etnia: "Rasgos Nativos/Indígenas",
+    edad: "Joven 18-25",
+    edadAnios: "21 to 26",
+    cabello: { es: "Negro muy largo y grueso en una trenza baja al lado", en: "very long thick black hair in a low side braid" },
+    rasgosFaciales: { forma: "a round face with prominent high cheekbones and golden-brown skin", ojos: "dark almond-shaped eyes", cejas: "thick straight eyebrows", nariz: "a small nose", boca: "full lips" },
+    rasgosEs: "Rostro redondo, pómulos prominentes, piel dorada, ojos almendrados oscuros",
+    origen: { es: "Peruana de rasgos andinos", en: "Peruvian {n} with Andean features" },
+    cuerpo: { complexion: "an average build", hombros: "medium-width shoulders", es: "Complexión promedio, hombros medios" },
+  },
+  "Mujer venezolana de ondas miel y ojos claros": {
+    id: "mujer-venezolana",
+    genero: "Mujer",
+    etnia: "Colombiana Costa Caribe",
+    edad: "Joven 18-25",
+    edadAnios: "24 to 29",
+    cabello: { es: "Ondas largas castaño miel con mechas doradas", en: "long loose honey-brown waves with golden highlights" },
+    rasgosFaciales: { forma: "an oval face with high cheekbones and sun-kissed skin", ojos: "light brown amber eyes", cejas: "gracefully arched eyebrows", nariz: "a refined slightly upturned nose", boca: "full lips" },
+    rasgosEs: "Rostro ovalado, pómulos altos, piel bronceada, ojos ámbar, nariz respingada fina",
+    origen: { es: "Venezolana", en: "Venezuelan {n}" },
+    cuerpo: { complexion: "an athletic build", hombros: "medium-width shoulders", es: "Complexión atlética, hombros medios" },
+  },
+  "Mujer cubana afrolatina de rizos definidos": {
+    id: "mujer-cubana",
+    genero: "Mujer",
+    etnia: "Afro-Latina",
+    edad: "Joven 18-25",
+    edadAnios: "23 to 28",
+    cabello: { es: "Rizos naturales definidos castaño oscuro", en: "defined natural dark-brown curls" },
+    rasgosFaciales: { forma: "a heart-shaped face with luminous deep-brown skin", ojos: "large dark expressive eyes", cejas: "arched thick eyebrows", nariz: "a soft broad nose", boca: "full lips" },
+    rasgosEs: "Rostro en corazón, piel morena luminosa, ojos grandes oscuros, labios llenos",
+    origen: { es: "Cubana afrodescendiente", en: "Afro-Cuban {n}" },
+    cuerpo: { complexion: "an athletic build", hombros: "medium-width shoulders", es: "Complexión atlética, hombros medios" },
+  },
+  "Mujer brasileña mestiza de ondas castañas": {
+    id: "mujer-brasilena",
+    genero: "Mujer",
+    etnia: "Afro-Latina",
+    edad: "Joven 18-25",
+    edadAnios: "24 to 29",
+    cabello: { es: "Ondas sueltas castaño oscuro con puntas aclaradas por el sol", en: "long loose dark-chestnut waves with sun-lightened ends" },
+    rasgosFaciales: { forma: "a diamond-shaped face with sculpted cheekbones and caramel skin", ojos: "warm hazel eyes", cejas: "natural full eyebrows", nariz: "a slim straight nose", boca: "full, softly defined lips" },
+    rasgosEs: "Rostro de diamante, pómulos marcados, piel caramelo, ojos avellana cálidos",
+    origen: { es: "Brasileña de herencia mixta", en: "Brazilian {n} of mixed heritage" },
+    cuerpo: { complexion: "an athletic build", hombros: "broad shoulders", es: "Complexión atlética, hombros anchos" },
+  },
+  "Mujer ecuatoriana de cabello liso en capas": {
+    id: "mujer-ecuatoriana",
+    genero: "Mujer",
+    etnia: "Colombiana Bogotá/Andino",
+    edad: "Joven 18-25",
+    edadAnios: "22 to 27",
+    cabello: { es: "Castaño oscuro liso a los hombros con capas suaves", en: "shoulder-length straight dark-brown hair with soft layers" },
+    rasgosFaciales: { forma: "a soft round face with smooth bronze skin", ojos: "dark brown almond-shaped eyes", cejas: "softly arched eyebrows", nariz: "a small rounded nose", boca: "medium-full lips" },
+    rasgosEs: "Rostro redondo suave, piel bronce, ojos almendrados marrones, nariz pequeña",
+    origen: { es: "Ecuatoriana de rasgos mestizos andinos", en: "Ecuadorian {n} with Andean mestizo features" },
+    cuerpo: { complexion: "a slim build", hombros: "narrow shoulders", es: "Complexión delgada, hombros estrechos" },
+  },
+  "Mujer costarricense de cabello rubio oscuro y pecas": {
+    id: "mujer-costarricense",
+    genero: "Mujer",
+    etnia: "Mestiza Clara México",
+    edad: "Joven 18-25",
+    edadAnios: "24 to 29",
+    cabello: { es: "Rubio oscuro ondulado en una coleta alta", en: "dark-blond wavy hair pulled into a high ponytail" },
+    rasgosFaciales: { forma: "an oval face with a light scatter of freckles", ojos: "light brown eyes", cejas: "light arched eyebrows", nariz: "a small slightly upturned nose", boca: "natural rosy lips" },
+    rasgosEs: "Rostro ovalado con pecas suaves, ojos castaño claro, nariz pequeña respingada",
+    origen: { es: "Costarricense", en: "Costa Rican {n}" },
     cuerpo: { complexion: "an average build", hombros: "medium-width shoulders", es: "Complexión promedio, hombros medios" },
   },
 };
@@ -1298,7 +1420,7 @@ function preparar(i: PromptInput, referencia = false) {
   const descripcion = referencia
     ? "the exact same person shown in the reference photos, keeping the identical face, facial structure, skin tone, hair and apparent age"
     : arq
-    ? `${conArticulo(ETNIA_EN[arq.etnia].replace("{n}", sexo))} aged ${arq.edadAnios}, with ${arq.cabello.en}, ${arq.rasgosFaciales.forma}, ${arq.rasgosFaciales.ojos}, ${arq.rasgosFaciales.cejas}, ${arq.rasgosFaciales.nariz} and ${arq.rasgosFaciales.boca}`
+    ? `${conArticulo((arq.origen?.en ?? ETNIA_EN[arq.etnia]).replace("{n}", sexo))} aged ${arq.edadAnios}, with ${arq.cabello.en}, ${arq.rasgosFaciales.forma}, ${arq.rasgosFaciales.ojos}, ${arq.rasgosFaciales.cejas}, ${arq.rasgosFaciales.nariz} and ${arq.rasgosFaciales.boca}`
     : `${conArticulo(ETNIA_EN[i.etnia].replace("{n}", sexo))} ${EDAD_EN[i.edad]}${i.personaje ? `, ${describirRostro(listas, i.personaje)}` : ""}`;
   const personaje = `On the right side of the frame, ${descripcion}, working as ${/^[aeiou]/i.test(perfil.en.role) ? "an" : "a"} ${perfil.en.role}, wearing ${clothing}, with ${i.emocion ? EMOCIONES_AB[i.emocion].faceEn : perfil.en.emotion}, and ${hands}.`;
   // Cuerpo: solo hacia arriba y según el plano (detalle = nada · primer plano = hombros · medio = complexión y hombros)

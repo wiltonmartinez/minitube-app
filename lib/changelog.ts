@@ -9,6 +9,16 @@ export type Cambio = {
 
 export const CHANGELOG: Cambio[] = [
   {
+    version: "3.4.0",
+    fecha: "2026-10-08",
+    titulo: "10 arquetipos de mujeres latinas de 20 a 30 años",
+    cambios: [
+      "Diez arquetipos nuevos de mujeres de 20 a 30 años de países distintos: México, Colombia (costa Caribe), Argentina, Chile, Perú, Venezuela, Cuba, Brasil, Ecuador y Costa Rica.",
+      "Cada una es diferente en cabello, rostro, ojos, piel y cuerpo, con belleza natural y armónica (atractivas pero reales, con textura de piel realista).",
+      "El prompt nombra el país de origen en lugar de una etnia genérica. Ahora hay 30 arquetipos.",
+    ],
+  },
+  {
     version: "3.3.0",
     fecha: "2026-10-08",
     titulo: "Postura: escribiendo en una laptop",

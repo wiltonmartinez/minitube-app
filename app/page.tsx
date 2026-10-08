@@ -710,7 +710,7 @@ export default function Home() {
                     />
                     {arq && (
                       <p className="-mt-2 text-xs text-muted-foreground md:col-span-2">
-                        Arquetipo activo: <strong>{arquetipoEf}</strong> — {arq.genero}, {arq.etnia}, {arq.edad} ({arq.edadAnios.replace(" to ", "-")} años). {arq.cabello.es}. {arq.rasgosEs}. {arq.cuerpo.es}
+                        Arquetipo activo: <strong>{arquetipoEf}</strong> — {arq.genero}, {arq.origen?.es ?? arq.etnia}, {arq.edad} ({arq.edadAnios.replace(" to ", "-")} años). {arq.cabello.es}. {arq.rasgosEs}. {arq.cuerpo.es}
                         {nivel === "detalle" ? " (el plano detalle no muestra el cuerpo)" : nivel === "primer" ? " (el primer plano solo muestra los hombros)" : ""}.
                         El arquetipo define todo; para elegir cada rasgo usa el modo «Personalizar».
                       </p>
