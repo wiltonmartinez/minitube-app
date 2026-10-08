@@ -46,5 +46,11 @@ export function useListaLocal<T>(clave: string, valido: (x: unknown) => x is T, 
     [clave, max],
   );
 
-  return [lista, guardar] as const;
+  /** Añade un elemento al principio leyendo siempre el contenido más reciente (seguro con varias altas a la vez). */
+  const agregar = useCallback(
+    (item: T) => guardar([item, ...leerLista(almacenDelNavegador(), clave, valido)]),
+    [guardar, clave, valido],
+  );
+
+  return [lista, guardar, agregar] as const;
 }

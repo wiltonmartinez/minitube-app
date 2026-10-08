@@ -9,6 +9,22 @@ export type Cambio = {
 
 export const CHANGELOG: Cambio[] = [
   {
+    version: "3.0.0",
+    fecha: "2026-10-08",
+    titulo: "De generador de prompts a generador de miniaturas",
+    cambios: [
+      "Generación de imágenes 16:9 por API (fal.ai) con 4 modelos a elegir: GPT Image 2, Nano Banana Pro, Seedream 5.0 Pro y FLUX.2 Pro, con costo aproximado a la vista y descarga en PNG.",
+      "Modo simulación sin costo cuando no hay clave FAL_KEY, para probar toda la interfaz.",
+      "Prompt para la API en inglés, sin porcentajes (la mirada se describe con el espacio), con interruptor «Texto 3D dentro de la imagen» y restricciones negativas al final. El prompt para Gemini se conserva.",
+      "Bloque 2 rediseñado: «Arquetipo listo» (20 arquetipos de 20 a 70 años) o «Personalizar» (estilo facial o detalle completo: rostro, ojos, cejas, nariz, labios, cabello, vello, complexión y hombros), con validador de armonía y cuerpo según el plano (siempre de la cintura hacia arriba).",
+      "Listas del personaje editables desde «Editar menús del panel maestro».",
+      "Foto de referencia del personaje (Nano Banana Pro y FLUX.2 Pro), referencias guardadas e historial local de miniaturas.",
+      "Variantes A/B para «Probar y comparar» de YouTube Studio: pánico, sorpresa y alivio, con paleta y badge distintos (respetan los candados) y confirmación antes de gastar dinero real.",
+      "El lote (ZIP) puede incluir las imágenes generadas y el prompt enviado a la API.",
+      "Pruebas automáticas con Vitest (60 pruebas).",
+    ],
+  },
+  {
     version: "2.0.0",
     fecha: "2026-10-08",
     titulo: "Motor de arquetipos paramétricos y sincronización estricta",

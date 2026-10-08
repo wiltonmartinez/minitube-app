@@ -879,6 +879,8 @@ export type PromptInput = {
   personaje?: Concreto;
   /** Listas editables del personaje (si falta, se usan las de fábrica). */
   listas?: Listas;
+  /** Emoción de una variante A/B (pánico, sorpresa o alivio). Si falta, manda la emoción del perfil. */
+  emocion?: EmocionAB;
   /** Arquetipo físico concreto (clave de ARQUETIPOS) o «Ninguno»: si existe, define por completo la apariencia. */
   arquetipo: string;
 };
@@ -954,6 +956,49 @@ export function resolverAccesorio(seleccion: string, profesion: string, u: numbe
   }
   return ACCESORIOS_FIJOS[ACCESORIOS_FIJOS.length - 1];
 }
+
+/* ───────── Emociones de las variantes A/B (YouTube «Probar y comparar») ─────────
+   Solo cambia la emoción del rostro y su afecto en la mirada; la dirección de la mirada, la postura de las manos y
+   el resto de reglas siguen exactamente igual. */
+export type EmocionAB = "panico" | "sorpresa" | "alivio";
+export const EMOCIONES_AB: Record<
+  EmocionAB,
+  { nombre: string; faceEn: string; afectoEs: string; afectoEn: string; objetoEn: string; expresionEs: string; expresionEn: string }
+> = {
+  panico: {
+    nombre: "Pánico",
+    faceEn: EMOCION.panico.en,
+    afectoEs: "por el pánico",
+    afectoEn: "with panic",
+    objetoEn: "something terrifying",
+    expresionEs: "",
+    expresionEn: "",
+  },
+  sorpresa: {
+    nombre: "Sorpresa",
+    faceEn:
+      "an expression of total surprise and astonishment, eyes bulging wide, eyebrows raised very high, mouth hanging open",
+    afectoEs: "por la sorpresa",
+    afectoEn: "with surprise",
+    objetoEn: "something shocking",
+    expresionEs:
+      "REGLA ESTRICTA DE EXPRESIÓN: Está absolutamente prohibido generar expresiones de tristeza, llanto, pucheros, lástima o resignación pasiva. Prohibido posturas relajadas como manos en la cintura o brazos cruzados. El personaje debe mostrar sorpresa extrema y activa: ojos muy abiertos, cejas muy elevadas y boca abierta.",
+    expresionEn:
+      "The face shows extreme, active surprise: eyes very wide, eyebrows raised high and mouth open. Never sadness, crying, pouting, self-pity or passive resignation, and never relaxed poses such as hands on hips or crossed arms.",
+  },
+  alivio: {
+    nombre: "Alivio",
+    faceEn:
+      "an expression of sudden, intense relief, eyes wide open and bright, eyebrows lifted, mouth open in a big exhale or a wide astonished smile, as if the problem has just been solved",
+    afectoEs: "por el alivio",
+    afectoEn: "with relief",
+    objetoEn: "the place where the solution appears",
+    expresionEs:
+      "REGLA ESTRICTA DE EXPRESIÓN: Está absolutamente prohibido generar expresiones de tristeza, llanto, pucheros, lástima o resignación pasiva. Prohibido posturas relajadas como manos en la cintura o brazos cruzados. El personaje debe mostrar alivio intenso y activo, como si el problema se acabara de resolver: ojos muy abiertos y brillantes, cejas elevadas y boca abierta en una gran exhalación o sonrisa de asombro.",
+    expresionEn:
+      "The face shows intense, active relief, as if the problem has just been solved: eyes wide open and bright, eyebrows lifted, mouth open in a big exhale or an astonished smile. Never sadness, crying, pouting, self-pity or passive resignation, and never relaxed poses such as hands on hips or crossed arms.",
+  },
+};
 
 /* ───────── Mirada: regla global (todas las profesiones) ───────── */
 export const MIRADA_ES =
@@ -1071,6 +1116,16 @@ export const REGLA_BRANDING =
 export const ESTETICA_MUJER =
   "ESTÉTICA DEL PERSONAJE: Las mujeres generadas deben ser atractivas pero reales, de belleza natural y armónica, con proporciones equilibradas y piel con textura realista (poros visibles e imperfecciones sutiles), nunca de modelo irreal, manteniendo siempre la expresión de alta tensión, pánico o estrés requerida.";
 
+/** Regla de mirada con el afecto de la emoción (pánico por defecto: el texto no cambia). */
+function miradaRegla(e?: EmocionAB): string {
+  return e ? MIRADA_REGLA.replace("por el pánico", EMOCIONES_AB[e].afectoEs) : MIRADA_REGLA;
+}
+function esteticaMujer(e?: EmocionAB): string {
+  return e && e !== "panico"
+    ? ESTETICA_MUJER.replace("la expresión de alta tensión, pánico o estrés requerida", "la expresión indicada")
+    : ESTETICA_MUJER;
+}
+
 export const REGLA_COMPOSICION =
   "REGLA DE COMPOSICIÓN ESPACIAL ESTRICTA: La composición del lienzo debe estar dividida. Todos los textos gigantes 3D principales y el badge flotante deben agruparse obligatoriamente en un lateral o en la mitad superior de la imagen, lejos de la esquina inferior izquierda, que debe estar completamente DESPEJADA Y VISIBLE (solo contiene la marca de agua sutil). Está absolutamente prohibido que cualquier letra, sombra, personaje o elemento 3D cruce, tape o se superponga sobre esa zona. El área libre es sagrada y debe quedar limpia.";
 
@@ -1120,7 +1175,7 @@ function preparar(i: PromptInput, referencia = false) {
     : arq
     ? `${conArticulo(ETNIA_EN[arq.etnia].replace("{n}", sexo))} aged ${arq.edadAnios}, with ${arq.cabello.en}, ${arq.rasgosFaciales.forma}, ${arq.rasgosFaciales.ojos}, ${arq.rasgosFaciales.cejas}, ${arq.rasgosFaciales.nariz} and ${arq.rasgosFaciales.boca}`
     : `${conArticulo(ETNIA_EN[i.etnia].replace("{n}", sexo))} ${EDAD_EN[i.edad]}${i.personaje ? `, ${describirRostro(listas, i.personaje)}` : ""}`;
-  const personaje = `On the right side of the frame, ${descripcion}, working as ${/^[aeiou]/i.test(perfil.en.role) ? "an" : "a"} ${perfil.en.role}, wearing ${clothing}, with ${perfil.en.emotion}, and ${hands}.`;
+  const personaje = `On the right side of the frame, ${descripcion}, working as ${/^[aeiou]/i.test(perfil.en.role) ? "an" : "a"} ${perfil.en.role}, wearing ${clothing}, with ${i.emocion ? EMOCIONES_AB[i.emocion].faceEn : perfil.en.emotion}, and ${hands}.`;
   // Cuerpo: solo hacia arriba y según el plano (detalle = nada · primer plano = hombros · medio = complexión y hombros)
   const rasgosExtra = referencia
     ? ""
@@ -1154,8 +1209,8 @@ export function buildPrompt(i: PromptInput): string {
     ...(gafasText ? [gafasText] : []),
     ...postura.reglas,
     REGLA_BRANDING,
-    MIRADA_REGLA,
-    ...(mujer ? [ESTETICA_MUJER] : []),
+    miradaRegla(i.emocion),
+    ...(mujer ? [esteticaMujer(i.emocion)] : []),
     "The person is anatomically correct: exactly one person, exactly two arms, two hands with five fingers each, one symmetrical face and natural proportions.",
     ANATOMIA_ES,
     setting,
@@ -1170,7 +1225,7 @@ export function buildPrompt(i: PromptInput): string {
     "Clean, balanced composition with no duplicated elements. Avoid extra limbs, extra or missing fingers, deformed hands, distorted faces, duplicate people, blurry or low-quality rendering, misspelled text, any other watermarks or logos, and incoherent shapes.",
   ];
 
-  return `${ASPECT_SENTENCE}\n\n${sentences.join(" ")} ${REGLA_EXPRESION} ${PROHIBICION_VISUAL}`;
+  return `${ASPECT_SENTENCE}\n\n${sentences.join(" ")} ${i.emocion && EMOCIONES_AB[i.emocion].expresionEs ? EMOCIONES_AB[i.emocion].expresionEs : REGLA_EXPRESION} ${PROHIBICION_VISUAL}`;
 }
 
 /* ───────── Resultado estructurado de la generación ───────── */
@@ -1209,6 +1264,15 @@ const REALISMO_API =
   "The physical environment is fully realistic, raw and photographic: no neon light coming out of devices, no holographic shields, no floating icons and no overlaid 3D graphics.";
 const YOUTUBE_API =
   "Keep the lower-right corner free of important elements and text, because YouTube's video-duration label covers it, and keep every element away from the extreme corners. Nothing overlaps chaotically.";
+
+function miradaApi(e?: EmocionAB): string {
+  if (!e) return MIRADA_API;
+  const x = EMOCIONES_AB[e];
+  return MIRADA_API.replace("with panic", x.afectoEn).replace("something terrifying", x.objetoEn);
+}
+function expresionApi(e?: EmocionAB): string {
+  return e && EMOCIONES_AB[e].expresionEn ? EMOCIONES_AB[e].expresionEn : EXPRESION_API;
+}
 
 export function buildApiPrompt(i: PromptInput, opts: { texto3d: boolean; referencia?: boolean }): string {
   const ref = !!opts.referencia;
@@ -1255,9 +1319,9 @@ export function buildApiPrompt(i: PromptInput, opts: { texto3d: boolean; referen
       : ["Every image shows a completely different person: a unique face and a unique facial structure."]),
     ...(c.gafasText ? [c.gafasText] : []),
     ...c.postura.reglasEn,
-    MIRADA_API,
+    miradaApi(i.emocion),
     ANATOMIA_API,
-    EXPRESION_API,
+    expresionApi(i.emocion),
     ropa,
     escena,
     esquina,

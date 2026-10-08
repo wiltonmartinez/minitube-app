@@ -6,6 +6,8 @@ import { useMemo, useState } from "react";
 import { COMMIT, VERSION } from "@/lib/changelog";
 import { CatalogEditor } from "@/components/catalog-editor";
 import { ImageGenerator } from "@/components/image-generator";
+import { nombresLote, type LoteItem } from "@/lib/lote";
+import { urlAPng } from "@/lib/imagen-cliente";
 import { useCatalogo } from "@/lib/use-catalogo";
 import { ListsEditor } from "@/components/lists-editor";
 import { useListas } from "@/lib/use-listas";
@@ -283,7 +285,7 @@ export default function Home() {
     [formBase, catalogo, profesiones],
   );
   // Resultados generados, acumulados para descargar como lote (.txt o ZIP)
-  const [batch, setBatch] = useState<GeneratedPrompt[]>([]);
+  const [batch, setBatch] = useState<LoteItem[]>([]);
   const [batchCount, setBatchCount] = useState("10");
   // Resultado del último sorteo de las opciones "🎲 Aleatorio" (paleta, gafas y badge). Se vuelve a sortear
   // en cada ciclo de autogeneración provocado por un selector o un botón (cualquier cambio de menú,
@@ -533,22 +535,47 @@ export default function Home() {
   async function downloadZip() {
     const items = batch.filter((g) => g.promptText.trim());
     if (!items.length) return;
-    const prompts = items.map((g) => g.promptText.trim());
     try {
       // Se carga solo al usarlo para no aumentar el peso inicial de la página
       const { default: JSZip } = await import("jszip");
       const zip = new JSZip();
-      const width = Math.max(2, String(prompts.length).length);
-      const manifest = prompts.map((p, i) => {
-        const file = `prompt-${String(i + 1).padStart(width, "0")}.txt`;
-        zip.file(file, `${p}\n`);
-        // Qué imagen de error corresponde a cada prompt
-        return { file, errorImageUrl: items[i].errorImageUrl };
-      });
+      const nombres = nombresLote(items);
+      let imagenes = 0;
+      let sinCopiar = 0;
+      const manifest = [];
+      for (let i = 0; i < items.length; i++) {
+        const it = items[i];
+        const n = nombres[i];
+        zip.file(n.txt, `${it.promptText.trim()}
+`);
+        if (n.api) zip.file(n.api, `${it.promptApi}
+`);
+        // Imagen generada: se convierte a PNG; si el navegador no deja copiarla, queda solo su dirección en el manifest
+        let imagen: string | null = null;
+        if (n.imagen && it.imagenUrl) {
+          try {
+            zip.file(n.imagen, await urlAPng(it.imagenUrl));
+            imagen = n.imagen;
+            imagenes++;
+          } catch {
+            sinCopiar++;
+          }
+        }
+        // Qué imagen de error corresponde a cada prompt (y qué imagen generada, si la hay)
+        manifest.push({
+          file: n.txt,
+          apiPromptFile: n.api ?? null,
+          etiqueta: it.etiqueta ?? null,
+          errorImageUrl: it.errorImageUrl,
+          imagen,
+          imagenUrl: imagen ? null : it.imagenUrl?.startsWith("https://") ? it.imagenUrl : null,
+        });
+      }
       zip.file("manifest.json", JSON.stringify(manifest, null, 2));
       const blob = await zip.generateAsync({ type: "blob", compression: "DEFLATE" });
       saveBlob(blob, `prompts-${new Date().toISOString().slice(0, 10)}.zip`);
-      toast.success(`ZIP descargado (${prompts.length} archivos .txt + manifest.json)`);
+      toast.success(`ZIP descargado (${items.length} prompts${imagenes ? ` + ${imagenes} imágenes` : ""} + manifest.json)`);
+      if (sinCopiar) toast.message(`${sinCopiar} imagen(es) no se pudieron copiar al ZIP: su dirección quedó en manifest.json`);
     } catch {
       toast.error("No se pudo crear el ZIP");
     }
@@ -957,7 +984,11 @@ export default function Home() {
             <Button variant="secondary" className="w-full" onClick={copy} disabled={!live}>
               Copiar al portapapeles
             </Button>
-            <ImageGenerator entrada={entrada} />
+            <ImageGenerator
+              entrada={entrada}
+              bloqueos={{ paleta: !!locks.paleta, badge: !!locks.badge }}
+              onAgregarAlLote={(items) => setBatch((b) => [...b, ...items])}
+            />
             <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
               <Button
                 variant="outline"
@@ -975,7 +1006,7 @@ export default function Home() {
                 disabled={!batch.length}
               >
                 <FileArchive className="size-4" />
-                Descargar ZIP (.txt separados)
+                Descargar ZIP (.txt + imágenes)
               </Button>
               <Button variant="ghost" onClick={() => setBatch([])} disabled={!batch.length}>
                 <Trash2 className="size-4" />

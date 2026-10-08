@@ -29,6 +29,18 @@ export async function reducirImagen(src: string, maxLado: number, calidad: numbe
   return canvas.toDataURL("image/jpeg", calidad);
 }
 
+/** Convierte una imagen (URL o data URI) en un PNG a su tamaño original. Falla si el navegador no permite copiarla. */
+export async function urlAPng(src: string): Promise<Blob> {
+  const img = await cargarImagen(src);
+  const canvas = document.createElement("canvas");
+  canvas.width = img.naturalWidth || 1280;
+  canvas.height = img.naturalHeight || 720;
+  canvas.getContext("2d")!.drawImage(img, 0, 0);
+  const blob = await new Promise<Blob | null>((ok) => canvas.toBlob(ok, "image/png"));
+  if (!blob) throw new Error("No se pudo convertir la imagen a PNG.");
+  return blob;
+}
+
 /** Igual que reducirImagen pero a partir de un archivo subido por el usuario. */
 export async function reducirArchivo(archivo: File, maxLado: number, calidad: number): Promise<string> {
   const url = URL.createObjectURL(archivo);

@@ -110,8 +110,10 @@ export async function POST(req: Request) {
 /** GET ?statusUrl=…&responseUrl=… → consulta el estado y, si terminó, devuelve la URL de la imagen. */
 export async function GET(req: Request) {
   const clave = process.env.FAL_KEY;
-  if (!clave) return error("Modo simulación: no hay trabajos que consultar.");
   const { searchParams } = new URL(req.url);
+  // ?modo=1 → ¿está activa la simulación? (la interfaz lo usa para avisar antes de gastar dinero real)
+  if (searchParams.get("modo")) return NextResponse.json({ simulacion: !clave });
+  if (!clave) return error("Modo simulación: no hay trabajos que consultar.");
   const statusUrl = searchParams.get("statusUrl") ?? "";
   const responseUrl = searchParams.get("responseUrl") ?? "";
   // Anti-SSRF: solo se aceptan direcciones de la cola de fal.ai

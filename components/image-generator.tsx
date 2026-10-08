@@ -1,6 +1,6 @@
 "use client";
 
-import { Download, ImageIcon, Loader2, Trash2, Upload, X } from "lucide-react";
+import { Download, ImageIcon, Loader2, Plus, Shuffle, Trash2, Upload, X } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { crearVariantes, type LetraAB } from "@/lib/ab";
 import {
   CLAVE_HISTORIAL,
   CLAVE_REFERENCIAS,
@@ -27,12 +28,33 @@ import {
   nuevoId,
   type ItemHistorial,
 } from "@/lib/historial";
-import { reducirArchivo, reducirImagen } from "@/lib/imagen-cliente";
+import { reducirArchivo, reducirImagen, urlAPng } from "@/lib/imagen-cliente";
 import { ASPECTO, MAX_REFERENCIAS, MODELOS, MODELO_POR_DEFECTO, buscarModelo, type ModeloId } from "@/lib/image-models";
+import type { LoteItem } from "@/lib/lote";
 import { useListaLocal } from "@/lib/use-lista-local";
-import { buildApiPrompt, type PromptInput } from "@/lib/prompt-config";
+import {
+  BADGES_REALES,
+  EMOCIONES_AB,
+  PALETAS_FIJAS,
+  buildApiPrompt,
+  generatePrompt,
+  type EmocionAB,
+  type PromptInput,
+} from "@/lib/prompt-config";
 
 type Estado = "reposo" | "generando" | "listo" | "error";
+
+type Variante = {
+  letra: LetraAB;
+  emocion: EmocionAB;
+  entrada: PromptInput;
+  promptApi: string;
+  estado: "generando" | "listo" | "error";
+  url?: string;
+  simulacion?: boolean;
+  mensaje?: string;
+  modelo: ModeloId;
+};
 
 const ESPERA_MAX_MS = 240_000; // tiempo máximo esperando a fal.ai
 const SONDEO_MS = 2_000;
@@ -41,7 +63,16 @@ const MAX_ARCHIVO_MB = 15;
 const pausa = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /** Genera la imagen con el modelo elegido (o una simulación si no hay FAL_KEY). Envía el prompt en inglés de la API. */
-export function ImageGenerator({ entrada }: { entrada: PromptInput | null }) {
+export function ImageGenerator({
+  entrada,
+  bloqueos,
+  onAgregarAlLote,
+}: {
+  entrada: PromptInput | null;
+  /** Candados 🔒 de la paleta y el badge: las variantes A/B no los cambian */
+  bloqueos: { paleta: boolean; badge: boolean };
+  onAgregarAlLote: (items: LoteItem[]) => void;
+}) {
   const [modeloId, setModeloId] = useState<ModeloId>(MODELO_POR_DEFECTO);
   const [texto3d, setTexto3d] = useState(false);
   const [usarRef, setUsarRef] = useState(false);
@@ -51,11 +82,19 @@ export function ImageGenerator({ entrada }: { entrada: PromptInput | null }) {
   const [imagenUrl, setImagenUrl] = useState<string | null>(null);
   const [simulacion, setSimulacion] = useState(false);
   const [imagenModelo, setImagenModelo] = useState<ModeloId>(MODELO_POR_DEFECTO);
-  const [historial, guardarHistorial] = useListaLocal<ItemHistorial>(CLAVE_HISTORIAL, esItemHistorial, MAX_HISTORIAL);
+  // Datos de la imagen que se ve ahora (para «Añadir al lote»); null si viene del historial
+  const [ultima, setUltima] = useState<{ entrada: PromptInput; promptApi: string; modelo: ModeloId } | null>(null);
+  const [variantes, setVariantes] = useState<Variante[]>([]);
+  const [historial, guardarHistorial, agregarHistorial] = useListaLocal<ItemHistorial>(
+    CLAVE_HISTORIAL,
+    esItemHistorial,
+    MAX_HISTORIAL,
+  );
   const [guardadas, guardarGuardadas] = useListaLocal(CLAVE_REFERENCIAS, esReferenciaGuardada, MAX_REFERENCIAS_GUARDADAS);
   const inputArchivo = useRef<HTMLInputElement>(null);
-  // Evita que una respuesta antigua pise a una generación más nueva
+  // Evitan que una respuesta antigua pise a una generación más nueva
   const intento = useRef(0);
+  const lanzamiento = useRef(0);
 
   const modelo = buscarModelo(modeloId)!;
   const admiteRef = !!modelo.endpointRef;
@@ -67,6 +106,7 @@ export function ImageGenerator({ entrada }: { entrada: PromptInput | null }) {
     [entrada, texto3d, refsEnvio.length],
   );
   const faltanFotos = refActiva && refs.length === 0;
+  const ocupado = estado === "generando" || variantes.some((v) => v.estado === "generando");
 
   function elegirModelo(id: ModeloId) {
     setModeloId(id);
@@ -111,7 +151,7 @@ export function ImageGenerator({ entrada }: { entrada: PromptInput | null }) {
   }
 
   /* ───────── historial ───────── */
-  async function registrar(url: string, esSimulacion: boolean, id: ModeloId, conTexto: boolean) {
+  async function registrar(url: string, esSimulacion: boolean, id: ModeloId, conTexto: boolean, etiqueta = "") {
     let thumb: string | undefined;
     try {
       thumb = await reducirImagen(url, LADO_MINIATURA, 0.7);
@@ -120,74 +160,81 @@ export function ImageGenerator({ entrada }: { entrada: PromptInput | null }) {
     }
     const remota = !esSimulacion && url.startsWith("https://") ? url : undefined;
     if (!thumb && !remota) return;
-    const item: ItemHistorial = {
+    agregarHistorial({
       id: nuevoId(),
       fecha: new Date().toISOString(),
-      modelo: buscarModelo(id)!.nombre,
+      modelo: `${buscarModelo(id)!.nombre}${etiqueta ? ` · ${etiqueta}` : ""}`,
       texto3d: conTexto,
       simulacion: esSimulacion,
       thumb,
       url: remota,
-    };
-    guardarHistorial([item, ...historial]);
+    });
   }
 
   function verDelHistorial(item: ItemHistorial) {
     setImagenUrl(item.url ?? item.thumb ?? null);
     setSimulacion(item.simulacion);
+    setUltima(null);
     setEstado("listo");
   }
 
-  /* ───────── generación ───────── */
+  /* ───────── petición a la API (una imagen) ───────── */
+  async function pedirImagen(
+    promptApi: string,
+    id: ModeloId,
+    fotos: string[],
+    alMensaje: (m: string) => void,
+    vigente: () => boolean,
+  ): Promise<{ url: string; simulacion: boolean } | null> {
+    const res = await fetch("/api/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        prompt: promptApi,
+        modelo: id,
+        aspectRatio: ASPECTO,
+        ...(fotos.length ? { imagenesReferencia: fotos } : {}),
+      }),
+    });
+    const j = await res.json();
+    if (!res.ok) throw new Error(j.error ?? "No se pudo generar la imagen.");
+    if (j.estado === "completado") return { url: j.imagenUrl, simulacion: !!j.simulacion };
+
+    const inicio = Date.now();
+    while (Date.now() - inicio < ESPERA_MAX_MS) {
+      await pausa(SONDEO_MS);
+      if (!vigente()) return null; // se lanzó otra generación
+      const q = new URLSearchParams({ statusUrl: j.statusUrl, responseUrl: j.responseUrl });
+      const r = await fetch(`/api/generate?${q}`);
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error ?? "No se pudo consultar el estado.");
+      if (d.estado === "completado") return { url: d.imagenUrl, simulacion: false };
+      alMensaje(d.estado === "en_cola" ? "En cola en fal.ai…" : "Generando la imagen…");
+    }
+    throw new Error("La imagen tardó demasiado. Vuelve a intentar o prueba con otro modelo.");
+  }
+
+  /* ───────── una imagen ───────── */
   async function generar() {
-    if (!prompt || faltanFotos) return;
+    if (!prompt || !entrada || faltanFotos) return;
     const mio = ++intento.current;
     const id = modeloId;
     const conTexto = texto3d;
+    const usada = entrada;
+    const promptUsado = prompt;
+    setVariantes([]);
     setEstado("generando");
     setMensaje(refsEnvio.length ? "Subiendo las fotos de referencia y enviando el prompt…" : "Enviando el prompt…");
-    const terminar = (url: string, esSim: boolean) => {
-      setImagenUrl(url);
-      setSimulacion(esSim);
-      setImagenModelo(id);
-      setEstado("listo");
-      toast.success(esSim ? "Imagen de simulación lista" : "Imagen lista");
-      void registrar(url, esSim, id, conTexto);
-    };
     try {
-      const res = await fetch("/api/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          prompt,
-          modelo: id,
-          aspectRatio: ASPECTO,
-          ...(refsEnvio.length ? { imagenesReferencia: refsEnvio } : {}),
-        }),
-      });
-      const j = await res.json();
-      if (!res.ok) throw new Error(j.error ?? "No se pudo generar la imagen.");
-
-      if (j.estado === "completado") {
-        if (mio === intento.current) terminar(j.imagenUrl, !!j.simulacion);
-        return;
-      }
-
-      const inicio = Date.now();
-      while (Date.now() - inicio < ESPERA_MAX_MS) {
-        await pausa(SONDEO_MS);
-        if (mio !== intento.current) return; // se lanzó otra generación
-        const q = new URLSearchParams({ statusUrl: j.statusUrl, responseUrl: j.responseUrl });
-        const r = await fetch(`/api/generate?${q}`);
-        const d = await r.json();
-        if (!r.ok) throw new Error(d.error ?? "No se pudo consultar el estado.");
-        if (d.estado === "completado") {
-          terminar(d.imagenUrl, false);
-          return;
-        }
-        setMensaje(d.estado === "en_cola" ? "En cola en fal.ai…" : "Generando la imagen…");
-      }
-      throw new Error("La imagen tardó demasiado. Vuelve a intentar o prueba con otro modelo.");
+      const r = await pedirImagen(promptUsado, id, refsEnvio, (m) => mio === intento.current && setMensaje(m), () => mio === intento.current);
+      if (!r || mio !== intento.current) return;
+      setImagenUrl(r.url);
+      setSimulacion(r.simulacion);
+      setImagenModelo(id);
+      setUltima({ entrada: usada, promptApi: promptUsado, modelo: id });
+      setEstado("listo");
+      toast.success(r.simulacion ? "Imagen de simulación lista" : "Imagen lista");
+      void registrar(r.url, r.simulacion, id, conTexto);
     } catch (e) {
       if (mio !== intento.current) return;
       setEstado("error");
@@ -195,34 +242,100 @@ export function ImageGenerator({ entrada }: { entrada: PromptInput | null }) {
     }
   }
 
-  // Descarga PNG: se dibuja la imagen en un canvas (sirve también para la simulación SVG)
-  async function descargar() {
-    if (!imagenUrl) return;
+  /* ───────── 3 variantes A/B ───────── */
+  async function consultarSimulacion(): Promise<boolean | null> {
     try {
-      const img = new Image();
-      img.crossOrigin = "anonymous";
-      await new Promise<void>((ok, fallo) => {
-        img.onload = () => ok();
-        img.onerror = () => fallo(new Error("carga"));
-        img.src = imagenUrl;
-      });
-      const canvas = document.createElement("canvas");
-      canvas.width = img.naturalWidth || 1280;
-      canvas.height = img.naturalHeight || 720;
-      canvas.getContext("2d")!.drawImage(img, 0, 0);
-      const blob = await new Promise<Blob | null>((ok) => canvas.toBlob(ok, "image/png"));
-      if (!blob) throw new Error("png");
-      const url = URL.createObjectURL(blob);
+      const r = await fetch("/api/generate?modo=1");
+      return (await r.json()).simulacion === true;
+    } catch {
+      return null;
+    }
+  }
+
+  async function generarVariantes() {
+    if (!entrada || faltanFotos) return;
+    // Antes de gastar dinero real se pide confirmación (en simulación no hace falta)
+    const sim = await consultarSimulacion();
+    if (sim === false) {
+      const costo = modelo.costoUsd != null ? `≈ USD ${(modelo.costoUsd * 3).toFixed(2)}` : "costo no publicado por fal.ai";
+      if (!window.confirm(`Se generarán 3 imágenes reales con ${modelo.nombre} (${costo}). ¿Continuar?`)) return;
+    }
+    const id = modeloId;
+    const conTexto = texto3d;
+    const fotos = [...refsEnvio];
+    const mio = ++lanzamiento.current;
+    ++intento.current; // cancela cualquier generación individual en curso
+    setEstado("reposo");
+    setImagenUrl(null);
+
+    const vs = crearVariantes(entrada, {
+      paletas: PALETAS_FIJAS,
+      badges: BADGES_REALES,
+      bloquearPaleta: bloqueos.paleta,
+      bloquearBadge: bloqueos.badge,
+    });
+    const inicial: Variante[] = vs.map((v) => ({
+      letra: v.letra,
+      emocion: v.emocion,
+      entrada: v.entrada,
+      promptApi: buildApiPrompt(v.entrada, { texto3d: conTexto, referencia: fotos.length > 0 }),
+      estado: "generando",
+      modelo: id,
+    }));
+    setVariantes(inicial);
+
+    await Promise.all(
+      inicial.map(async (v, k) => {
+        const actualizar = (cambio: Partial<Variante>) =>
+          mio === lanzamiento.current && setVariantes((x) => x.map((y, j) => (j === k ? { ...y, ...cambio } : y)));
+        try {
+          const r = await pedirImagen(v.promptApi, id, fotos, (m) => actualizar({ mensaje: m }), () => mio === lanzamiento.current);
+          if (!r || mio !== lanzamiento.current) return;
+          actualizar({ estado: "listo", url: r.url, simulacion: r.simulacion, mensaje: undefined });
+          void registrar(r.url, r.simulacion, id, conTexto, `${v.letra} ${EMOCIONES_AB[v.emocion].nombre}`);
+        } catch (e) {
+          actualizar({ estado: "error", mensaje: e instanceof Error ? e.message : "No se pudo generar la imagen." });
+        }
+      }),
+    );
+    if (mio === lanzamiento.current) toast.success("Variantes A/B terminadas");
+  }
+
+  /* ───────── descargas y lote ───────── */
+  async function descargarPng(url: string, nombre: string) {
+    try {
+      const blob = await urlAPng(url);
+      const objeto = URL.createObjectURL(blob);
       const a = document.createElement("a");
-      a.href = url;
-      a.download = `miniatura-${imagenModelo}.png`;
+      a.href = objeto;
+      a.download = nombre;
       a.click();
-      URL.revokeObjectURL(url);
+      URL.revokeObjectURL(objeto);
     } catch {
       // Si el navegador bloquea la conversión, se abre la imagen para guardarla a mano
-      window.open(imagenUrl, "_blank", "noopener");
+      window.open(url, "_blank", "noopener");
       toast.message("Se abrió la imagen en otra pestaña: clic derecho → Guardar imagen como…");
     }
+  }
+
+  function itemLote(e: PromptInput, promptApi: string, url: string, etiqueta: string): LoteItem {
+    const g = generatePrompt(e, { baseUrl: typeof window !== "undefined" ? window.location.origin : "" });
+    return { ...g, etiqueta, imagenUrl: url, promptApi };
+  }
+
+  function agregarUna() {
+    if (!ultima || !imagenUrl) return;
+    onAgregarAlLote([itemLote(ultima.entrada, ultima.promptApi, imagenUrl, buscarModelo(ultima.modelo)!.nombre)]);
+    toast.success("Imagen añadida al lote");
+  }
+
+  function agregarVariantes(lista: Variante[]) {
+    const items = lista
+      .filter((v) => v.estado === "listo" && v.url)
+      .map((v) => itemLote(v.entrada, v.promptApi, v.url!, `${v.letra} ${EMOCIONES_AB[v.emocion].nombre}`));
+    if (!items.length) return;
+    onAgregarAlLote(items);
+    toast.success(items.length === 1 ? "Variante añadida al lote" : `${items.length} variantes añadidas al lote`);
   }
 
   return (
@@ -361,10 +474,20 @@ export function ImageGenerator({ entrada }: { entrada: PromptInput | null }) {
         <Textarea readOnly value={prompt} className="mt-2 min-h-[200px] font-mono text-xs" />
       </details>
 
-      <Button className="w-full" onClick={generar} disabled={!prompt || estado === "generando" || faltanFotos}>
-        {estado === "generando" ? <Loader2 className="size-4 animate-spin" /> : <ImageIcon className="size-4" />}
-        {estado === "generando" ? "Generando…" : "Generar imagen"}
-      </Button>
+      <div className="grid gap-2 sm:grid-cols-2">
+        <Button onClick={generar} disabled={!prompt || ocupado || faltanFotos}>
+          {estado === "generando" ? <Loader2 className="size-4 animate-spin" /> : <ImageIcon className="size-4" />}
+          {estado === "generando" ? "Generando…" : "Generar imagen"}
+        </Button>
+        <Button variant="secondary" onClick={() => void generarVariantes()} disabled={!prompt || ocupado || faltanFotos}>
+          {variantes.some((v) => v.estado === "generando") ? <Loader2 className="size-4 animate-spin" /> : <Shuffle className="size-4" />}
+          Generar 3 variantes A/B
+        </Button>
+      </div>
+      <p className="text-xs text-muted-foreground">
+        Las 3 variantes comparten problema, plano, idioma y persona; cambian la emoción (pánico, sorpresa, alivio), la paleta y el
+        badge, para «Probar y comparar» en YouTube Studio. Las paletas y badges con candado 🔒 no cambian.
+      </p>
 
       {estado === "generando" && <p className="text-xs text-muted-foreground">{mensaje}</p>}
       {estado === "error" && (
@@ -373,7 +496,7 @@ export function ImageGenerator({ entrada }: { entrada: PromptInput | null }) {
         </p>
       )}
 
-      {imagenUrl && estado !== "generando" && (
+      {imagenUrl && estado !== "generando" && variantes.length === 0 && (
         <div className="space-y-2">
           {simulacion && (
             <p className="rounded-md border border-amber-500/50 p-2 text-sm text-amber-500">
@@ -382,9 +505,78 @@ export function ImageGenerator({ entrada }: { entrada: PromptInput | null }) {
           )}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={imagenUrl} alt="Miniatura generada" className="aspect-video w-full rounded-md border object-cover" />
-          <Button variant="outline" className="w-full" onClick={descargar}>
-            <Download className="size-4" />
-            Descargar PNG
+          <div className="grid gap-2 sm:grid-cols-2">
+            <Button variant="outline" onClick={() => void descargarPng(imagenUrl, `miniatura-${imagenModelo}.png`)}>
+              <Download className="size-4" />
+              Descargar PNG
+            </Button>
+            <Button variant="outline" onClick={agregarUna} disabled={!ultima}>
+              <Plus className="size-4" />
+              Añadir imagen al lote
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {variantes.length > 0 && (
+        <div className="space-y-3">
+          {variantes.some((v) => v.simulacion) && (
+            <p className="rounded-md border border-amber-500/50 p-2 text-sm text-amber-500">
+              Modo simulación activo: no hay FAL_KEY configurada, estas imágenes son de prueba y no tienen costo.
+            </p>
+          )}
+          <ul className="grid gap-3 sm:grid-cols-3">
+            {variantes.map((v) => (
+              <li key={v.letra} className="space-y-2 rounded-md border p-2" aria-label={`Variante ${v.letra}`}>
+                <p className="text-sm font-semibold">
+                  {v.letra} · {EMOCIONES_AB[v.emocion].nombre}
+                </p>
+                <p className="text-[11px] leading-tight text-muted-foreground">
+                  {v.entrada.paleta} · {v.entrada.badge}
+                </p>
+                {v.estado === "generando" && (
+                  <div className="flex aspect-video items-center justify-center rounded border text-xs text-muted-foreground">
+                    <Loader2 className="mr-1 size-4 animate-spin" />
+                    {v.mensaje ?? "Generando…"}
+                  </div>
+                )}
+                {v.estado === "error" && (
+                  <p role="alert" className="rounded border border-destructive/50 p-2 text-xs text-destructive">
+                    {v.mensaje}
+                  </p>
+                )}
+                {v.estado === "listo" && v.url && (
+                  <>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={v.url} alt={`Variante ${v.letra}`} className="aspect-video w-full rounded border object-cover" />
+                    <div className="flex gap-1">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="flex-1"
+                        onClick={() => void descargarPng(v.url!, `miniatura-${v.letra}-${v.emocion}.png`)}
+                      >
+                        <Download className="size-3" />
+                        PNG
+                      </Button>
+                      <Button size="sm" variant="outline" className="flex-1" onClick={() => agregarVariantes([v])}>
+                        <Plus className="size-3" />
+                        Lote
+                      </Button>
+                    </div>
+                  </>
+                )}
+              </li>
+            ))}
+          </ul>
+          <Button
+            variant="outline"
+            className="w-full"
+            onClick={() => agregarVariantes(variantes)}
+            disabled={!variantes.some((v) => v.estado === "listo")}
+          >
+            <Plus className="size-4" />
+            Añadir las variantes terminadas al lote
           </Button>
         </div>
       )}
