@@ -115,7 +115,7 @@ describe("Fase 5 · la emoción cambia, el resto de reglas no", () => {
       const p = buildPrompt(base({ emocion: e }));
       expect(p).toContain(EMOCIONES_AB[e].faceEn);
       expect(p).not.toMatch(/pánico/i);
-      expect(p).toContain("prohibido mirar el celular, el cable, la mano, hacia abajo o a la cámara");
+      expect(p).toContain("prohibido mirar el accesorio (celular, cable, portátil o tablet), la impresora, la mano, hacia abajo o a la cámara");
     }
   });
   it("siempre se mantienen: mirada, postura, ropa lisa, impresoras, esquinas, waist up, marca de agua y negativos", () => {

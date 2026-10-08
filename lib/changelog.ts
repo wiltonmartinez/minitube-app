@@ -9,6 +9,18 @@ export type Cambio = {
 
 export const CHANGELOG: Cambio[] = [
   {
+    version: "3.1.0",
+    fecha: "2026-10-08",
+    titulo: "Más accesorios: portátil, tablet y manos en la impresora",
+    cambios: [
+      "Nuevos accesorios en la mano: portátil (cerrado, junto al pecho) y tablet (con la pantalla encendida, junto al pecho).",
+      "Nueva postura «Ambas manos en la impresora»: las dos manos tocan la MISMA impresora del modelo seleccionado, sobre la mesa y lejos de las esquinas inferiores (la única impresora que se ve de cerca; las demás siguen al fondo).",
+      "Mismas reglas anatómicas: una mano sostiene el objeto y la otra descansa o gesticula; prohibido tocarse la cabeza o la cara.",
+      "El sorteo «según perfil» reparte ahora entre 6 opciones (los perfiles técnicos tienden al cable, al portátil y a las manos en la impresora).",
+      "La mirada sigue prohibida hacia cualquier accesorio.",
+    ],
+  },
+  {
     version: "3.0.0",
     fecha: "2026-10-08",
     titulo: "De generador de prompts a generador de miniaturas",

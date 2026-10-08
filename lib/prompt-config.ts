@@ -900,6 +900,9 @@ export function printerFullName(marca: string, modelo: string) {
 export const PROHIBICION_IMPRESORAS =
   "PROHIBIDO generar impresoras en primer plano o en la esquina inferior izquierda: las impresoras solo pueden verse al fondo, desenfocadas, y NUNCA dentro del área de montaje libre.";
 
+export const PROHIBICION_IMPRESORAS_MANOS =
+  "PROHIBIDO generar más impresoras en primer plano o en la esquina inferior izquierda: la ÚNICA impresora que puede verse de cerca es la que las dos manos tocan, sobre la mesa, en la parte derecha-central del encuadre y lejos de las dos esquinas inferiores; las demás impresoras solo pueden verse al fondo, desenfocadas, y NUNCA dentro del área de montaje libre.";
+
 export const AREA_MONTAJE_ES =
   "ÁREA DE MONTAJE LIBRE: La esquina inferior izquierda de la imagen debe ser puro ESPACIO NEGATIVO (por ejemplo, una mesa vacía, un fondo desenfocado o pared lisa). Está ESTRICTAMENTE PROHIBIDO generar pantallas, recuadros sólidos, marcos, bordes geométricos o cualquier objeto en esa zona (la ÚNICA excepción es la marca de agua tipográfica sutil descrita en la regla de marca de agua). Debe quedar como un hueco visual limpio para facilitar la superposición de una imagen en postproducción.";
 
@@ -924,6 +927,21 @@ export const ACCESORIOS: Record<string, { es: string; corto: string; unaMano: bo
     corto: "teléfono celular",
     unaMano: true,
   },
+  Portátil: {
+    es: "Sosteniendo un portátil moderno cerrado en una mano, pegado al cuerpo a la altura del pecho.",
+    corto: "portátil cerrado",
+    unaMano: true,
+  },
+  Tablet: {
+    es: "Sosteniendo una tablet moderna en una mano, a la altura del pecho, con la pantalla encendida.",
+    corto: "tablet",
+    unaMano: true,
+  },
+  "Manos en la impresora": {
+    es: "Las dos manos tocando la misma impresora del modelo seleccionado, apoyadas sobre ella con frustración.",
+    corto: "ambas manos en la impresora",
+    unaMano: false,
+  },
   "Manos a la cabeza (sin objeto)": {
     es: "Manos a la cabeza por el estrés (sin objeto adicional).",
     corto: "sin objeto adicional",
@@ -932,18 +950,18 @@ export const ACCESORIOS: Record<string, { es: string; corto: string; unaMano: bo
 };
 export const ACCESORIOS_FIJOS = Object.keys(ACCESORIOS);
 
-// Opción dinámica: el sistema asigna uno de los 3 según el perfil
+// Opción dinámica: el sistema asigna uno de los 6 según el perfil
 export const ACCESORIO_ALEATORIO = "🎲 Aleatorio (según perfil)";
 export const ACCESORIOS_OPCIONES = [ACCESORIO_ALEATORIO, ...ACCESORIOS_FIJOS];
 
-// Probabilidades [cable USB, teléfono, sin objeto] según el perfil: los perfiles técnicos tienden al cable;
-// el resto, al teléfono o a las manos solas. (Ajustables.)
+// Probabilidades [cable USB, teléfono, portátil, tablet, manos en la impresora, sin objeto] según el perfil: los perfiles técnicos tienden al
+// cable y al portátil; el resto, al teléfono o a las manos solas. (Ajustables; cada fila suma 1.)
 const PERFILES_TECNICOS = new Set(["Técnico de Impresoras", "Técnico de computadores", "Ingeniero de sistemas"]);
-const PESOS_TECNICO: [number, number, number] = [0.5, 0.2, 0.3];
-const PESOS_GENERAL: [number, number, number] = [0.25, 0.35, 0.4];
+export const PESOS_TECNICO: number[] = [0.25, 0.1, 0.1, 0.1, 0.2, 0.25];
+export const PESOS_GENERAL: number[] = [0.15, 0.2, 0.1, 0.1, 0.15, 0.3];
 
 /**
- * Devuelve un accesorio concreto: el elegido o, si es "Aleatorio", uno de los 3 sorteado con las
+ * Devuelve un accesorio concreto: el elegido o, si es "Aleatorio", uno de los 6 sorteado con las
  * probabilidades del perfil. `u` es un número en [0,1) (el sorteo), para poder fijarlo entre renders.
  */
 export function resolverAccesorio(seleccion: string, profesion: string, u: number = Math.random()): string {
@@ -1004,15 +1022,17 @@ export const EMOCIONES_AB: Record<
 export const MIRADA_ES =
   "Ojos desorbitados y fijos hacia el vacío inferior izquierdo, un poco por encima de la esquina; nunca abajo, en la mano ni en la cámara";
 const MIRADA_REGLA =
-  "MIRADA FIJA Y ALTA HACIA LA IZQUIERDA (DIRECCIÓN ELEVADA HACIA EL ESPACIO DE ERROR): Los ojos del personaje deben estar abiertos, desorbitados por el pánico, y orientados obligatoriamente hacia el sector medio-izquierdo de la imagen, un poco por encima de la esquina inferior izquierda, en el borde alto del espacio vacío reservado para el error, con la cabeza girada hacia ese sector. Los ojos tienen prohibido mirar el celular, el cable, la mano, hacia abajo o a la cámara; la línea visual debe conectar el rostro estresado con el espacio vacío del error.";
+  "MIRADA FIJA Y ALTA HACIA LA IZQUIERDA (DIRECCIÓN ELEVADA HACIA EL ESPACIO DE ERROR): Los ojos del personaje deben estar abiertos, desorbitados por el pánico, y orientados obligatoriamente hacia el sector medio-izquierdo de la imagen, un poco por encima de la esquina inferior izquierda, en el borde alto del espacio vacío reservado para el error, con la cabeza girada hacia ese sector. Los ojos tienen prohibido mirar el accesorio (celular, cable, portátil o tablet), la impresora, la mano, hacia abajo o a la cámara; la línea visual debe conectar el rostro estresado con el espacio vacío del error.";
 
 /* ───────── Cerebro de Postura (máquina de estados, anatomía exacta de 2 manos) ─────────
    Lógica MUTUAMENTE EXCLUYENTE: el accesorio fija la postura de AMBAS manos; nunca se combinan dos acciones.
      · celular → UNA mano sostiene el teléfono (parte baja de la toma) · la OTRA, en la mesa o gesticulando a un lado
      · cable   → UNA mano sostiene el cable frente a la cámara · la OTRA, descansa o gesticula a un lado
+     · impresora → las DOS manos tocan la MISMA impresora del modelo elegido (sobre la mesa, lejos de las esquinas inferiores)
+     · portátil/tablet → UNA mano lo sostiene pegado al cuerpo a la altura del pecho · la OTRA, en la mesa o a un lado
      · cabeza  → las DOS manos van a los lados de la cabeza; el accesorio se fuerza a «ninguno»
    Los gestos por profesión ya no se usan en el prompt: la postura la decide solo este cerebro. */
-export type EstadoPostura = "celular" | "cable" | "cabeza";
+export type EstadoPostura = "celular" | "cable" | "portatil" | "tablet" | "impresora" | "cabeza";
 export type Postura = {
   estado: EstadoPostura;
   /** Accesorio efectivo (siempre válido; en «cabeza» se fuerza a «Manos a la cabeza (sin objeto)») */
@@ -1028,14 +1048,37 @@ export type Postura = {
 export const POSTURA_ALEATORIA = "🎲 Aleatorio (según perfil)";
 export const POSTURA_CABEZA = "Manos a la cabeza";
 export const POSTURA_ACCESORIO = "Con accesorio en una mano";
-export const POSTURA_OPCIONES = [POSTURA_ALEATORIA, POSTURA_CABEZA, POSTURA_ACCESORIO];
+export const POSTURA_IMPRESORA = "Ambas manos en la impresora";
+export const ACCESORIO_IMPRESORA = "Manos en la impresora";
+export const POSTURA_OPCIONES = [POSTURA_ALEATORIA, POSTURA_CABEZA, POSTURA_ACCESORIO, POSTURA_IMPRESORA];
 export const ACCESORIO_NINGUNO = "Ninguno";
-export const ACCESORIOS_MANO = ["Cable USB negro", "Teléfono celular"];
+export const ACCESORIOS_MANO = ["Cable USB negro", "Teléfono celular", "Portátil", "Tablet"];
 /** Postura que corresponde al valor del campo accesorio (el campo accesorio es la única fuente de estado). */
 export const posturaDe = (accesorio: string) =>
-  accesorio === ACCESORIO_ALEATORIO ? POSTURA_ALEATORIA : ACCESORIOS_MANO.includes(accesorio) ? POSTURA_ACCESORIO : POSTURA_CABEZA;
+  accesorio === ACCESORIO_ALEATORIO
+    ? POSTURA_ALEATORIA
+    : accesorio === ACCESORIO_IMPRESORA
+      ? POSTURA_IMPRESORA
+      : ACCESORIOS_MANO.includes(accesorio)
+        ? POSTURA_ACCESORIO
+        : POSTURA_CABEZA;
 
-export function cerebroPostura(accesorio: string): Postura {
+export function cerebroPostura(accesorio: string, impresora = "selected printer"): Postura {
+  if (accesorio === ACCESORIO_IMPRESORA) {
+    return {
+      estado: "impresora",
+      accesorio,
+      manosEs: "Las dos manos tocando la misma impresora del modelo seleccionado",
+      manosEn: `both hands resting on the very same ${impresora} printer, one hand on each side of it or both on top of it, in frustration`,
+      reglasEn: [
+        `Both hands touch the very same single ${impresora} printer, resting on top of it or gripping its sides in frustration, and no hand holds any other object. The printer sits on the table in front of the person, in the right-center part of the frame, well away from both lower corners, and it has no legible logos or text on its body. No hand touches the head, nose, eyes or face, so the person has exactly two hands.`,
+      ],
+      reglas: [
+        ACCESORIOS[accesorio].es,
+        `POSTURA CON IMPRESORA: las DOS manos tocan la MISMA impresora ${impresora} (una sola impresora, la del modelo seleccionado), apoyadas sobre ella o agarrando sus lados con frustración, sin sostener ningún otro objeto. La impresora está sobre la mesa delante del personaje, en la parte derecha-central del encuadre y lejos de las dos esquinas inferiores (nunca en el área de montaje libre de la esquina inferior izquierda ni en la esquina inferior derecha), y sin logotipos ni texto legibles en su carcasa. PROHIBIDO que una mano vaya a la cabeza, a la nariz, a los ojos o cubra el rostro.`,
+      ],
+    };
+  }
   if (accesorio === "Teléfono celular") {
     return {
       estado: "celular",
@@ -1049,6 +1092,38 @@ export function cerebroPostura(accesorio: string): Postura {
       reglas: [
         ACCESORIOS[accesorio].es,
         "POSTURA CON CELULAR: exactamente UNA mano sostiene el teléfono en la parte baja de la toma, de forma pasiva y secundaria, y la OTRA mano está apoyada firmemente sobre la mesa o gesticulando de frustración a un lado. PROHIBIDO que una mano vaya a la cabeza, a la nariz, a los ojos o cubra el rostro mientras hay un celular en la mano, para que no sobren extremidades.",
+      ],
+    };
+  }
+  if (accesorio === "Portátil") {
+    return {
+      estado: "portatil",
+      accesorio,
+      manosEs: "Una mano sostiene el portátil cerrado junto al pecho; la otra, apoyada en la mesa o gesticulando a un lado",
+      manosEn:
+        "exactly one hand holding a closed slim laptop against the side of the torso at chest height while the other hand rests firmly on the table or gestures in frustration to the side",
+      reglasEn: [
+        "Exactly one hand holds a closed slim laptop close to the body at chest height, passively, well away from the lower corners of the frame, while the other hand rests firmly on the table or gestures in frustration to the side. No hand touches the head, nose, eyes or face while the laptop is in hand, so the person has exactly two hands.",
+      ],
+      reglas: [
+        ACCESORIOS[accesorio].es,
+        "POSTURA CON PORTÁTIL: exactamente UNA mano sostiene el portátil cerrado, pegado al cuerpo a la altura del pecho y lejos de las esquinas inferiores, de forma pasiva y secundaria, y la OTRA mano está apoyada firmemente sobre la mesa o gesticulando de frustración a un lado. PROHIBIDO que una mano vaya a la cabeza, a la nariz, a los ojos o cubra el rostro mientras hay un portátil en la mano, para que no sobren extremidades.",
+      ],
+    };
+  }
+  if (accesorio === "Tablet") {
+    return {
+      estado: "tablet",
+      accesorio,
+      manosEs: "Una mano sostiene la tablet junto al pecho; la otra, apoyada en la mesa o gesticulando a un lado",
+      manosEn:
+        "exactly one hand holding a modern tablet with its screen on at chest height while the other hand rests firmly on the table or gestures in frustration to the side",
+      reglasEn: [
+        "Exactly one hand holds a modern tablet with its screen on at chest height, passively, well away from the lower corners of the frame, while the other hand rests firmly on the table or gestures in frustration to the side. No hand touches the head, nose, eyes or face while the tablet is in hand, so the person has exactly two hands.",
+      ],
+      reglas: [
+        ACCESORIOS[accesorio].es,
+        "POSTURA CON TABLET: exactamente UNA mano sostiene la tablet a la altura del pecho, lejos de las esquinas inferiores, de forma pasiva y secundaria, y la OTRA mano está apoyada firmemente sobre la mesa o gesticulando de frustración a un lado. PROHIBIDO que una mano vaya a la cabeza, a la nariz, a los ojos o cubra el rostro mientras hay una tablet en la mano, para que no sobren extremidades.",
       ],
     };
   }
@@ -1075,11 +1150,11 @@ export function cerebroPostura(accesorio: string): Postura {
     manosEs: "Las dos manos a los lados de la cabeza con desesperación (sin accesorio)",
     manosEn: "both hands placed on the sides of the head in desperation, with no object in either hand",
     reglasEn: [
-      "Both hands are placed on the sides of the head in desperation, and there is no object in the frame: no phone, no cable, nothing floating in the lower part of the image.",
+      "Both hands are placed on the sides of the head in desperation, and there is no object in the frame: no phone, no cable, no laptop, no tablet, no printer being touched, nothing floating in the lower part of the image.",
     ],
     reglas: [
       ACCESORIOS["Manos a la cabeza (sin objeto)"].es,
-      "POSTURA MANOS A LA CABEZA: las DOS manos van exclusivamente a los lados de la cabeza con desesperación. No hay ningún accesorio ni objeto en la toma: ni celular, ni cable, ni nada flotando en la parte baja.",
+      "POSTURA MANOS A LA CABEZA: las DOS manos van exclusivamente a los lados de la cabeza con desesperación. No hay ningún accesorio ni objeto en la toma: ni celular, ni cable, ni portátil, ni tablet, ni impresora, ni nada flotando en la parte baja.",
     ],
   };
 }
@@ -1149,7 +1224,7 @@ function preparar(i: PromptInput, referencia = false) {
   // vestimenta del perfil (p. ej. "…and black-framed glasses") para no duplicarlas ni contradecirlas.
   const gafasText = GAFAS[i.gafas] ?? "";
   // Accesorio en las manos: con cable o teléfono, una mano lo sostiene y la otra conserva el gesto (variante de una mano)
-  const postura = cerebroPostura(i.accesorio); // el cerebro decide la postura de AMBAS manos
+  const postura = cerebroPostura(i.accesorio, printer); // el cerebro decide la postura de AMBAS manos
   const hands = postura.manosEn;
   const clothingBase = mujer ? perfil.en.clothing.f : perfil.en.clothing.m;
   const clothing = gafasText
@@ -1196,7 +1271,7 @@ export function buildPrompt(i: PromptInput): string {
 
   // Entorno contextual (Fondo Estructural del Bloque 3): detalles del trabajo de la profesión + impresoras reales de la
   // marca elegida al fondo desenfocado; el primer plano y el área de montaje (esquina inferior izquierda) quedan libres.
-  const setting = `The setting is ${perfil.en.scene}, with subtle but realistic details of the character's daily workplace in the soft-focus background, such as ${perfil.en.props}. On the desks and shelves of this blurred background there are also real, physical ${i.marca} printers (recognizable ${i.marca} printer silhouettes, slightly out of focus, with no legible logos or brand text on them), giving the immediate visual impression that the character is a customer who uses ${i.marca} printers in their daily work. ${PROHIBICION_IMPRESORAS} ${AREA_MONTAJE_ES}`;
+  const setting = `The setting is ${perfil.en.scene}, with subtle but realistic details of the character's daily workplace in the soft-focus background, such as ${perfil.en.props}. On the desks and shelves of this blurred background there are also real, physical ${i.marca} printers (recognizable ${i.marca} printer silhouettes, slightly out of focus, with no legible logos or brand text on them), giving the immediate visual impression that the character is a customer who uses ${i.marca} printers in their daily work. ${postura.estado === "impresora" ? PROHIBICION_IMPRESORAS_MANOS : PROHIBICION_IMPRESORAS} ${AREA_MONTAJE_ES}`;
 
   const sentences = [
     "Hyper-realistic cinematic photograph for a YouTube thumbnail in 16:9 widescreen on a 1920x1080 pixel canvas, shot on a full-frame camera with an 85mm lens, shallow depth of field, dramatic high-contrast lighting, ultra-detailed skin and fabric textures, vivid saturated colors.",
@@ -1255,7 +1330,7 @@ export function generatePrompt(input: PromptInput, options: { baseUrl?: string }
    Con «texto3d» activado incluye los textos 3D y el badge (idioma del bloque 4); desactivado pide la imagen SIN
    texto y deja las zonas libres para postproducción. El prompt de Gemini (buildPrompt) no cambia de formato. */
 const MIRADA_API =
-  "The character's eyes are wide open and bulging with panic, and the head is turned so the stare is fixed firmly on the empty lower-left area of the frame, aimed just above the very corner, toward the upper edge of that empty space, as if staring at something terrifying there. The eyes never look at the camera, never look at the hand, the phone or the cable, and never look downward. The line of sight clearly connects the stressed face with that empty space.";
+  "The character's eyes are wide open and bulging with panic, and the head is turned so the stare is fixed firmly on the empty lower-left area of the frame, aimed just above the very corner, toward the upper edge of that empty space, as if staring at something terrifying there. The eyes never look at the camera, never look at the hand, the phone, the cable, the laptop, the tablet or the printer, and never look downward. The line of sight clearly connects the stressed face with that empty space.";
 const ANATOMIA_API =
   "Flawless human anatomy: exactly one person with exactly two arms and two hands, five fingers on each hand, no extra hands, no phantom limbs, no duplicated arms. The hands look completely natural with perfect proportions.";
 const EXPRESION_API =
@@ -1280,7 +1355,7 @@ export function buildApiPrompt(i: PromptInput, opts: { texto3d: boolean; referen
   const t = opts.texto3d;
   const marcoEn = c.marco.charAt(0).toUpperCase() + c.marco.slice(1);
 
-  const escena = `The setting is ${c.perfil.en.scene}, with realistic details of the character's workplace softly blurred in the background, such as ${c.perfil.en.props}. Real physical ${i.marca} printers sit on shelves and tables in the blurred background, slightly out of focus, with no legible logos or text on them. There are no printers in the foreground.`;
+  const escena = `The setting is ${c.perfil.en.scene}, with realistic details of the character's workplace softly blurred in the background, such as ${c.perfil.en.props}. Real physical ${i.marca} printers sit on shelves and tables in the blurred background, slightly out of focus, with no legible logos or text on them. ${c.postura.estado === "impresora" ? "The only printer in the foreground is the single one both hands are touching, on the table at the right-center of the frame and away from the lower corners; every other printer stays in the blurred background." : "There are no printers in the foreground."}`;
   const esquina = t
     ? `The lower-left corner of the frame is completely empty negative space: only a clean, softly blurred background, with no objects, no hands, no printers and no graphics. In that corner, and only there, add a tiny, subtle, semi-transparent, elegant typographic watermark reading "${MARCA_AGUA_TEXTO}", slightly inset from the edges, with no box and no icon.`
     : "The lower-left corner of the frame is completely empty negative space: only a clean, softly blurred background, with no objects, no hands, no printers, no graphics and no text, kept clean for post-production.";

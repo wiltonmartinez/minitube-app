@@ -49,7 +49,7 @@ describe("Fase 2 · sin porcentajes en las reglas espaciales", () => {
     expect(api).toMatch(/never look downward/);
     const gemini = buildPrompt(base());
     expect(gemini).toContain("un poco por encima de la esquina inferior izquierda");
-    expect(gemini).toContain("prohibido mirar el celular, el cable, la mano, hacia abajo o a la cámara");
+    expect(gemini).toContain("prohibido mirar el accesorio (celular, cable, portátil o tablet), la impresora, la mano, hacia abajo o a la cámara");
   });
 });
 

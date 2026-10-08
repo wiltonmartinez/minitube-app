@@ -142,9 +142,9 @@ describe("reglas que deben seguir intactas", () => {
     expect(cabeza.manosEn).not.toMatch(/smartphone|USB/);
   });
   it("cada prompt contiene exactamente una postura y la marca de agua", () => {
-    for (const acc of [...ACCESORIOS_MANO, "Manos a la cabeza (sin objeto)"]) {
+    for (const acc of [...ACCESORIOS_MANO, "Manos en la impresora", "Manos a la cabeza (sin objeto)"]) {
       const p = buildPrompt(base({ accesorio: acc }));
-      const posturas = ["POSTURA CON CELULAR", "POSTURA CON CABLE USB", "POSTURA MANOS A LA CABEZA"].filter((t) =>
+      const posturas = ["POSTURA CON CELULAR", "POSTURA CON CABLE USB", "POSTURA CON PORTÁTIL", "POSTURA CON TABLET", "POSTURA CON IMPRESORA", "POSTURA MANOS A LA CABEZA"].filter((t) =>
         p.includes(t),
       );
       expect(posturas).toHaveLength(1);
