@@ -9,6 +9,18 @@ export type Cambio = {
 
 export const CHANGELOG: Cambio[] = [
   {
+    version: "4.0.0",
+    fecha: "2026-10-08",
+    titulo: "API pública del motor de miniaturas (para TexTube)",
+    cambios: [
+      "Nuevo POST /api/v1/thumbnail: recibe marca, modelo y error y devuelve el prompt para la imagen (inglés) y el prompt de Gemini (español); opcionalmente genera la imagen.",
+      "Seguridad: exige «Authorization: Bearer <MINITUBE_API_TOKEN>» (401 sin token; si el servidor no lo tiene configurado, queda cerrada con 503).",
+      "Generación asíncrona por la cola de fal.ai: POST responde 202 con un id firmado y GET /api/v1/thumbnail/{id} consulta el estado.",
+      "Errores en JSON y en español: 400 datos inválidos, 401 sin token, 429 cuota agotada (con el prompt de Gemini incluido), 502 fallo del proveedor.",
+      "Misma escena con la misma semilla; enfoque «error» (pánico) o «solución» (alivio). Modo simulación sin FAL_KEY.",
+    ],
+  },
+  {
     version: "3.6.0",
     fecha: "2026-10-08",
     titulo: "Ver los créditos de fal.ai",
