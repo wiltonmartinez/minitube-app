@@ -1,12 +1,10 @@
 "use client";
 
-import { Download, ImageIcon, Loader2 } from "lucide-react";
+import { Download, ImageIcon, Loader2, Trash2, Upload, X } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -14,13 +12,31 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  CLAVE_HISTORIAL,
+  CLAVE_REFERENCIAS,
+  LADO_MINIATURA,
+  LADO_REFERENCIA_ENVIO,
+  LADO_REFERENCIA_GUARDADA,
+  MAX_HISTORIAL,
+  MAX_REFERENCIAS_GUARDADAS,
+  esItemHistorial,
+  esReferenciaGuardada,
+  nuevoId,
+  type ItemHistorial,
+} from "@/lib/historial";
+import { reducirArchivo, reducirImagen } from "@/lib/imagen-cliente";
+import { ASPECTO, MAX_REFERENCIAS, MODELOS, MODELO_POR_DEFECTO, buscarModelo, type ModeloId } from "@/lib/image-models";
+import { useListaLocal } from "@/lib/use-lista-local";
 import { buildApiPrompt, type PromptInput } from "@/lib/prompt-config";
-import { ASPECTO, MODELOS, MODELO_POR_DEFECTO, buscarModelo, type ModeloId } from "@/lib/image-models";
 
 type Estado = "reposo" | "generando" | "listo" | "error";
 
 const ESPERA_MAX_MS = 240_000; // tiempo máximo esperando a fal.ai
 const SONDEO_MS = 2_000;
+const MAX_ARCHIVO_MB = 15;
 
 const pausa = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -28,44 +44,132 @@ const pausa = (ms: number) => new Promise((r) => setTimeout(r, ms));
 export function ImageGenerator({ entrada }: { entrada: PromptInput | null }) {
   const [modeloId, setModeloId] = useState<ModeloId>(MODELO_POR_DEFECTO);
   const [texto3d, setTexto3d] = useState(false);
+  const [usarRef, setUsarRef] = useState(false);
+  const [refs, setRefs] = useState<string[]>([]); // fotos de esta sesión (1024 px, solo en memoria)
   const [estado, setEstado] = useState<Estado>("reposo");
   const [mensaje, setMensaje] = useState("");
   const [imagenUrl, setImagenUrl] = useState<string | null>(null);
   const [simulacion, setSimulacion] = useState(false);
   const [imagenModelo, setImagenModelo] = useState<ModeloId>(MODELO_POR_DEFECTO);
+  const [historial, guardarHistorial] = useListaLocal<ItemHistorial>(CLAVE_HISTORIAL, esItemHistorial, MAX_HISTORIAL);
+  const [guardadas, guardarGuardadas] = useListaLocal(CLAVE_REFERENCIAS, esReferenciaGuardada, MAX_REFERENCIAS_GUARDADAS);
+  const inputArchivo = useRef<HTMLInputElement>(null);
   // Evita que una respuesta antigua pise a una generación más nueva
   const intento = useRef(0);
 
   const modelo = buscarModelo(modeloId)!;
-  // Prompt en inglés para la API; se actualiza solo con cada cambio del formulario o del interruptor
-  const prompt = useMemo(() => (entrada ? buildApiPrompt(entrada, { texto3d }) : ""), [entrada, texto3d]);
+  const admiteRef = !!modelo.endpointRef;
+  const refActiva = usarRef && admiteRef;
+  const refsEnvio = refActiva ? refs : [];
+  // Prompt en inglés para la API; se actualiza solo con cada cambio del formulario o de los interruptores
+  const prompt = useMemo(
+    () => (entrada ? buildApiPrompt(entrada, { texto3d, referencia: refsEnvio.length > 0 }) : ""),
+    [entrada, texto3d, refsEnvio.length],
+  );
+  const faltanFotos = refActiva && refs.length === 0;
 
   function elegirModelo(id: ModeloId) {
     setModeloId(id);
     setTexto3d(buscarModelo(id)!.textoEnImagen); // recomendado solo con los modelos que escriben bien el texto
   }
 
+  /* ───────── fotos de referencia ───────── */
+  async function subirFotos(archivos: FileList | null) {
+    if (!archivos?.length) return;
+    const libres = MAX_REFERENCIAS - refs.length;
+    if (libres <= 0) return toast.error(`Máximo ${MAX_REFERENCIAS} fotos de referencia.`);
+    const nuevas: string[] = [];
+    for (const f of Array.from(archivos).slice(0, libres)) {
+      if (!/^image\/(jpeg|png|webp)$/.test(f.type)) {
+        toast.error(`«${f.name}» no es una imagen JPG, PNG o WebP.`);
+        continue;
+      }
+      if (f.size > MAX_ARCHIVO_MB * 1024 * 1024) {
+        toast.error(`«${f.name}» pesa más de ${MAX_ARCHIVO_MB} MB.`);
+        continue;
+      }
+      try {
+        nuevas.push(await reducirArchivo(f, LADO_REFERENCIA_ENVIO, 0.85));
+      } catch {
+        toast.error(`No se pudo leer «${f.name}».`);
+      }
+    }
+    if (archivos.length > libres) toast.message(`Solo caben ${MAX_REFERENCIAS} fotos: se añadieron las primeras.`);
+    if (nuevas.length) setRefs((r) => [...r, ...nuevas]);
+    if (inputArchivo.current) inputArchivo.current.value = "";
+  }
+
+  async function guardarReferencia(imagen: string) {
+    try {
+      const pequena = await reducirImagen(imagen, LADO_REFERENCIA_GUARDADA, 0.8);
+      const n = guardarGuardadas([{ id: nuevoId(), nombre: `Referencia ${guardadas.length + 1}`, imagen: pequena }, ...guardadas]);
+      if (n === 0) toast.error("No hay espacio en el navegador para guardar la referencia.");
+      else toast.success("Referencia guardada en este navegador");
+    } catch {
+      toast.error("No se pudo guardar la referencia.");
+    }
+  }
+
+  /* ───────── historial ───────── */
+  async function registrar(url: string, esSimulacion: boolean, id: ModeloId, conTexto: boolean) {
+    let thumb: string | undefined;
+    try {
+      thumb = await reducirImagen(url, LADO_MINIATURA, 0.7);
+    } catch {
+      thumb = undefined; // p. ej. el servidor de la imagen no permite copiarla: se guarda solo la URL
+    }
+    const remota = !esSimulacion && url.startsWith("https://") ? url : undefined;
+    if (!thumb && !remota) return;
+    const item: ItemHistorial = {
+      id: nuevoId(),
+      fecha: new Date().toISOString(),
+      modelo: buscarModelo(id)!.nombre,
+      texto3d: conTexto,
+      simulacion: esSimulacion,
+      thumb,
+      url: remota,
+    };
+    guardarHistorial([item, ...historial]);
+  }
+
+  function verDelHistorial(item: ItemHistorial) {
+    setImagenUrl(item.url ?? item.thumb ?? null);
+    setSimulacion(item.simulacion);
+    setEstado("listo");
+  }
+
+  /* ───────── generación ───────── */
   async function generar() {
-    if (!prompt) return;
+    if (!prompt || faltanFotos) return;
     const mio = ++intento.current;
+    const id = modeloId;
+    const conTexto = texto3d;
     setEstado("generando");
-    setMensaje("Enviando el prompt…");
+    setMensaje(refsEnvio.length ? "Subiendo las fotos de referencia y enviando el prompt…" : "Enviando el prompt…");
+    const terminar = (url: string, esSim: boolean) => {
+      setImagenUrl(url);
+      setSimulacion(esSim);
+      setImagenModelo(id);
+      setEstado("listo");
+      toast.success(esSim ? "Imagen de simulación lista" : "Imagen lista");
+      void registrar(url, esSim, id, conTexto);
+    };
     try {
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt, modelo: modeloId, aspectRatio: ASPECTO }),
+        body: JSON.stringify({
+          prompt,
+          modelo: id,
+          aspectRatio: ASPECTO,
+          ...(refsEnvio.length ? { imagenesReferencia: refsEnvio } : {}),
+        }),
       });
       const j = await res.json();
       if (!res.ok) throw new Error(j.error ?? "No se pudo generar la imagen.");
 
       if (j.estado === "completado") {
-        if (mio !== intento.current) return;
-        setImagenUrl(j.imagenUrl);
-        setSimulacion(!!j.simulacion);
-        setImagenModelo(modeloId);
-        setEstado("listo");
-        toast.success(j.simulacion ? "Imagen de simulación lista" : "Imagen lista");
+        if (mio === intento.current) terminar(j.imagenUrl, !!j.simulacion);
         return;
       }
 
@@ -78,11 +182,7 @@ export function ImageGenerator({ entrada }: { entrada: PromptInput | null }) {
         const d = await r.json();
         if (!r.ok) throw new Error(d.error ?? "No se pudo consultar el estado.");
         if (d.estado === "completado") {
-          setImagenUrl(d.imagenUrl);
-          setSimulacion(false);
-          setImagenModelo(modeloId);
-          setEstado("listo");
-          toast.success("Imagen lista");
+          terminar(d.imagenUrl, false);
           return;
         }
         setMensaje(d.estado === "en_cola" ? "En cola en fal.ai…" : "Generando la imagen…");
@@ -164,12 +264,104 @@ export function ImageGenerator({ entrada }: { entrada: PromptInput | null }) {
         </div>
       </div>
 
+      <div className="space-y-3 rounded-md border p-3">
+        <div className="flex items-start gap-3">
+          <Switch id="usar-ref" checked={refActiva} onCheckedChange={setUsarRef} disabled={!admiteRef} />
+          <div className="space-y-1">
+            <Label htmlFor="usar-ref">Usar foto de referencia del personaje</Label>
+            <p className="text-xs text-muted-foreground">
+              {admiteRef
+                ? `La IA mantiene la cara de las fotos (de 1 a ${MAX_REFERENCIAS}) y cambia el resto. Usa solo fotos tuyas o de personas que te dieron permiso. ${modelo.costoRefTexto ?? ""}`
+                : `${modelo.nombre} no admite fotos de referencia. Elige Nano Banana Pro o FLUX.2 Pro para usarlas.`}
+            </p>
+          </div>
+        </div>
+
+        {refActiva && (
+          <div className="space-y-3">
+            <input
+              ref={inputArchivo}
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              multiple
+              className="hidden"
+              onChange={(e) => void subirFotos(e.target.files)}
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => inputArchivo.current?.click()}
+              disabled={refs.length >= MAX_REFERENCIAS}
+            >
+              <Upload className="size-4" />
+              Subir fotos ({refs.length}/{MAX_REFERENCIAS})
+            </Button>
+            {refs.length > 0 && (
+              <ul className="flex flex-wrap gap-2">
+                {refs.map((r, i) => (
+                  <li key={i} className="relative">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={r} alt={`Referencia ${i + 1}`} className="size-20 rounded-md border object-cover" />
+                    <button
+                      type="button"
+                      aria-label={`Quitar referencia ${i + 1}`}
+                      onClick={() => setRefs((x) => x.filter((_, k) => k !== i))}
+                      className="absolute -right-1 -top-1 rounded-full bg-background p-0.5 shadow ring-1 ring-border"
+                    >
+                      <X className="size-3" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void guardarReferencia(r)}
+                      className="mt-1 block w-full text-center text-[10px] text-muted-foreground underline"
+                    >
+                      Guardar
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {guardadas.length > 0 && (
+              <div className="space-y-1">
+                <p className="text-xs text-muted-foreground">Mis referencias guardadas (clic para usar):</p>
+                <ul className="flex flex-wrap gap-2">
+                  {guardadas.map((g) => (
+                    <li key={g.id} className="relative">
+                      <button
+                        type="button"
+                        aria-label={`Usar ${g.nombre}`}
+                        disabled={refs.length >= MAX_REFERENCIAS}
+                        onClick={() => setRefs((x) => [...x, g.imagen])}
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={g.imagen} alt={g.nombre} className="size-14 rounded-md border object-cover" />
+                      </button>
+                      <button
+                        type="button"
+                        aria-label={`Borrar ${g.nombre}`}
+                        onClick={() => guardarGuardadas(guardadas.filter((x) => x.id !== g.id))}
+                        className="absolute -right-1 -top-1 rounded-full bg-background p-0.5 shadow ring-1 ring-border"
+                      >
+                        <X className="size-3" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+                <p className="text-[10px] text-muted-foreground">Las guardadas se reducen a {LADO_REFERENCIA_GUARDADA} px para no llenar el navegador.</p>
+              </div>
+            )}
+            {faltanFotos && <p className="text-xs text-amber-500">Sube al menos una foto para generar con referencia.</p>}
+          </div>
+        )}
+      </div>
+
       <details className="rounded-md border p-3 text-sm">
         <summary className="cursor-pointer text-muted-foreground">Ver el prompt que se envía a la API (inglés)</summary>
         <Textarea readOnly value={prompt} className="mt-2 min-h-[200px] font-mono text-xs" />
       </details>
 
-      <Button className="w-full" onClick={generar} disabled={!prompt || estado === "generando"}>
+      <Button className="w-full" onClick={generar} disabled={!prompt || estado === "generando" || faltanFotos}>
         {estado === "generando" ? <Loader2 className="size-4 animate-spin" /> : <ImageIcon className="size-4" />}
         {estado === "generando" ? "Generando…" : "Generar imagen"}
       </Button>
@@ -196,6 +388,41 @@ export function ImageGenerator({ entrada }: { entrada: PromptInput | null }) {
           </Button>
         </div>
       )}
+
+      <details className="rounded-md border p-3 text-sm">
+        <summary className="cursor-pointer text-muted-foreground">Historial de miniaturas ({historial.length})</summary>
+        {historial.length === 0 ? (
+          <p className="mt-2 text-xs text-muted-foreground">Aún no hay miniaturas. Se guardan aquí, solo en este navegador.</p>
+        ) : (
+          <div className="mt-2 space-y-2">
+            <ul className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+              {historial.map((h) => (
+                <li key={h.id} className="space-y-1">
+                  <button type="button" onClick={() => verDelHistorial(h)} aria-label={`Ver miniatura de ${h.modelo}`} className="block w-full">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={h.thumb ?? h.url} alt={`Miniatura ${h.modelo}`} className="aspect-video w-full rounded border object-cover" />
+                  </button>
+                  <p className="truncate text-[10px] text-muted-foreground">
+                    {h.modelo}
+                    {h.simulacion ? " · simulación" : ""} · {new Date(h.fecha).toLocaleDateString("es")}
+                  </p>
+                  <button
+                    type="button"
+                    className="text-[10px] text-muted-foreground underline"
+                    onClick={() => guardarHistorial(historial.filter((x) => x.id !== h.id))}
+                  >
+                    Borrar
+                  </button>
+                </li>
+              ))}
+            </ul>
+            <Button type="button" variant="ghost" size="sm" onClick={() => guardarHistorial([])}>
+              <Trash2 className="size-4" />
+              Vaciar historial
+            </Button>
+          </div>
+        )}
+      </details>
     </section>
   );
 }

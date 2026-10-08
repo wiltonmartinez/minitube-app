@@ -19,7 +19,16 @@ export type ModeloIA = {
   resolucion: string;
   /** Construye la entrada del modelo (16:9) a partir del prompt */
   entrada: (prompt: string) => Record<string, unknown>;
+  /** Endpoint «edit» que admite fotos de referencia (solo los modelos que lo soportan) */
+  endpointRef?: string;
+  /** Entrada del endpoint con referencias (URLs ya subidas a fal) */
+  entradaRef?: (prompt: string, imageUrls: string[]) => Record<string, unknown>;
+  /** Aviso de costo extra cuando se usan referencias */
+  costoRefTexto?: string;
 };
+
+/** Máximo de fotos de referencia por imagen */
+export const MAX_REFERENCIAS = 4;
 
 export const ASPECTO = "16:9" as const;
 
@@ -58,6 +67,16 @@ export const MODELOS: ModeloIA[] = [
       num_images: 1,
       output_format: "png",
     }),
+    endpointRef: "fal-ai/nano-banana-pro/edit",
+    entradaRef: (prompt, imageUrls) => ({
+      prompt,
+      image_urls: imageUrls,
+      aspect_ratio: ASPECTO,
+      resolution: "1K",
+      num_images: 1,
+      output_format: "png",
+    }),
+    costoRefTexto: "mismo precio con referencias (≈ USD 0.15)",
   },
   {
     id: "seedream-5-pro",
@@ -90,6 +109,14 @@ export const MODELOS: ModeloIA[] = [
       image_size: "landscape_16_9",
       output_format: "png",
     }),
+    endpointRef: "fal-ai/flux-2-pro/edit",
+    entradaRef: (prompt, imageUrls) => ({
+      prompt,
+      image_urls: imageUrls,
+      image_size: "landscape_16_9",
+      output_format: "png",
+    }),
+    costoRefTexto: "con referencias el costo sube un poco: fal cobra ≈ USD 0.015 por megapíxel extra de las fotos de entrada",
   },
 ];
 

@@ -1080,7 +1080,7 @@ export const REGLA_COMPOSICION =
  * definido por el perfil del Bloque 3, dejando la esquina inferior izquierda como espacio negativo.
  */
 /** Datos comunes de los dos prompts (el de Gemini y el de la API de imágenes). */
-function preparar(i: PromptInput) {
+function preparar(i: PromptInput, referencia = false) {
   const catalogo = i.catalogo ?? PERFILES;
   const perfil = catalogo[i.profesion] ?? Object.values(catalogo)[0] ?? PERFILES[PROFESIONES[0]];
   const arq = ARQUETIPOS[i.arquetipo];
@@ -1115,12 +1115,16 @@ function preparar(i: PromptInput) {
   const nivel = nivelPlano(i.plano);
   const sexo = mujer ? "woman" : "man";
   const conArticulo = (t: string) => `${/^[aeiou]/i.test(t) ? "an" : "a"} ${t}`;
-  const descripcion = arq
+  const descripcion = referencia
+    ? "the exact same person shown in the reference photos, keeping the identical face, facial structure, skin tone, hair and apparent age"
+    : arq
     ? `${conArticulo(ETNIA_EN[arq.etnia].replace("{n}", sexo))} aged ${arq.edadAnios}, with ${arq.cabello.en}, ${arq.rasgosFaciales.forma}, ${arq.rasgosFaciales.ojos}, ${arq.rasgosFaciales.cejas}, ${arq.rasgosFaciales.nariz} and ${arq.rasgosFaciales.boca}`
     : `${conArticulo(ETNIA_EN[i.etnia].replace("{n}", sexo))} ${EDAD_EN[i.edad]}${i.personaje ? `, ${describirRostro(listas, i.personaje)}` : ""}`;
   const personaje = `On the right side of the frame, ${descripcion}, working as ${/^[aeiou]/i.test(perfil.en.role) ? "an" : "a"} ${perfil.en.role}, wearing ${clothing}, with ${perfil.en.emotion}, and ${hands}.`;
   // Cuerpo: solo hacia arriba y según el plano (detalle = nada · primer plano = hombros · medio = complexión y hombros)
-  const rasgosExtra = arq
+  const rasgosExtra = referencia
+    ? ""
+    : arq
     ? describirCuerpo(arq.cuerpo.complexion, arq.cuerpo.hombros, nivel)
     : describirCuerpo(
         listas.complexion.find((x) => x.es === i.personaje?.complexion)?.en ?? "",
@@ -1206,8 +1210,9 @@ const REALISMO_API =
 const YOUTUBE_API =
   "Keep the lower-right corner free of important elements and text, because YouTube's video-duration label covers it, and keep every element away from the extreme corners. Nothing overlaps chaotically.";
 
-export function buildApiPrompt(i: PromptInput, opts: { texto3d: boolean }): string {
-  const c = preparar(i);
+export function buildApiPrompt(i: PromptInput, opts: { texto3d: boolean; referencia?: boolean }): string {
+  const ref = !!opts.referencia;
+  const c = preparar(i, ref);
   const t = opts.texto3d;
   const marcoEn = c.marco.charAt(0).toUpperCase() + c.marco.slice(1);
 
@@ -1243,7 +1248,11 @@ export function buildApiPrompt(i: PromptInput, opts: { texto3d: boolean }): stri
     ...(c.rasgosExtra ? [c.rasgosExtra] : []),
     FRASE_CINTURA,
     ARMONIA_EN,
-    "Every image shows a completely different person: a unique face and a unique facial structure.",
+    ...(ref
+      ? [
+          "Use the reference photos only for the identity of the person: copy the face, not the clothing, background, pose or expression of the photos. The final image keeps the framing, outfit, expression and hands described here.",
+        ]
+      : ["Every image shows a completely different person: a unique face and a unique facial structure."]),
     ...(c.gafasText ? [c.gafasText] : []),
     ...c.postura.reglasEn,
     MIRADA_API,
