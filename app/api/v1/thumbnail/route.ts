@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { VERSION_API, crearId, respuestaError, verificarToken } from "@/lib/api-v1";
+import { VERSION_API, claveFal, crearId, respuestaError, verificarToken } from "@/lib/api-v1";
 import { ErrorProveedor, enviarACola, esCuotaAgotada } from "@/lib/fal-cola";
 import { imagenSimulada } from "@/lib/fal-helpers";
 import { COMPOSICION, planificar, validarSolicitud } from "@/lib/motor";
@@ -73,7 +73,7 @@ export async function POST(req: Request) {
     });
   }
 
-  const clave = process.env.FAL_KEY;
+  const clave = claveFal();
   if (!clave) {
     return NextResponse.json({
       ...base,

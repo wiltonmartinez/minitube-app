@@ -6,6 +6,12 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev"],
       "port": 3100
+    },
+    {
+      "name": "minitube-simulacion",
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": ["/c", "set MINITUBE_FORZAR_SIMULACION=1&& npx next dev -p 3200"],
+      "port": 3200
     }
   ]
 }

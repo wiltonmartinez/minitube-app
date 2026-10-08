@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { VERSION_API, leerId, respuestaError, verificarToken } from "@/lib/api-v1";
+import { VERSION_API, claveFal, leerId, respuestaError, verificarToken } from "@/lib/api-v1";
 import { ErrorProveedor, consultarCola, esCuotaAgotada } from "@/lib/fal-cola";
 import { buscarModelo } from "@/lib/image-models";
 
@@ -13,7 +13,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
   const { id } = await ctx.params;
   const datos = leerId(id, process.env.MINITUBE_API_TOKEN!);
   if (!datos) return respuestaError("NO_ENCONTRADO", "El id no es válido o no pertenece a este servicio.", 404);
-  const clave = process.env.FAL_KEY;
+  const clave = claveFal();
   if (!clave) return respuestaError("SERVICIO_NO_CONFIGURADO", "El servidor no tiene FAL_KEY: no hay trabajos reales que consultar.", 503);
   const modelo = buscarModelo(datos.m);
 

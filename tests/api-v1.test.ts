@@ -265,3 +265,16 @@ describe("API v1 · generación real por cola (fal.ai simulado)", () => {
     expect((await post(OK)).status).toBe(502);
   });
 });
+
+describe("API v1 · MINITUBE_FORZAR_SIMULACION", () => {
+  it("con la bandera activa responde en simulación aunque exista FAL_KEY y no llama a fal.ai", async () => {
+    vi.stubEnv("FAL_KEY", "clave-real");
+    vi.stubEnv("MINITUBE_FORZAR_SIMULACION", "1");
+    const espia = vi.fn();
+    vi.stubGlobal("fetch", espia);
+    const r = await post(OK);
+    expect(r.status).toBe(200);
+    expect((await r.json()).simulacion).toBe(true);
+    expect(espia).not.toHaveBeenCalled();
+  });
+});

@@ -5,6 +5,15 @@ import { NextResponse } from "next/server";
 
 export const VERSION_API = "1";
 
+/**
+ * Clave de fal.ai que usa la API v1. Con MINITUBE_FORZAR_SIMULACION=1 se ignora y la API responde siempre en modo
+ * simulación (imagen de prueba, sin costo): sirve para probar todo el flujo aunque haya una FAL_KEY real en el equipo.
+ */
+export function claveFal(): string | undefined {
+  if (process.env.MINITUBE_FORZAR_SIMULACION) return undefined;
+  return process.env.FAL_KEY || undefined;
+}
+
 export type CodigoError =
   | "DATOS_INVALIDOS"
   | "NO_AUTORIZADO"
