@@ -29,3 +29,17 @@ export function imagenSimulada(modelo: ModeloIA, referencias = 0): string {
 </svg>`;
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 }
+
+/** Errores de la consulta de créditos de fal.ai, en español. */
+export function explicarErrorCreditos(status: number, tipo = ""): string {
+  if (status === 401 || status === 403 || tipo === "authorization_error")
+    return "fal.ai no permitió consultar el saldo: esta consulta exige una clave con alcance «Admin». Crea una en fal.ai/dashboard/keys (alcance Admin) y guárdala como FAL_ADMIN_KEY.";
+  if (status === 429 || tipo === "rate_limited") return "fal.ai recibió demasiadas consultas. Espera unos segundos y vuelve a intentar.";
+  if (status >= 500) return "fal.ai tuvo un problema temporal al consultar el saldo. Vuelve a intentar en un momento.";
+  return "No se pudo consultar el saldo de fal.ai.";
+}
+
+/** «USD 24.50» (el saldo siempre con 2 decimales). */
+export function formatearSaldo(valor: number, moneda: string): string {
+  return `${moneda || "USD"} ${valor.toFixed(2)}`;
+}

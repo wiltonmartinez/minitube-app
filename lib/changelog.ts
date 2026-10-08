@@ -9,6 +9,16 @@ export type Cambio = {
 
 export const CHANGELOG: Cambio[] = [
   {
+    version: "3.6.0",
+    fecha: "2026-10-08",
+    titulo: "Ver los créditos de fal.ai",
+    cambios: [
+      "Nuevo botón «Ver saldo» en el panel de generación: muestra los créditos de tu cuenta de fal.ai (solo cuando lo pulsas; es una consulta gratuita de solo lectura).",
+      "La consulta exige una clave de fal.ai con alcance «Admin»: se usa FAL_ADMIN_KEY si la configuras o, si no, FAL_KEY; si no tiene alcance Admin, la app te explica cómo crearla.",
+      "Sin clave, avisa de que está en modo simulación.",
+    ],
+  },
+  {
     version: "3.5.0",
     fecha: "2026-10-08",
     titulo: "Todo al azar excepto marca, modelo y error",
