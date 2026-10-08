@@ -27,7 +27,6 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import {
   ACCESORIOS,
-  ACCESORIOS_OPCIONES,
   ACCESORIO_ALEATORIO,
   ALEATORIO_RASGO,
   ARQUETIPO_ALEATORIO,
@@ -41,7 +40,14 @@ import {
   resolverRasgo,
   resolverCabello,
   cabelloLegible,
-  MANO_LIBRE_ES,
+  cerebroPostura,
+  posturaDe,
+  POSTURA_ACCESORIO,
+  POSTURA_ALEATORIA,
+  POSTURA_CABEZA,
+  POSTURA_OPCIONES,
+  ACCESORIO_NINGUNO,
+  ACCESORIOS_MANO,
   BADGES,
   BADGES_OPCIONES,
   BADGES_REALES,
@@ -190,6 +196,7 @@ function SelectField({
   className,
   locked,
   onToggleLock,
+  disabled,
 }: {
   id: string;
   label: string;
@@ -199,6 +206,7 @@ function SelectField({
   className?: string;
   locked?: boolean;
   onToggleLock?: () => void;
+  disabled?: boolean;
 }) {
   return (
     <div className={`space-y-2 ${className ?? ""}`}>
@@ -206,7 +214,7 @@ function SelectField({
         <Label htmlFor={id}>{label}</Label>
         {onToggleLock && <LockButton locked={!!locked} onClick={onToggleLock} label={label} />}
       </div>
-      <Select value={value} onValueChange={onChange}>
+      <Select value={value} onValueChange={onChange} disabled={disabled}>
         <SelectTrigger id={id} className="w-full">
           <SelectValue placeholder="Selecciona..." />
         </SelectTrigger>
@@ -300,12 +308,16 @@ export default function Home() {
   const cabelloEf = resolverCabello(form.cabello, form.genero, sorteo.uc);
   const rasgosEf = resolverRasgo(RASGOS, form.rasgos, form.genero, sorteo.ur);
   const arquetipoEf = resolverArquetipo(form.arquetipo, sorteo.ua);
+  const arq = ARQUETIPOS[arquetipoEf]; // undefined = «Ninguno» (selectores manuales)
+  // Single source of truth: con arquetipo, estos campos se DERIVAN de él; es imposible enviar contradicciones
+  const generoEf = arq ? arq.genero : form.genero;
+  const edadEf = arq ? arq.edad : form.edad;
+  const etniaEf = arq ? arq.etnia : form.etnia;
 
 
 
   // Manos mostradas: con cable o teléfono, una mano conserva el gesto y la otra sostiene el accesorio
-  const acc = ACCESORIOS[accesorioEf];
-  const manosMostradas = acc?.unaMano ? `${MANO_LIBRE_ES} + ${acc.corto}` : perfil.manos;
+  const manosMostradas = cerebroPostura(accesorioEf).manosEs;
 
   // Si se elige un par de gafas, la vestimenta del perfil no las incluye (el prompt las quita para no duplicarlas)
   const vestimenta =
@@ -320,6 +332,9 @@ export default function Home() {
     return generatePrompt(
       {
         ...form,
+        genero: generoEf,
+        edad: edadEf,
+        etnia: etniaEf,
         catalogo,
         paleta: paletaEf,
         gafas: gafasEf,
@@ -332,7 +347,7 @@ export default function Home() {
       },
       { baseUrl: baseUrl() },
     );
-  }, [form, catalogo, errorFinal, paletaEf, gafasEf, badgeEf, accesorioEf, cabelloEf, rasgosEf, arquetipoEf]);
+  }, [form, catalogo, errorFinal, paletaEf, gafasEf, badgeEf, accesorioEf, cabelloEf, rasgosEf, arquetipoEf, generoEf, edadEf, etniaEf]);
 
   // Alternar candado: al bloquear una opción «Aleatorio» se fija el valor sorteado en ese momento
   function toggleLock(key: string) {
@@ -412,7 +427,7 @@ export default function Home() {
       if (locks.profesion) r.profesion = form.profesion;
       if (locks.marco) r.marco = form.marco as typeof r.marco;
       // Arquetipo físico: distinto del anterior en cada prompt del lote (salvo candado o «Ninguno»)
-      const arq = locks.arquetipo ? arquetipoEf : resolverArquetipo(form.arquetipo, uArq);
+      const arqLote = locks.arquetipo ? arquetipoEf : resolverArquetipo(form.arquetipo, uArq);
       uArq = sorteoArquetipoDistinto(uArq);
       prompts.push(
         generatePrompt(
@@ -426,7 +441,7 @@ export default function Home() {
             accesorio: locks.accesorio ? accesorioEf : resolverAccesorio(form.accesorio, r.profesion), // según el perfil de ese prompt
             cabello: locks.cabello ? cabelloEf : resolverCabello(ALEATORIO_RASGO, r.genero), // identidad única por prompt
             rasgos: locks.rasgos ? rasgosEf : resolverRasgo(RASGOS, ALEATORIO_RASGO, r.genero),
-            arquetipo: arq,
+            arquetipo: arqLote,
             error: errorFinal,
           },
           { baseUrl: baseUrl() },
@@ -600,61 +615,72 @@ export default function Home() {
                   className="md:col-span-2"
                   {...lockProps("arquetipo")}
                 />
-                <p className="-mt-2 text-xs text-muted-foreground md:col-span-2">
-                  {arquetipoEf in ARQUETIPOS ? (
-                    <>
-                      Arquetipo activo: <strong>{arquetipoEf}</strong>. Define género, etnia, edad, cabello y rostro; los
-                      selectores de abajo se ignoran. Elige «Ninguno» para usarlos.
-                    </>
-                  ) : (
-                    "Sin arquetipo: se usan los selectores manuales de género, edad, etnia, cabello y rasgos."
-                  )}
-                </p>
-                <SelectField
-                  id="genero"
-                  label="Género"
-                  value={form.genero}
-                  options={GENEROS}
-                  onChange={(v) => set("genero", v as FormState["genero"])}
-                  {...lockProps("genero")}
-                />
-                <SelectField
-                  id="edad"
-                  label="Edad"
-                  value={form.edad}
-                  options={EDADES}
-                  onChange={(v) => set("edad", v as FormState["edad"])}
-                  {...lockProps("edad")}
-                />
-                <SelectField
-                  id="etnia"
-                  label="Etnia"
-                  value={form.etnia}
-                  options={ETNIAS}
-                  onChange={(v) => set("etnia", v as FormState["etnia"])}
-                  className="md:col-span-2"
-                  {...lockProps("etnia")}
-                />
-                <SelectField
-                  id="cabello"
-                  label="Cabello"
-                  value={form.cabello}
-                  options={CABELLO_OPCIONES}
-                  onChange={(v) => set("cabello", v)}
-                  {...lockProps("cabello")}
-                />
-                <SelectField
-                  id="rasgos"
-                  label="Rasgos faciales"
-                  value={form.rasgos}
-                  options={RASGOS_OPCIONES}
-                  onChange={(v) => set("rasgos", v)}
-                  {...lockProps("rasgos")}
-                />
-                {(form.cabello === ALEATORIO_RASGO || form.rasgos === ALEATORIO_RASGO) && (
-                  <p className="-mt-2 text-xs text-muted-foreground md:col-span-2">
-                    Sorteado ahora: {cabelloLegible(cabelloEf)} · {rasgosEf}. Cada generación rota género, edad, etnia, cabello y rasgos.
-                  </p>
+                {arq ? (
+                  <>
+                    <p className="-mt-2 text-xs text-muted-foreground md:col-span-2">
+                      Arquetipo activo: <strong>{arquetipoEf}</strong>. Género, edad, etnia, cabello y rasgos se sincronizan
+                      desde el arquetipo (campos bloqueados). Elige «Ninguno» para editarlos a mano.
+                    </p>
+                    <ReadOnlyField id="genero" label="Género" value={arq.genero} />
+                    <ReadOnlyField id="edad" label="Edad" value={`${arq.edad} (${arq.edadAnios.replace(" to ", "-")} años)`} />
+                    <div className="md:col-span-2">
+                      <ReadOnlyField id="etnia" label="Etnia" value={arq.etnia} />
+                    </div>
+                    <ReadOnlyField id="cabello" label="Cabello" value={arq.cabello.es} />
+                    <ReadOnlyField id="rasgos" label="Rasgos faciales" value={arq.rasgosEs} />
+                  </>
+                ) : (
+                  <>
+                    <p className="-mt-2 text-xs text-muted-foreground md:col-span-2">
+                      Sin arquetipo: se usan los selectores manuales de género, edad, etnia, cabello y rasgos.
+                    </p>
+                    <SelectField
+                      id="genero"
+                      label="Género"
+                      value={form.genero}
+                      options={GENEROS}
+                      onChange={(v) => set("genero", v as FormState["genero"])}
+                      {...lockProps("genero")}
+                    />
+                    <SelectField
+                      id="edad"
+                      label="Edad"
+                      value={form.edad}
+                      options={EDADES}
+                      onChange={(v) => set("edad", v as FormState["edad"])}
+                      {...lockProps("edad")}
+                    />
+                    <SelectField
+                      id="etnia"
+                      label="Etnia"
+                      value={form.etnia}
+                      options={ETNIAS}
+                      onChange={(v) => set("etnia", v as FormState["etnia"])}
+                      className="md:col-span-2"
+                      {...lockProps("etnia")}
+                    />
+                    <SelectField
+                      id="cabello"
+                      label="Cabello"
+                      value={form.cabello}
+                      options={CABELLO_OPCIONES}
+                      onChange={(v) => set("cabello", v)}
+                      {...lockProps("cabello")}
+                    />
+                    <SelectField
+                      id="rasgos"
+                      label="Rasgos faciales"
+                      value={form.rasgos}
+                      options={RASGOS_OPCIONES}
+                      onChange={(v) => set("rasgos", v)}
+                      {...lockProps("rasgos")}
+                    />
+                    {(form.cabello === ALEATORIO_RASGO || form.rasgos === ALEATORIO_RASGO) && (
+                      <p className="-mt-2 text-xs text-muted-foreground md:col-span-2">
+                        Sorteado ahora: {cabelloLegible(cabelloEf)} · {rasgosEf}.
+                      </p>
+                    )}
+                  </>
                 )}
                 <SelectField
                   id="gafas"
@@ -671,19 +697,42 @@ export default function Home() {
                   </p>
                 )}
                 <SelectField
-                  id="accesorio"
-                  label="Accesorio en las manos"
-                  value={form.accesorio}
-                  options={ACCESORIOS_OPCIONES}
-                  onChange={(v) => set("accesorio", v)}
+                  id="postura"
+                  label="Postura de las manos"
+                  value={posturaDe(form.accesorio)}
+                  options={POSTURA_OPCIONES}
+                  onChange={(v) =>
+                    set(
+                      "accesorio",
+                      v === POSTURA_ALEATORIA
+                        ? ACCESORIO_ALEATORIO
+                        : v === POSTURA_CABEZA
+                          ? "Manos a la cabeza (sin objeto)"
+                          : ACCESORIOS_MANO.includes(form.accesorio)
+                            ? form.accesorio
+                            : ACCESORIOS_MANO[0],
+                    )
+                  }
                   className="md:col-span-2"
                   {...lockProps("accesorio")}
                 />
-                {form.accesorio === ACCESORIO_ALEATORIO && (
-                  <p className="-mt-2 text-xs text-muted-foreground md:col-span-2">
-                    Sorteado ahora ({form.profesion}): {ACCESORIOS[accesorioEf].corto}. Se sortea de nuevo en cada cambio de menú.
-                  </p>
-                )}
+                <SelectField
+                  id="accesorio"
+                  label="Accesorio en la mano"
+                  value={posturaDe(form.accesorio) === POSTURA_ACCESORIO ? form.accesorio : accesorioEf in ACCESORIOS && accesorioEf !== "Manos a la cabeza (sin objeto)" ? accesorioEf : ACCESORIO_NINGUNO}
+                  options={[ACCESORIO_NINGUNO, ...ACCESORIOS_MANO]}
+                  onChange={(v) => v !== ACCESORIO_NINGUNO && set("accesorio", v)}
+                  disabled={posturaDe(form.accesorio) !== POSTURA_ACCESORIO}
+                  className="md:col-span-2"
+                />
+                <p className="-mt-2 text-xs text-muted-foreground md:col-span-2">
+                  {posturaDe(form.accesorio) === POSTURA_CABEZA &&
+                    "Manos a la cabeza: las dos manos van a los lados de la cabeza; el accesorio queda forzado a «Ninguno» y bloqueado."}
+                  {posturaDe(form.accesorio) === POSTURA_ALEATORIA &&
+                    `Sorteado ahora (${form.profesion}): ${ACCESORIOS[accesorioEf].corto}. La postura de ambas manos se decide automáticamente.`}
+                  {posturaDe(form.accesorio) === POSTURA_ACCESORIO &&
+                    "Una mano sostiene el accesorio y la otra descansa o gesticula; tocarse la cabeza o la cara está prohibido."}
+                </p>
               </Block>
 
               <Block
@@ -703,7 +752,7 @@ export default function Home() {
                 <ReadOnlyField id="vestimenta" label="Vestimenta" value={vestimenta} {...lockProps("profesion")} />
                 <ReadOnlyField id="emocion" label="Emociones" value={perfil.emocion} {...lockProps("profesion")} />
                 <ReadOnlyField id="mirada" label="Mirada" value={MIRADA_ES} />
-                <ReadOnlyField id="manos" label="Manos" value={manosMostradas} {...lockProps("profesion")} />
+                <ReadOnlyField id="manos" label="Manos (según accesorio)" value={manosMostradas} />
                 <div className="md:col-span-2">
                   <ReadOnlyField id="fondo" label="Fondo estructural" value={perfil.fondo} {...lockProps("profesion")} />
                 </div>

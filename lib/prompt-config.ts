@@ -139,67 +139,140 @@ export const cabelloLegible = (c: string) => c.replace("|", ", ");
    12 perfiles radicalmente distintos entre sí. Al generar, se sortea UNO y se inyecta de forma absoluta en el
    prompt como descripción completa del personaje (género, etnia, edad, cabello y rostro), de modo que cada
    imagen sea físicamente otra persona. Las gafas NO forman parte del arquetipo: las controla el menú de gafas. */
-export type Arquetipo = { genero: (typeof GENEROS)[number]; edad: string; en: string };
+export type Arquetipo = {
+  /** Identificador estable */
+  id: string;
+  genero: (typeof GENEROS)[number];
+  etnia: (typeof ETNIAS)[number];
+  edad: (typeof EDADES)[number];
+  /** Rango exacto de años para el prompt (p. ej. «30 to 40») */
+  edadAnios: string;
+  cabello: { es: string; en: string };
+  rasgosFaciales: { forma: string; ojos: string; cejas: string; nariz: string; boca: string };
+  rasgosEs: string;
+};
+// FUENTE ÚNICA DE VERDAD: género, etnia, edad, cabello y rostro salen SIEMPRE del arquetipo activo; la interfaz
+// los muestra bloqueados y el prompt los compone desde aquí, así que no puede haber contradicciones.
 export const ARQUETIPOS: Record<string, Arquetipo> = {
   "Hombre maduro calvo con barba tupida": {
+    id: "hombre-maduro-calvo",
     genero: "Hombre",
-    edad: "50-60",
-    en: "mature bald Latin man aged 50 to 60 with a thick, bushy gray-flecked beard, heavy dark eyebrows, a broad nose and deep laugh lines",
+    etnia: "Colombiana Bogotá/Andino",
+    edad: "Adulto Mayor 45-55",
+    edadAnios: "50 to 60",
+    cabello: { es: "Calvo con barba tupida y canosa", en: "a completely bald head and a thick, bushy gray-flecked beard" },
+    rasgosFaciales: { forma: "a broad square face", ojos: "small deep-set dark eyes", cejas: "heavy dark eyebrows", nariz: "a wide nose", boca: "a full mouth with deep laugh lines" },
+    rasgosEs: "Rostro cuadrado, ojos hundidos, cejas gruesas, nariz ancha, boca llena",
   },
   "Joven asiático de cabello lacio y corte moderno": {
+    id: "joven-asiatico",
     genero: "Hombre",
-    edad: "20-25",
-    en: "young East Asian man aged 20 to 25 with straight black hair in a modern textured undercut with side-swept fringe, a slim angular face and fair skin",
+    etnia: "Asiática del Este",
+    edad: "Joven 18-25",
+    edadAnios: "20 to 25",
+    cabello: { es: "Lacio negro, corte moderno con flequillo", en: "straight black hair in a modern textured undercut with a side-swept fringe" },
+    rasgosFaciales: { forma: "a slim angular face", ojos: "narrow almond-shaped eyes", cejas: "thin straight eyebrows", nariz: "a small straight nose", boca: "thin lips" },
+    rasgosEs: "Rostro angular, ojos rasgados, cejas finas, nariz pequeña, labios finos",
   },
   "Mujer rubia de rasgos europeos": {
+    id: "mujer-rubia-europea",
     genero: "Mujer",
-    edad: "30-40",
-    en: "blonde woman of European features aged 30 to 40 with shoulder-length straight golden hair, light blue eyes, high cheekbones and a narrow nose",
+    etnia: "Caucásica/Europea",
+    edad: "Adulto Joven 30-40",
+    edadAnios: "30 to 40",
+    cabello: { es: "Rubio dorado liso hasta los hombros", en: "shoulder-length straight golden-blonde hair" },
+    rasgosFaciales: { forma: "an oval face with high cheekbones", ojos: "light blue eyes", cejas: "light softly arched eyebrows", nariz: "a narrow straight nose", boca: "thin pink lips" },
+    rasgosEs: "Rostro ovalado, ojos azules, cejas claras, nariz estrecha, labios finos",
   },
   "Hombre afrodescendiente de cabello corto y rapado a los lados": {
+    id: "hombre-afro-fade",
     genero: "Hombre",
-    edad: "30-40",
-    en: "Black man of African descent aged 30 to 40 with short dark hair on top and shaved sides in a sharp fade, deep brown skin and a strong square jaw",
+    etnia: "Afrodescendiente",
+    edad: "Adulto Joven 30-40",
+    edadAnios: "30 to 40",
+    cabello: { es: "Corto arriba, rapado a los lados (fade)", en: "short dark hair on top with the sides shaved in a sharp fade" },
+    rasgosFaciales: { forma: "a strong square jaw", ojos: "deep dark brown eyes", cejas: "thick straight eyebrows", nariz: "a broad nose", boca: "full lips" },
+    rasgosEs: "Mandíbula cuadrada, ojos oscuros, cejas gruesas, nariz ancha, labios llenos",
   },
   "Mujer latina de cabello rizado abundante": {
+    id: "mujer-latina-rizos",
     genero: "Mujer",
-    edad: "25-35",
-    en: "Latina woman aged 25 to 35 with abundant voluminous dark curly hair, warm olive-tan skin, large expressive brown eyes and full cheeks",
+    etnia: "Colombiana Costa Caribe",
+    edad: "Joven 18-25",
+    edadAnios: "24 to 30",
+    cabello: { es: "Rizado oscuro abundante y voluminoso", en: "abundant, voluminous dark curly hair" },
+    rasgosFaciales: { forma: "a round face with full cheeks", ojos: "large expressive brown eyes", cejas: "defined arched eyebrows", nariz: "a small rounded nose", boca: "full lips" },
+    rasgosEs: "Rostro redondo, ojos grandes marrones, cejas arqueadas, nariz pequeña, labios llenos",
   },
   "Hombre joven caucásico de rostro redondo": {
+    id: "joven-caucasico-redondo",
     genero: "Hombre",
-    edad: "20-28",
-    en: "young Caucasian man aged 20 to 28 with a round face, light freckles, short messy red-brown hair and pale skin",
+    etnia: "Caucásica/Europea",
+    edad: "Joven 18-25",
+    edadAnios: "20 to 28",
+    cabello: { es: "Castaño rojizo corto y desordenado", en: "short messy red-brown hair" },
+    rasgosFaciales: { forma: "a round face with light freckles", ojos: "light green eyes", cejas: "sparse light eyebrows", nariz: "an upturned nose", boca: "thin lips" },
+    rasgosEs: "Rostro redondo con pecas, ojos verdes, cejas claras, nariz respingona, labios finos",
   },
   "Mujer madura de cabello canoso recogido": {
+    id: "mujer-madura-canosa",
     genero: "Mujer",
-    edad: "56-65",
-    en: "mature woman aged 56 to 65 with silver-gray hair gathered back in a neat low bun, fine wrinkles, a soft oval face and gentle hazel eyes",
+    etnia: "Blanca/Mediterránea Cono Sur",
+    edad: "Adulto Maduro 56-65",
+    edadAnios: "56 to 65",
+    cabello: { es: "Canoso plateado recogido en moño bajo", en: "silver-gray hair gathered back in a neat low bun" },
+    rasgosFaciales: { forma: "a soft oval face with fine wrinkles", ojos: "gentle hazel eyes", cejas: "thin gray eyebrows", nariz: "a straight nose", boca: "a thin mouth" },
+    rasgosEs: "Rostro ovalado con arrugas finas, ojos color avellana, cejas grises, nariz recta, boca fina",
   },
   "Hombre con bigote y cabello castaño ondulado": {
+    id: "hombre-bigote-ondulado",
     genero: "Hombre",
-    edad: "30-40",
-    en: "man aged 30 to 40 with a full dark mustache and wavy chestnut-brown hair swept back, tan skin and a prominent nose",
+    etnia: "Colombiana Medellín/Paisa",
+    edad: "Adulto Joven 30-40",
+    edadAnios: "30 to 40",
+    cabello: { es: "Castaño ondulado peinado hacia atrás y bigote poblado", en: "wavy chestnut-brown hair swept back and a full dark mustache" },
+    rasgosFaciales: { forma: "a long face", ojos: "dark brown eyes", cejas: "thick dark eyebrows", nariz: "a prominent nose", boca: "a mouth framed by the mustache" },
+    rasgosEs: "Rostro alargado, ojos marrones, cejas gruesas, nariz prominente, bigote poblado",
   },
   "Mujer sudasiática de cabello largo y lacio": {
+    id: "mujer-sudasiatica",
     genero: "Mujer",
-    edad: "20-30",
-    en: "South Asian woman aged 20 to 30 with very long straight jet-black hair, warm brown skin, defined arched eyebrows and large dark eyes",
+    etnia: "Sudasiática",
+    edad: "Joven 18-25",
+    edadAnios: "20 to 30",
+    cabello: { es: "Negro azabache muy largo y lacio", en: "very long straight jet-black hair" },
+    rasgosFaciales: { forma: "an oval face with high cheekbones", ojos: "large dark eyes", cejas: "defined arched eyebrows", nariz: "a slim straight nose", boca: "full lips" },
+    rasgosEs: "Rostro ovalado, ojos grandes oscuros, cejas definidas, nariz fina, labios llenos",
   },
   "Mujer afrodescendiente con trenzas": {
+    id: "mujer-afro-trenzas",
     genero: "Mujer",
-    edad: "30-40",
-    en: "Black woman of African descent aged 30 to 40 with long box braids, rich dark skin, high cheekbones and a bright wide face",
+    etnia: "Afrodescendiente",
+    edad: "Adulto Joven 30-40",
+    edadAnios: "30 to 40",
+    cabello: { es: "Trenzas largas (box braids)", en: "long box braids" },
+    rasgosFaciales: { forma: "a bright wide face", ojos: "dark almond-shaped eyes", cejas: "thin arched eyebrows", nariz: "a broad nose", boca: "full lips" },
+    rasgosEs: "Rostro ancho, ojos almendrados, cejas finas, nariz ancha, labios llenos",
   },
   "Hombre de Medio Oriente con barba recortada": {
+    id: "hombre-medio-oriente",
     genero: "Hombre",
-    edad: "35-45",
-    en: "Middle Eastern man of Arab descent aged 35 to 45 with a neatly trimmed black beard, short dark hair with a receding hairline and olive skin",
+    etnia: "Medio Oriente/Árabe",
+    edad: "Adulto Joven 30-40",
+    edadAnios: "35 to 45",
+    cabello: { es: "Corto oscuro con entradas y barba negra recortada", en: "short dark hair with a receding hairline and a neatly trimmed black beard" },
+    rasgosFaciales: { forma: "a long angular face", ojos: "dark deep-set eyes", cejas: "thick dark eyebrows", nariz: "a prominent aquiline nose", boca: "a mouth framed by the beard" },
+    rasgosEs: "Rostro angular, ojos hundidos, cejas gruesas, nariz aguileña, barba recortada",
   },
   "Mujer asiática del Este de cabello corto": {
+    id: "mujer-asiatica-bob",
     genero: "Mujer",
-    edad: "35-45",
-    en: "East Asian woman aged 35 to 45 with a short chin-length black bob haircut, smooth fair skin and a soft round face",
+    etnia: "Asiática del Este",
+    edad: "Adulto Joven 30-40",
+    edadAnios: "35 to 45",
+    cabello: { es: "Negro corto a la altura de la barbilla (bob)", en: "a short chin-length black bob haircut" },
+    rasgosFaciales: { forma: "a soft round face", ojos: "dark almond-shaped eyes", cejas: "soft straight eyebrows", nariz: "a small nose", boca: "a small mouth" },
+    rasgosEs: "Rostro redondo, ojos almendrados, cejas rectas, nariz pequeña, boca pequeña",
   },
 };
 export const ARQUETIPOS_LISTA = Object.keys(ARQUETIPOS);
@@ -844,20 +917,76 @@ export const MIRADA_ES = "Ojos desorbitados y fijos en el sector medio-izquierdo
 const MIRADA_REGLA =
   "MIRADA FIJA Y ALTA HACIA LA IZQUIERDA (DIRECCIÓN ELEVADA HACIA EL ESPACIO DE ERROR): Los ojos del personaje deben estar abiertos, desorbitados por el pánico, y orientados obligatoriamente hacia el sector medio-izquierdo elevado de la imagen (a unos 15% por encima de la esquina inferior izquierda, justo donde está el espacio negativo), con la cabeza girada hacia ese sector. Los ojos tienen prohibido mirar el celular, el cable, la mano, hacia abajo o a la cámara; la línea visual debe conectar el rostro estresado con el espacio vacío del error.";
 
-// Comportamiento del accesorio (solo cable USB o teléfono): objeto pasivo, la atención va al espacio del error
-export const ACCESORIO_COMPORTAMIENTO =
-  "COMPORTAMIENTO DEL ACCESORIO: El teléfono celular o el cable USB solo se sostiene de manera secundaria en una mano o cerca del cuerpo, de forma pasiva, mientras toda la atención visual y la expresión de horror del rostro están enfocadas exclusivamente hacia el espacio libre inferior izquierdo.";
+/* ───────── Cerebro de Postura (máquina de estados, anatomía exacta de 2 manos) ─────────
+   Lógica MUTUAMENTE EXCLUYENTE: el accesorio fija la postura de AMBAS manos; nunca se combinan dos acciones.
+     · celular → UNA mano sostiene el teléfono (parte baja de la toma) · la OTRA, en la mesa o gesticulando a un lado
+     · cable   → UNA mano sostiene el cable frente a la cámara · la OTRA, descansa o gesticula a un lado
+     · cabeza  → las DOS manos van a los lados de la cabeza; el accesorio se fuerza a «ninguno»
+   Los gestos por profesión ya no se usan en el prompt: la postura la decide solo este cerebro. */
+export type EstadoPostura = "celular" | "cable" | "cabeza";
+export type Postura = {
+  estado: EstadoPostura;
+  /** Accesorio efectivo (siempre válido; en «cabeza» se fuerza a «Manos a la cabeza (sin objeto)») */
+  accesorio: string;
+  manosEs: string;
+  manosEn: string;
+  /** Frases del prompt (en español) que describen la postura, sin ambigüedad */
+  reglas: string[];
+};
 
-// Postura con accesorio: la mano libre nunca toca el rostro (evita manos múltiples y confusiones anatómicas)
-export const POSTURA_LIMPIA =
-  "PROHIBICIÓN DE DOBLE ACCIÓN CORPORAL: Si el personaje sostiene un accesorio (como un teléfono celular o un cable USB) en una mano, la otra mano debe estar apoyada firmemente sobre la mesa o estirada a un lado mostrando frustración. Está estrictamente prohibido que una mano se agarre la cabeza mientras la otra sostiene un objeto al mismo tiempo, y que cualquier mano toque la nariz, los ojos o cubra el rostro, ya que esto genera extremidades extra y confusión anatómica. Las manos deben ser exactamente dos y verse totalmente naturales.";
-export const MANO_LIBRE_ES = "Mano libre apoyada firmemente en la mesa o estirada a un lado mostrando frustración";
-const MANO_LIBRE_EN =
-  "the free hand resting firmly on the table or stretched out to the side showing frustration, never gripping the head and never touching the nose, eyes or face";
+export const POSTURA_ALEATORIA = "🎲 Aleatorio (según perfil)";
+export const POSTURA_CABEZA = "Manos a la cabeza";
+export const POSTURA_ACCESORIO = "Con accesorio en una mano";
+export const POSTURA_OPCIONES = [POSTURA_ALEATORIA, POSTURA_CABEZA, POSTURA_ACCESORIO];
+export const ACCESORIO_NINGUNO = "Ninguno";
+export const ACCESORIOS_MANO = ["Cable USB negro", "Teléfono celular"];
+/** Postura que corresponde al valor del campo accesorio (el campo accesorio es la única fuente de estado). */
+export const posturaDe = (accesorio: string) =>
+  accesorio === ACCESORIO_ALEATORIO ? POSTURA_ALEATORIA : ACCESORIOS_MANO.includes(accesorio) ? POSTURA_ACCESORIO : POSTURA_CABEZA;
 
-// Anatomía: directiva negativa estricta contra extremidades de más
+export function cerebroPostura(accesorio: string): Postura {
+  if (accesorio === "Teléfono celular") {
+    return {
+      estado: "celular",
+      accesorio,
+      manosEs: "Una mano sostiene el celular abajo; la otra, apoyada en la mesa o gesticulando a un lado",
+      manosEn:
+        "exactly one hand holding a modern smartphone in the lower part of the frame while the other hand rests firmly on the table or gestures in frustration to the side",
+      reglas: [
+        ACCESORIOS[accesorio].es,
+        "POSTURA CON CELULAR: exactamente UNA mano sostiene el teléfono en la parte baja de la toma, de forma pasiva y secundaria, y la OTRA mano está apoyada firmemente sobre la mesa o gesticulando de frustración a un lado. PROHIBIDO que una mano vaya a la cabeza, a la nariz, a los ojos o cubra el rostro mientras hay un celular en la mano, para que no sobren extremidades.",
+      ],
+    };
+  }
+  if (accesorio === "Cable USB negro") {
+    return {
+      estado: "cable",
+      accesorio,
+      manosEs: "Una mano sostiene el cable frente a la cámara; la otra, descansa o gesticula a un lado",
+      manosEn:
+        "exactly one hand holding a black USB cable up in front of the camera while the other hand rests on the table or gestures to the side",
+      reglas: [
+        ACCESORIOS[accesorio].es,
+        "POSTURA CON CABLE USB: exactamente UNA mano sostiene el cable frente a la cámara, de forma pasiva y secundaria, y la OTRA mano descansa apoyada o gesticula de frustración a un lado. PROHIBIDO que una mano vaya a la cabeza, a la nariz, a los ojos o cubra el rostro mientras hay un cable en la mano.",
+      ],
+    };
+  }
+  // Cualquier otro valor (incluido «Manos a la cabeza») → postura de cabeza con el accesorio forzado a «ninguno»
+  return {
+    estado: "cabeza",
+    accesorio: "Manos a la cabeza (sin objeto)",
+    manosEs: "Las dos manos a los lados de la cabeza con desesperación (sin accesorio)",
+    manosEn: "both hands placed on the sides of the head in desperation, with no object in either hand",
+    reglas: [
+      ACCESORIOS["Manos a la cabeza (sin objeto)"].es,
+      "POSTURA MANOS A LA CABEZA: las DOS manos van exclusivamente a los lados de la cabeza con desesperación. No hay ningún accesorio ni objeto en la toma: ni celular, ni cable, ni nada flotando en la parte baja.",
+    ],
+  };
+}
+
+// Regla de oro de anatomía (siempre presente)
 export const ANATOMIA_ES =
-  "ANATOMÍA PERFECTA Y OBLIGATORIA: El personaje debe tener exactamente dos brazos y dos manos normales, con proporciones perfectas, sin extremidades fantasma ni manos de más. Está absolutamente prohibido generar extremidades extra, dedos de más, manos flotantes o múltiples brazos superpuestos. Las manos deben interactuar de forma coherente y realista con el entorno o accesorio; si sostiene un celular o cable, este es pasivo y nunca es observado por los ojos.";
+  "ANATOMÍA HUMANA IMPECABLE: El cuerpo renderizado debe tener exactamente dos extremidades superiores (dos brazos y dos manos). Cero manos extra, cero brazos fantasma, cero duplicaciones. Las manos deben verse totalmente naturales, con proporciones perfectas y cinco dedos cada una.";
 
 // Reglas restrictivas globales: se inyectan SIEMPRE al final del prompt
 // (orden: expresión → prohibición visual). La composición espacial va en la sección Marketing 3D.
@@ -914,8 +1043,8 @@ export function buildPrompt(i: PromptInput): string {
   const cabelloEn = colorEn ? `${estiloEn} in ${colorEn}` : estiloEn;
   const rasgosEn = RASGOS.find((r) => r.es === i.rasgos)?.en ?? "";
   // Accesorio en las manos: con cable o teléfono, una mano lo sostiene y la otra conserva el gesto (variante de una mano)
-  const accesorio = ACCESORIOS[i.accesorio];
-  const hands = accesorio?.unaMano ? MANO_LIBRE_EN : perfil.en.hands;
+  const postura = cerebroPostura(i.accesorio); // el cerebro decide la postura de AMBAS manos
+  const hands = postura.manosEn;
   const clothingBase = mujer ? perfil.en.clothing.f : perfil.en.clothing.m;
   const clothing = gafasText
     ? clothingBase.replace(/\s+and\s+(?:black-framed\s+|relaxing\s+)?(?:eye)?glasses/i, "")
@@ -937,12 +1066,11 @@ export function buildPrompt(i: PromptInput): string {
   const sentences = [
     "Hyper-realistic cinematic photograph for a YouTube thumbnail in 16:9 widescreen on a 1920x1080 pixel canvas, shot on a full-frame camera with an 85mm lens, shallow depth of field, dramatic high-contrast lighting, ultra-detailed skin and fabric textures, vivid saturated colors.",
     plano,
-    `On the right side of the frame, ${arq ? `a ${arq.en}` : `a ${ETNIA_EN[i.etnia].replace("{n}", mujer ? "woman" : "man")} ${EDAD_EN[i.edad]}`}, working as ${/^[aeiou]/i.test(perfil.en.role) ? "an" : "a"} ${perfil.en.role}, wearing ${clothing}, with ${perfil.en.emotion}, and ${hands}.`,
+    `On the right side of the frame, ${arq ? `a ${ETNIA_EN[arq.etnia].replace("{n}", mujer ? "woman" : "man")} aged ${arq.edadAnios}, with ${arq.cabello.en}, ${arq.rasgosFaciales.forma}, ${arq.rasgosFaciales.ojos}, ${arq.rasgosFaciales.cejas}, ${arq.rasgosFaciales.nariz} and ${arq.rasgosFaciales.boca}` : `a ${ETNIA_EN[i.etnia].replace("{n}", mujer ? "woman" : "man")} ${EDAD_EN[i.edad]}`}, working as ${/^[aeiou]/i.test(perfil.en.role) ? "an" : "a"} ${perfil.en.role}, wearing ${clothing}, with ${perfil.en.emotion}, and ${hands}.`,
     ...(!arq && (cabelloEn || rasgosEn) ? [`The character has ${[cabelloEn, rasgosEn].filter(Boolean).join(" and ")}.`] : []),
     IDENTIDAD_ES,
     ...(gafasText ? [gafasText] : []),
-    ...(accesorio ? [accesorio.es] : []),
-    ...(accesorio?.unaMano ? [ACCESORIO_COMPORTAMIENTO, POSTURA_LIMPIA] : []),
+    ...postura.reglas,
     REGLA_BRANDING,
     MIRADA_REGLA,
     ...(mujer ? [ESTETICA_MUJER] : []),

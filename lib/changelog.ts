@@ -9,6 +9,28 @@ export type Cambio = {
 
 export const CHANGELOG: Cambio[] = [
   {
+    version: "2.0.0",
+    fecha: "2026-10-08",
+    titulo: "Motor de arquetipos paramétricos y sincronización estricta",
+    cambios: [
+      "Arquetipos estructurados (id, género, etnia, edad, cabello y rasgos faciales: forma de cara, ojos, cejas, nariz y boca) como fuente única de verdad.",
+      "Con un arquetipo activo (manual o con el azar), Género, Edad, Etnia, Cabello y Rasgos se sincronizan y se muestran bloqueados: no puede haber contradicciones.",
+      "Nuevo selector «Postura de las manos»: con «Manos a la cabeza» el accesorio se fuerza a «Ninguno» y se bloquea; con accesorio, solo cable USB o celular.",
+      "El prompt compone el personaje con todos los rasgos del arquetipo (cara, ojos, cejas, nariz y boca).",
+    ],
+  },
+  {
+    version: "1.10.0",
+    fecha: "2026-10-08",
+    titulo: "Cerebro de Postura (anatomía exacta de 2 manos)",
+    cambios: [
+      "Máquina de estados mutuamente excluyente: celular → una mano lo sostiene abajo y la otra se apoya o gesticula; cable USB → una mano lo sostiene frente a la cámara y la otra descansa; manos a la cabeza → las dos a los lados de la cabeza y sin accesorio.",
+      "Prohibido llevar una mano a la cabeza, nariz, ojos o rostro cuando hay un objeto en la mano.",
+      "Los gestos de manos por profesión ya no se usan en el prompt: la postura la decide solo el accesorio (campo «Manos» ahora refleja la postura).",
+      "Regla de oro de anatomía: exactamente dos brazos y dos manos, cero extras ni duplicaciones.",
+    ],
+  },
+  {
     version: "1.9.0",
     fecha: "2026-10-08",
     titulo: "Banco de 12 arquetipos físicos aleatorios",
