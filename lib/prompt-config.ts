@@ -1,4 +1,5 @@
 // Configuración de opciones, perfiles del "Controlador Maestro" y función de concatenación del prompt.
+import { ARMONIA_EN, FRASE_CINTURA, LISTAS_BASE, describirCuerpo, describirRostro, nivelPlano, type Concreto, type Listas } from "@/lib/rostro";
 import { resolveErrorImagePath } from "./error-images";
 
 export const OTRO = "Otro";
@@ -35,12 +36,13 @@ export const ERRORES = [
 /* ───────── Bloque 2: Perfil demográfico ───────── */
 export const GENEROS = ["Mujer", "Hombre"] as const;
 
-export const EDADES = ["Joven 18-25", "Adulto Joven 30-40", "Adulto Mayor 45-55", "Adulto Maduro 56-65"] as const;
+export const EDADES = ["Joven 18-25", "Adulto Joven 30-40", "Adulto Mayor 45-55", "Adulto Maduro 56-65", "Mayor 66-70"] as const;
 const EDAD_EN: Record<(typeof EDADES)[number], string> = {
   "Joven 18-25": "aged 18 to 25",
   "Adulto Joven 30-40": "aged 30 to 40",
   "Adulto Mayor 45-55": "aged 45 to 55",
   "Adulto Maduro 56-65": "aged 56 to 65",
+  "Mayor 66-70": "aged 66 to 70",
 };
 
 export const ETNIAS = [
@@ -73,68 +75,6 @@ const ETNIA_EN: Record<(typeof ETNIAS)[number], string> = {
   "Medio Oriente/Árabe": "Middle Eastern {n} of Arab descent",
 };
 
-/* ───────── Diversidad del personaje: cabello y estructura facial ─────────
-   Cada generación rota género, edad, etnia, cabello y rasgos faciales para que NUNCA salga la misma persona.
-   g: "f" solo mujer · "m" solo hombre · "x" ambos. */
-type Rasgo = { es: string; en: string; g: "f" | "m" | "x" };
-export const CABELLOS: Rasgo[] = [
-  { es: "Cabello corto", en: "short cropped hair", g: "x" },
-  { es: "Cabello rizado", en: "voluminous curly hair", g: "x" },
-  { es: "Cabello recogido", en: "hair pulled back and tied up", g: "x" },
-  { es: "Cabello lacio", en: "straight hair falling past the ears", g: "x" },
-  { es: "Cabello largo ondulado", en: "long wavy hair", g: "f" },
-  { es: "Trenzas", en: "neat braids", g: "x" },
-  { es: "Con gorra lisa", en: "short hair under a plain solid-color cap with no logo, text or brand marks", g: "x" },
-  { es: "Rapado", en: "a closely shaved head", g: "m" },
-  { es: "Calvo", en: "a completely bald head", g: "m" },
-  { es: "Cabello canoso", en: "short gray-streaked hair", g: "x" },
-];
-export const RASGOS: Rasgo[] = [
-  { es: "Rostro ovalado y suave", en: "an oval face with soft features", g: "x" },
-  { es: "Mandíbula marcada y pómulos altos", en: "a strong angular jawline and high cheekbones", g: "x" },
-  { es: "Rostro redondo de mejillas llenas", en: "a round face with full cheeks", g: "x" },
-  { es: "Rostro alargado y nariz prominente", en: "a long narrow face with a prominent nose", g: "x" },
-  { es: "Mentón cuadrado y frente amplia", en: "a square chin and a broad forehead", g: "x" },
-  { es: "Rostro en corazón y mentón puntiagudo", en: "a heart-shaped face with a pointed chin", g: "x" },
-  { es: "Ojos separados y nariz ancha", en: "wide-set eyes and a broad nose", g: "x" },
-  { es: "Ojos hundidos y mentón definido", en: "deep-set eyes and a defined chin", g: "x" },
-  { es: "Barba recortada", en: "a neatly trimmed beard", g: "m" },
-  { es: "Barba de unos días", en: "light stubble", g: "m" },
-  { es: "Pecas marcadas", en: "visible freckles across the nose and cheeks", g: "x" },
-];
-// Colores de cabello: el sorteo «Aleatorio» combina estilo + color (salvo rapado, calvo y canoso)
-const COLORES_PELO = [
-  { es: "negro", en: "jet black" },
-  { es: "castaño oscuro", en: "dark brown" },
-  { es: "castaño claro", en: "light chestnut brown" },
-  { es: "rubio", en: "blond" },
-  { es: "pelirrojo", en: "auburn red" },
-  { es: "castaño cobrizo", en: "copper brown" },
-];
-const SIN_COLOR = new Set(["Rapado", "Calvo", "Cabello canoso"]);
-export const ALEATORIO_RASGO = "🎲 Aleatorio";
-export const CABELLO_OPCIONES = [ALEATORIO_RASGO, ...CABELLOS.map((c) => c.es)];
-export const RASGOS_OPCIONES = [ALEATORIO_RASGO, ...RASGOS.map((r) => r.es)];
-
-const validos = (lista: Rasgo[], genero: string) => lista.filter((r) => r.g === "x" || r.g === (genero === "Mujer" ? "f" : "m"));
-
-/** Devuelve el rasgo concreto: el elegido o, si es «Aleatorio», uno válido para el género según `u` en [0,1). */
-export function resolverRasgo(lista: Rasgo[], seleccion: string, genero: string, u: number = Math.random()): string {
-  if (seleccion !== ALEATORIO_RASGO) return seleccion;
-  const v = validos(lista, genero);
-  return v[Math.min(v.length - 1, Math.floor(u * v.length))].es;
-}
-
-/** Cabello concreto. Si es «Aleatorio» devuelve «estilo|color» (el color deriva del mismo número del sorteo). */
-export function resolverCabello(seleccion: string, genero: string, u: number = Math.random()): string {
-  const estilo = resolverRasgo(CABELLOS, seleccion, genero, u);
-  if (seleccion !== ALEATORIO_RASGO || SIN_COLOR.has(estilo)) return estilo;
-  const color = COLORES_PELO[Math.floor(((u * 9973) % 1) * COLORES_PELO.length)];
-  return `${estilo}|${color.es}`;
-}
-/** Texto legible («Cabello rizado, castaño oscuro») de un cabello resuelto. */
-export const cabelloLegible = (c: string) => c.replace("|", ", ");
-
 /* ───────── Banco de arquetipos físicos (aleatoriedad real) ─────────
    12 perfiles radicalmente distintos entre sí. Al generar, se sortea UNO y se inyecta de forma absoluta en el
    prompt como descripción completa del personaje (género, etnia, edad, cabello y rostro), de modo que cada
@@ -150,8 +90,10 @@ export type Arquetipo = {
   cabello: { es: string; en: string };
   rasgosFaciales: { forma: string; ojos: string; cejas: string; nariz: string; boca: string };
   rasgosEs: string;
+  /** Cuerpo (medio cuerpo hacia arriba): se usa según el plano */
+  cuerpo: { complexion: string; hombros: string; es: string };
 };
-// FUENTE ÚNICA DE VERDAD: género, etnia, edad, cabello y rostro salen SIEMPRE del arquetipo activo; la interfaz
+// FUENTE ÚNICA DE VERDAD (modo «Arquetipo listo»): género, etnia, edad, cabello, rostro y cuerpo salen SIEMPRE del arquetipo activo; la interfaz
 // los muestra bloqueados y el prompt los compone desde aquí, así que no puede haber contradicciones.
 export const ARQUETIPOS: Record<string, Arquetipo> = {
   "Hombre maduro calvo con barba tupida": {
@@ -163,6 +105,7 @@ export const ARQUETIPOS: Record<string, Arquetipo> = {
     cabello: { es: "Calvo con barba tupida y canosa", en: "a completely bald head and a thick, bushy gray-flecked beard" },
     rasgosFaciales: { forma: "a broad square face", ojos: "small deep-set dark eyes", cejas: "heavy dark eyebrows", nariz: "a wide nose", boca: "a full mouth with deep laugh lines" },
     rasgosEs: "Rostro cuadrado, ojos hundidos, cejas gruesas, nariz ancha, boca llena",
+    cuerpo: { complexion: "a sturdy build", hombros: "broad shoulders", es: "Complexión robusta, hombros anchos" },
   },
   "Joven asiático de cabello lacio y corte moderno": {
     id: "joven-asiatico",
@@ -173,6 +116,7 @@ export const ARQUETIPOS: Record<string, Arquetipo> = {
     cabello: { es: "Lacio negro, corte moderno con flequillo", en: "straight black hair in a modern textured undercut with a side-swept fringe" },
     rasgosFaciales: { forma: "a slim angular face", ojos: "narrow almond-shaped eyes", cejas: "thin straight eyebrows", nariz: "a small straight nose", boca: "thin lips" },
     rasgosEs: "Rostro angular, ojos rasgados, cejas finas, nariz pequeña, labios finos",
+    cuerpo: { complexion: "a slim build", hombros: "narrow shoulders", es: "Complexión delgada, hombros estrechos" },
   },
   "Mujer rubia de rasgos europeos": {
     id: "mujer-rubia-europea",
@@ -183,6 +127,7 @@ export const ARQUETIPOS: Record<string, Arquetipo> = {
     cabello: { es: "Rubio dorado liso hasta los hombros", en: "shoulder-length straight golden-blonde hair" },
     rasgosFaciales: { forma: "an oval face with high cheekbones", ojos: "light blue eyes", cejas: "light softly arched eyebrows", nariz: "a narrow straight nose", boca: "thin pink lips" },
     rasgosEs: "Rostro ovalado, ojos azules, cejas claras, nariz estrecha, labios finos",
+    cuerpo: { complexion: "an average build", hombros: "medium-width shoulders", es: "Complexión promedio, hombros medios" },
   },
   "Hombre afrodescendiente de cabello corto y rapado a los lados": {
     id: "hombre-afro-fade",
@@ -193,6 +138,7 @@ export const ARQUETIPOS: Record<string, Arquetipo> = {
     cabello: { es: "Corto arriba, rapado a los lados (fade)", en: "short dark hair on top with the sides shaved in a sharp fade" },
     rasgosFaciales: { forma: "a strong square jaw", ojos: "deep dark brown eyes", cejas: "thick straight eyebrows", nariz: "a broad nose", boca: "full lips" },
     rasgosEs: "Mandíbula cuadrada, ojos oscuros, cejas gruesas, nariz ancha, labios llenos",
+    cuerpo: { complexion: "an athletic build", hombros: "broad shoulders", es: "Complexión atlética, hombros anchos" },
   },
   "Mujer latina de cabello rizado abundante": {
     id: "mujer-latina-rizos",
@@ -203,6 +149,7 @@ export const ARQUETIPOS: Record<string, Arquetipo> = {
     cabello: { es: "Rizado oscuro abundante y voluminoso", en: "abundant, voluminous dark curly hair" },
     rasgosFaciales: { forma: "a round face with full cheeks", ojos: "large expressive brown eyes", cejas: "defined arched eyebrows", nariz: "a small rounded nose", boca: "full lips" },
     rasgosEs: "Rostro redondo, ojos grandes marrones, cejas arqueadas, nariz pequeña, labios llenos",
+    cuerpo: { complexion: "an average build", hombros: "medium-width shoulders", es: "Complexión promedio, hombros medios" },
   },
   "Hombre joven caucásico de rostro redondo": {
     id: "joven-caucasico-redondo",
@@ -213,6 +160,7 @@ export const ARQUETIPOS: Record<string, Arquetipo> = {
     cabello: { es: "Castaño rojizo corto y desordenado", en: "short messy red-brown hair" },
     rasgosFaciales: { forma: "a round face with light freckles", ojos: "light green eyes", cejas: "sparse light eyebrows", nariz: "an upturned nose", boca: "thin lips" },
     rasgosEs: "Rostro redondo con pecas, ojos verdes, cejas claras, nariz respingona, labios finos",
+    cuerpo: { complexion: "a slim build", hombros: "medium-width shoulders", es: "Complexión delgada, hombros medios" },
   },
   "Mujer madura de cabello canoso recogido": {
     id: "mujer-madura-canosa",
@@ -223,6 +171,7 @@ export const ARQUETIPOS: Record<string, Arquetipo> = {
     cabello: { es: "Canoso plateado recogido en moño bajo", en: "silver-gray hair gathered back in a neat low bun" },
     rasgosFaciales: { forma: "a soft oval face with fine wrinkles", ojos: "gentle hazel eyes", cejas: "thin gray eyebrows", nariz: "a straight nose", boca: "a thin mouth" },
     rasgosEs: "Rostro ovalado con arrugas finas, ojos color avellana, cejas grises, nariz recta, boca fina",
+    cuerpo: { complexion: "an average build", hombros: "narrow shoulders", es: "Complexión promedio, hombros estrechos" },
   },
   "Hombre con bigote y cabello castaño ondulado": {
     id: "hombre-bigote-ondulado",
@@ -233,6 +182,7 @@ export const ARQUETIPOS: Record<string, Arquetipo> = {
     cabello: { es: "Castaño ondulado peinado hacia atrás y bigote poblado", en: "wavy chestnut-brown hair swept back and a full dark mustache" },
     rasgosFaciales: { forma: "a long face", ojos: "dark brown eyes", cejas: "thick dark eyebrows", nariz: "a prominent nose", boca: "a mouth framed by the mustache" },
     rasgosEs: "Rostro alargado, ojos marrones, cejas gruesas, nariz prominente, bigote poblado",
+    cuerpo: { complexion: "an average build", hombros: "medium-width shoulders", es: "Complexión promedio, hombros medios" },
   },
   "Mujer sudasiática de cabello largo y lacio": {
     id: "mujer-sudasiatica",
@@ -243,6 +193,7 @@ export const ARQUETIPOS: Record<string, Arquetipo> = {
     cabello: { es: "Negro azabache muy largo y lacio", en: "very long straight jet-black hair" },
     rasgosFaciales: { forma: "an oval face with high cheekbones", ojos: "large dark eyes", cejas: "defined arched eyebrows", nariz: "a slim straight nose", boca: "full lips" },
     rasgosEs: "Rostro ovalado, ojos grandes oscuros, cejas definidas, nariz fina, labios llenos",
+    cuerpo: { complexion: "a slim build", hombros: "narrow shoulders", es: "Complexión delgada, hombros estrechos" },
   },
   "Mujer afrodescendiente con trenzas": {
     id: "mujer-afro-trenzas",
@@ -253,6 +204,7 @@ export const ARQUETIPOS: Record<string, Arquetipo> = {
     cabello: { es: "Trenzas largas (box braids)", en: "long box braids" },
     rasgosFaciales: { forma: "a bright wide face", ojos: "dark almond-shaped eyes", cejas: "thin arched eyebrows", nariz: "a broad nose", boca: "full lips" },
     rasgosEs: "Rostro ancho, ojos almendrados, cejas finas, nariz ancha, labios llenos",
+    cuerpo: { complexion: "an athletic build", hombros: "medium-width shoulders", es: "Complexión atlética, hombros medios" },
   },
   "Hombre de Medio Oriente con barba recortada": {
     id: "hombre-medio-oriente",
@@ -263,6 +215,7 @@ export const ARQUETIPOS: Record<string, Arquetipo> = {
     cabello: { es: "Corto oscuro con entradas y barba negra recortada", en: "short dark hair with a receding hairline and a neatly trimmed black beard" },
     rasgosFaciales: { forma: "a long angular face", ojos: "dark deep-set eyes", cejas: "thick dark eyebrows", nariz: "a prominent aquiline nose", boca: "a mouth framed by the beard" },
     rasgosEs: "Rostro angular, ojos hundidos, cejas gruesas, nariz aguileña, barba recortada",
+    cuerpo: { complexion: "a sturdy build", hombros: "broad shoulders", es: "Complexión robusta, hombros anchos" },
   },
   "Mujer asiática del Este de cabello corto": {
     id: "mujer-asiatica-bob",
@@ -273,12 +226,101 @@ export const ARQUETIPOS: Record<string, Arquetipo> = {
     cabello: { es: "Negro corto a la altura de la barbilla (bob)", en: "a short chin-length black bob haircut" },
     rasgosFaciales: { forma: "a soft round face", ojos: "dark almond-shaped eyes", cejas: "soft straight eyebrows", nariz: "a small nose", boca: "a small mouth" },
     rasgosEs: "Rostro redondo, ojos almendrados, cejas rectas, nariz pequeña, boca pequeña",
+    cuerpo: { complexion: "a slim build", hombros: "narrow shoulders", es: "Complexión delgada, hombros estrechos" },
+  },
+  "Hombre mayor de cabello blanco y bigote": {
+    id: "hombre-mayor-blanco",
+    genero: "Hombre",
+    etnia: "Blanca/Mediterránea Cono Sur",
+    edad: "Mayor 66-70",
+    edadAnios: "65 to 70",
+    cabello: { es: "Blanco corto con bigote canoso", en: "short white hair and a neat gray mustache" },
+    rasgosFaciales: { forma: "a long face with deep wrinkles", ojos: "pale blue eyes", cejas: "bushy white eyebrows", nariz: "a prominent rounded nose", boca: "thin lips" },
+    rasgosEs: "Rostro alargado con arrugas profundas, ojos azul pálido, cejas blancas, nariz redondeada",
+    cuerpo: { complexion: "an average build", hombros: "medium-width shoulders", es: "Complexión promedio, hombros medios" },
+  },
+  "Mujer mayor afrodescendiente de cabello corto y canoso": {
+    id: "mujer-mayor-afro",
+    genero: "Mujer",
+    etnia: "Afrodescendiente",
+    edad: "Mayor 66-70",
+    edadAnios: "62 to 70",
+    cabello: { es: "Corto plateado natural (afro corto)", en: "short natural silver-gray afro-textured hair" },
+    rasgosFaciales: { forma: "a warm round face with soft wrinkles", ojos: "dark kind eyes", cejas: "thin gray eyebrows", nariz: "a broad nose", boca: "medium-full lips" },
+    rasgosEs: "Rostro redondo con arrugas suaves, ojos oscuros, cejas grises, nariz ancha",
+    cuerpo: { complexion: "an average build", hombros: "medium-width shoulders", es: "Complexión promedio, hombros medios" },
+  },
+  "Mujer joven caucásica pelirroja": {
+    id: "mujer-joven-pelirroja",
+    genero: "Mujer",
+    etnia: "Caucásica/Europea",
+    edad: "Joven 18-25",
+    edadAnios: "20 to 26",
+    cabello: { es: "Pelirrojo largo y ondulado", en: "long wavy auburn-red hair" },
+    rasgosFaciales: { forma: "a heart-shaped face with freckles", ojos: "green eyes", cejas: "light reddish eyebrows", nariz: "a small upturned nose", boca: "full pink lips" },
+    rasgosEs: "Rostro en corazón con pecas, ojos verdes, cejas rojizas, nariz respingada",
+    cuerpo: { complexion: "a slim build", hombros: "narrow shoulders", es: "Complexión delgada, hombros estrechos" },
+  },
+  "Hombre joven latino de barba corta y cabello rizado": {
+    id: "joven-latino-rizado",
+    genero: "Hombre",
+    etnia: "Mestiza Clara México",
+    edad: "Joven 18-25",
+    edadAnios: "22 to 28",
+    cabello: { es: "Rizado oscuro corto y barba corta", en: "short dark curly hair and a short trimmed beard" },
+    rasgosFaciales: { forma: "an oval face", ojos: "dark brown expressive eyes", cejas: "thick straight eyebrows", nariz: "a straight nose", boca: "medium-full lips" },
+    rasgosEs: "Rostro ovalado, ojos marrones, cejas gruesas, nariz recta, barba corta",
+    cuerpo: { complexion: "an athletic build", hombros: "broad shoulders", es: "Complexión atlética, hombros anchos" },
+  },
+  "Hombre asiático maduro de cabello canoso": {
+    id: "hombre-asiatico-maduro",
+    genero: "Hombre",
+    etnia: "Asiática del Este",
+    edad: "Adulto Mayor 45-55",
+    edadAnios: "50 to 60",
+    cabello: { es: "Canoso corto peinado a un lado", en: "short gray hair combed to one side" },
+    rasgosFaciales: { forma: "a square face with a defined jaw", ojos: "narrow slightly slanted dark eyes", cejas: "straight dark eyebrows", nariz: "a broad flat nose", boca: "thin lips" },
+    rasgosEs: "Rostro cuadrado, ojos rasgados oscuros, cejas rectas, nariz ancha",
+    cuerpo: { complexion: "an average build", hombros: "medium-width shoulders", es: "Complexión promedio, hombros medios" },
+  },
+  "Mujer árabe de cabello largo y ondulado": {
+    id: "mujer-arabe-ondulado",
+    genero: "Mujer",
+    etnia: "Medio Oriente/Árabe",
+    edad: "Adulto Joven 30-40",
+    edadAnios: "28 to 38",
+    cabello: { es: "Castaño oscuro largo y ondulado", en: "long wavy dark brown hair" },
+    rasgosFaciales: { forma: "an oval face with defined cheekbones", ojos: "large hazel almond-shaped eyes", cejas: "full arched eyebrows", nariz: "a straight elegant nose", boca: "full lips" },
+    rasgosEs: "Rostro ovalado, ojos avellana grandes, cejas pobladas arqueadas, nariz recta",
+    cuerpo: { complexion: "an average build", hombros: "medium-width shoulders", es: "Complexión promedio, hombros medios" },
+  },
+  "Hombre sudasiático con barba completa": {
+    id: "hombre-sudasiatico-barba",
+    genero: "Hombre",
+    etnia: "Sudasiática",
+    edad: "Adulto Joven 30-40",
+    edadAnios: "35 to 45",
+    cabello: { es: "Negro corto y barba completa", en: "short black hair and a full dark beard" },
+    rasgosFaciales: { forma: "a round face", ojos: "dark deep eyes", cejas: "thick dark eyebrows", nariz: "a prominent nose", boca: "a mouth framed by the beard" },
+    rasgosEs: "Rostro redondo, ojos oscuros, cejas gruesas, nariz prominente, barba completa",
+    cuerpo: { complexion: "a sturdy build", hombros: "broad shoulders", es: "Complexión robusta, hombros anchos" },
+  },
+  "Mujer indígena latinoamericana de trenza larga": {
+    id: "mujer-indigena-trenza",
+    genero: "Mujer",
+    etnia: "Rasgos Nativos/Indígenas",
+    edad: "Adulto Joven 30-40",
+    edadAnios: "30 to 40",
+    cabello: { es: "Negro muy largo en una trenza", en: "very long black hair in a single thick braid" },
+    rasgosFaciales: { forma: "a broad round face with high cheekbones", ojos: "dark almond-shaped eyes", cejas: "straight dark eyebrows", nariz: "a small broad nose", boca: "medium-full lips" },
+    rasgosEs: "Rostro redondo con pómulos altos, ojos almendrados oscuros, nariz pequeña ancha",
+    cuerpo: { complexion: "an average build", hombros: "medium-width shoulders", es: "Complexión promedio, hombros medios" },
   },
 };
 export const ARQUETIPOS_LISTA = Object.keys(ARQUETIPOS);
 export const ARQUETIPO_ALEATORIO = "🎲 Aleatorio (arquetipo)";
 export const ARQUETIPO_NINGUNO = "Ninguno (usar selectores manuales)";
-export const ARQUETIPO_OPCIONES = [ARQUETIPO_ALEATORIO, ARQUETIPO_NINGUNO, ...ARQUETIPOS_LISTA];
+export const ARQUETIPO_OPCIONES = [ARQUETIPO_ALEATORIO, ...ARQUETIPOS_LISTA];
 
 /** Arquetipo concreto: el elegido (o «Ninguno») o, si es «Aleatorio», el que corresponde a `u` en [0,1). */
 export function resolverArquetipo(seleccion: string, u: number = Math.random()): string {
@@ -833,9 +875,10 @@ export type PromptInput = {
   gafas: string;
   accesorio: string;
   paleta: string;
-  /** Cabello y rasgos faciales concretos (etiquetas de CABELLOS / RASGOS). */
-  cabello: string;
-  rasgos: string;
+  /** Personalización concreta (modo «Personalizar»): rostro, cabello, vello y cuerpo ya sorteados/elegidos. */
+  personaje?: Concreto;
+  /** Listas editables del personaje (si falta, se usan las de fábrica). */
+  listas?: Listas;
   /** Arquetipo físico concreto (clave de ARQUETIPOS) o «Ninguno»: si existe, define por completo la apariencia. */
   arquetipo: string;
 };
@@ -1026,7 +1069,7 @@ export const REGLA_BRANDING =
 
 // Estética del personaje: solo aplica cuando el personaje es una mujer.
 export const ESTETICA_MUJER =
-  "ESTÉTICA DEL PERSONAJE: Todas las mujeres generadas deben ser extremadamente hermosas, de rasgos muy atractivos y altamente fotogénicos, sin importar su origen étnico, manteniendo siempre la expresión de alta tensión, pánico o estrés requerida.";
+  "ESTÉTICA DEL PERSONAJE: Las mujeres generadas deben ser atractivas pero reales, de belleza natural y armónica, con proporciones equilibradas y piel con textura realista (poros visibles e imperfecciones sutiles), nunca de modelo irreal, manteniendo siempre la expresión de alta tensión, pánico o estrés requerida.";
 
 export const REGLA_COMPOSICION =
   "REGLA DE COMPOSICIÓN ESPACIAL ESTRICTA: La composición del lienzo debe estar dividida. Todos los textos gigantes 3D principales y el badge flotante deben agruparse obligatoriamente en un lateral o en la mitad superior de la imagen, lejos de la esquina inferior izquierda, que debe estar completamente DESPEJADA Y VISIBLE (solo contiene la marca de agua sutil). Está absolutamente prohibido que cualquier letra, sombra, personaje o elemento 3D cruce, tape o se superponga sobre esa zona. El área libre es sagrada y debe quedar limpia.";
@@ -1050,11 +1093,6 @@ function preparar(i: PromptInput) {
   // Gafas: "Ninguna" no inyecta nada. Si se elige un par, se quitan las gafas que pudiera traer la
   // vestimenta del perfil (p. ej. "…and black-framed glasses") para no duplicarlas ni contradecirlas.
   const gafasText = GAFAS[i.gafas] ?? "";
-  const [estiloCab, colorCab] = i.cabello.split("|");
-  const colorEn = COLORES_PELO.find((c) => c.es === colorCab)?.en;
-  const estiloEn = CABELLOS.find((c) => c.es === estiloCab)?.en ?? "";
-  const cabelloEn = colorEn ? `${estiloEn} in ${colorEn}` : estiloEn;
-  const rasgosEn = RASGOS.find((r) => r.es === i.rasgos)?.en ?? "";
   // Accesorio en las manos: con cable o teléfono, una mano lo sostiene y la otra conserva el gesto (variante de una mano)
   const postura = cerebroPostura(i.accesorio); // el cerebro decide la postura de AMBAS manos
   const hands = postura.manosEn;
@@ -1072,8 +1110,23 @@ function preparar(i: PromptInput) {
     ? `A floating 3D badge in the composition reading "${badge.textos[i.idioma]}", with a small ${badge.icon} icon (${badge.emoji}) integrated inside the badge itself, with the same massive, legible typography.`
     : "No badges or extra labels in the composition.";
 
-  const personaje = `On the right side of the frame, ${arq ? `a ${ETNIA_EN[arq.etnia].replace("{n}", mujer ? "woman" : "man")} aged ${arq.edadAnios}, with ${arq.cabello.en}, ${arq.rasgosFaciales.forma}, ${arq.rasgosFaciales.ojos}, ${arq.rasgosFaciales.cejas}, ${arq.rasgosFaciales.nariz} and ${arq.rasgosFaciales.boca}` : `a ${ETNIA_EN[i.etnia].replace("{n}", mujer ? "woman" : "man")} ${EDAD_EN[i.edad]}`}, working as ${/^[aeiou]/i.test(perfil.en.role) ? "an" : "a"} ${perfil.en.role}, wearing ${clothing}, with ${perfil.en.emotion}, and ${hands}.`;
-  const rasgosExtra = !arq && (cabelloEn || rasgosEn) ? `The character has ${[cabelloEn, rasgosEn].filter(Boolean).join(" and ")}.` : "";
+  // Descripción del personaje: arquetipo (todo definido) o personalización (rostro, cabello, vello)
+  const listas = i.listas ?? LISTAS_BASE;
+  const nivel = nivelPlano(i.plano);
+  const sexo = mujer ? "woman" : "man";
+  const conArticulo = (t: string) => `${/^[aeiou]/i.test(t) ? "an" : "a"} ${t}`;
+  const descripcion = arq
+    ? `${conArticulo(ETNIA_EN[arq.etnia].replace("{n}", sexo))} aged ${arq.edadAnios}, with ${arq.cabello.en}, ${arq.rasgosFaciales.forma}, ${arq.rasgosFaciales.ojos}, ${arq.rasgosFaciales.cejas}, ${arq.rasgosFaciales.nariz} and ${arq.rasgosFaciales.boca}`
+    : `${conArticulo(ETNIA_EN[i.etnia].replace("{n}", sexo))} ${EDAD_EN[i.edad]}${i.personaje ? `, ${describirRostro(listas, i.personaje)}` : ""}`;
+  const personaje = `On the right side of the frame, ${descripcion}, working as ${/^[aeiou]/i.test(perfil.en.role) ? "an" : "a"} ${perfil.en.role}, wearing ${clothing}, with ${perfil.en.emotion}, and ${hands}.`;
+  // Cuerpo: solo hacia arriba y según el plano (detalle = nada · primer plano = hombros · medio = complexión y hombros)
+  const rasgosExtra = arq
+    ? describirCuerpo(arq.cuerpo.complexion, arq.cuerpo.hombros, nivel)
+    : describirCuerpo(
+        listas.complexion.find((x) => x.es === i.personaje?.complexion)?.en ?? "",
+        listas.hombros.find((x) => x.es === i.personaje?.hombros)?.en ?? "",
+        nivel,
+      );
   return {
     perfil, arq, mujer, printer, errorText, marco, plano, gafasText, postura, color1, color2, color3, badge, badgeSentence, personaje, rasgosExtra,
   };
@@ -1091,6 +1144,8 @@ export function buildPrompt(i: PromptInput): string {
     plano,
     personaje,
     ...(rasgosExtra ? [rasgosExtra] : []),
+    FRASE_CINTURA,
+    ARMONIA_EN,
     IDENTIDAD_ES,
     ...(gafasText ? [gafasText] : []),
     ...postura.reglas,
@@ -1186,6 +1241,8 @@ export function buildApiPrompt(i: PromptInput, opts: { texto3d: boolean }): stri
     c.plano,
     c.personaje,
     ...(c.rasgosExtra ? [c.rasgosExtra] : []),
+    FRASE_CINTURA,
+    ARMONIA_EN,
     "Every image shows a completely different person: a unique face and a unique facial structure.",
     ...(c.gafasText ? [c.gafasText] : []),
     ...c.postura.reglasEn,

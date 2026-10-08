@@ -29,8 +29,6 @@ const base = (extra: Partial<PromptInput> = {}): PromptInput => ({
   gafas: "Ninguna",
   accesorio: "Teléfono celular",
   paleta: "Amarillo intenso",
-  cabello: "Cabello corto",
-  rasgos: "Rostro ovalado y suave",
   arquetipo: "Ninguno (usar selectores manuales)",
   ...extra,
 });
