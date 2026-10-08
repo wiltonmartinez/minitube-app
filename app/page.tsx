@@ -143,6 +143,21 @@ function Block({
   );
 }
 
+function LockButton({ locked, onClick, label }: { locked: boolean; onClick: () => void; label: string }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={locked}
+      aria-label={`${locked ? "Desbloquear" : "Bloquear"} ${label}`}
+      title={locked ? "Bloqueado: el azar no lo cambia (clic para desbloquear)" : "Desbloqueado: el azar puede cambiarlo (clic para bloquear)"}
+      className={`rounded px-1.5 text-sm leading-6 transition-colors ${locked ? "bg-primary/20" : "opacity-60 hover:opacity-100"}`}
+    >
+      {locked ? "🔒" : "🔓"}
+    </button>
+  );
+}
+
 function SelectField({
   id,
   label,
@@ -150,6 +165,8 @@ function SelectField({
   options,
   onChange,
   className,
+  locked,
+  onToggleLock,
 }: {
   id: string;
   label: string;
@@ -157,10 +174,15 @@ function SelectField({
   options: readonly string[];
   onChange: (v: string) => void;
   className?: string;
+  locked?: boolean;
+  onToggleLock?: () => void;
 }) {
   return (
     <div className={`space-y-2 ${className ?? ""}`}>
-      <Label htmlFor={id}>{label}</Label>
+      <div className="flex items-center justify-between">
+        <Label htmlFor={id}>{label}</Label>
+        {onToggleLock && <LockButton locked={!!locked} onClick={onToggleLock} label={label} />}
+      </div>
       <Select value={value} onValueChange={onChange}>
         <SelectTrigger id={id} className="w-full">
           <SelectValue placeholder="Selecciona..." />
@@ -177,10 +199,25 @@ function SelectField({
   );
 }
 
-function ReadOnlyField({ id, label, value }: { id: string; label: string; value: string }) {
+function ReadOnlyField({
+  id,
+  label,
+  value,
+  locked,
+  onToggleLock,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  locked?: boolean;
+  onToggleLock?: () => void;
+}) {
   return (
     <div className="space-y-2">
-      <Label htmlFor={id}>{label}</Label>
+      <div className="flex items-center justify-between">
+        <Label htmlFor={id}>{label}</Label>
+        {onToggleLock && <LockButton locked={!!locked} onClick={onToggleLock} label={label} />}
+      </div>
       <Input id={id} value={value} readOnly disabled className="disabled:opacity-80" />
     </div>
   );
@@ -208,13 +245,15 @@ export default function Home() {
     badge: BADGES_REALES[0],
     u: 0.5, // número del sorteo del accesorio (se interpreta según el perfil vigente)
   });
+  // Candados: una variable bloqueada no cambia con el azar (ni con «Generar al Azar», ni con el lote, ni con el re-sorteo)
+  const [locks, setLocks] = useState<Record<string, boolean>>({});
   const sortear = () =>
-    setSorteo({
-      paleta: resolverPaleta(PALETA_ALEATORIA),
-      gafas: resolverGafas(GAFAS_ALEATORIAS),
-      badge: resolverBadge(BADGE_ALEATORIO),
-      u: Math.random(),
-    });
+    setSorteo((s) => ({
+      paleta: locks.paleta ? s.paleta : resolverPaleta(PALETA_ALEATORIA),
+      gafas: locks.gafas ? s.gafas : resolverGafas(GAFAS_ALEATORIAS),
+      badge: locks.badge ? s.badge : resolverBadge(BADGE_ALEATORIO),
+      u: locks.accesorio ? s.u : Math.random(),
+    }));
 
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) => {
     setForm((f) => ({ ...f, [key]: value }));
@@ -229,6 +268,8 @@ export default function Home() {
   const gafasEf = form.gafas === GAFAS_ALEATORIAS ? sorteo.gafas : form.gafas;
   const badgeEf = form.badge === BADGE_ALEATORIO ? sorteo.badge : form.badge;
   const accesorioEf = resolverAccesorio(form.accesorio, form.profesion, sorteo.u);
+
+
 
   // Manos mostradas: con cable o teléfono, una mano conserva el gesto y la otra sostiene el accesorio
   const acc = ACCESORIOS[accesorioEf];
@@ -250,6 +291,24 @@ export default function Home() {
     );
   }, [form, catalogo, errorFinal, paletaEf, gafasEf, badgeEf, accesorioEf]);
 
+  // Alternar candado: al bloquear una opción «Aleatorio» se fija el valor sorteado en ese momento
+  function toggleLock(key: string) {
+    const bloqueando = !locks[key];
+    setLocks((l) => ({ ...l, [key]: bloqueando }));
+    if (!bloqueando) return;
+    const fijo: Record<string, [string, string]> = {
+      gafas: [GAFAS_ALEATORIAS, gafasEf],
+      paleta: [PALETA_ALEATORIA, paletaEf],
+      badge: [BADGE_ALEATORIO, badgeEf],
+      accesorio: [ACCESORIO_ALEATORIO, accesorioEf],
+    };
+    const f = fijo[key];
+    if (f && form[key as keyof FormState] === f[0]) setForm((x) => ({ ...x, [key]: f[1] }));
+  }
+  const lockProps = (key: string) => ({ locked: !!locks[key], onToggleLock: () => toggleLock(key) });
+
+
+
   // Valida los campos obligatorios para el lote al azar
   function validate() {
     if (!form.modelo.trim()) {
@@ -267,12 +326,13 @@ export default function Home() {
   function randomizeFields() {
     setForm((f) => {
       const r = randomVariables(profesiones);
+      for (const k of Object.keys(r) as (keyof typeof r)[]) if (locks[k]) delete r[k]; // bloqueado: no cambia
       return {
         ...f,
         ...r,
         // si el menú está en "Aleatorio" se conserva esa opción (se re-sortea); si no, se cambia a una concreta
-        badge: f.badge === BADGE_ALEATORIO ? f.badge : r.badge,
-        paleta: f.paleta === PALETA_ALEATORIA ? f.paleta : r.paleta,
+        badge: locks.badge || f.badge === BADGE_ALEATORIO ? f.badge : (r.badge ?? f.badge),
+        paleta: locks.paleta || f.paleta === PALETA_ALEATORIA ? f.paleta : (r.paleta ?? f.paleta),
       };
     });
     sortear(); // si paleta, gafas o badge están en "Aleatorio", se vuelven a sortear
@@ -298,16 +358,20 @@ export default function Home() {
     const prompts: GeneratedPrompt[] = [];
     for (let n = 0; n < total; n++) {
       const r = randomVariables(profesiones);
+      // Variables bloqueadas: conservan el valor actual en todos los prompts del lote
+      if (locks.etnia) r.etnia = form.etnia;
+      if (locks.profesion) r.profesion = form.profesion;
+      if (locks.marco) r.marco = form.marco as typeof r.marco;
       prompts.push(
         generatePrompt(
           {
             ...form,
             ...r,
             catalogo,
-            paleta: resolverPaleta(PALETA_ALEATORIA), // cada prompt del lote, con su propia paleta
-            gafas: resolverGafas(form.gafas),
-            badge: resolverBadge(BADGE_ALEATORIO), // el lote siempre lleva un badge real
-            accesorio: resolverAccesorio(form.accesorio, r.profesion), // según el perfil de ese prompt
+            paleta: locks.paleta ? paletaEf : resolverPaleta(PALETA_ALEATORIA), // cada prompt, con su propia paleta (salvo bloqueo)
+            gafas: locks.gafas ? gafasEf : resolverGafas(form.gafas),
+            badge: locks.badge ? badgeEf : resolverBadge(BADGE_ALEATORIO), // el lote siempre lleva un badge real
+            accesorio: locks.accesorio ? accesorioEf : resolverAccesorio(form.accesorio, r.profesion), // según el perfil de ese prompt
             error: errorFinal,
           },
           { baseUrl: baseUrl() },
@@ -488,6 +552,7 @@ export default function Home() {
                   options={ETNIAS}
                   onChange={(v) => set("etnia", v as FormState["etnia"])}
                   className="md:col-span-2"
+                  {...lockProps("etnia")}
                 />
                 <SelectField
                   id="gafas"
@@ -496,6 +561,7 @@ export default function Home() {
                   options={GAFAS_OPCIONES}
                   onChange={(v) => set("gafas", v)}
                   className="md:col-span-2"
+                  {...lockProps("gafas")}
                 />
                 {form.gafas === GAFAS_ALEATORIAS && (
                   <p className="-mt-2 text-xs text-muted-foreground md:col-span-2">
@@ -509,6 +575,7 @@ export default function Home() {
                   options={ACCESORIOS_OPCIONES}
                   onChange={(v) => set("accesorio", v)}
                   className="md:col-span-2"
+                  {...lockProps("accesorio")}
                 />
                 {form.accesorio === ACCESORIO_ALEATORIO && (
                   <p className="-mt-2 text-xs text-muted-foreground md:col-span-2">
@@ -529,13 +596,14 @@ export default function Home() {
                   options={profesiones}
                   onChange={(v) => set("profesion", v as Profesion)}
                   className="md:col-span-2"
+                  {...lockProps("profesion")}
                 />
-                <ReadOnlyField id="vestimenta" label="Vestimenta" value={vestimenta} />
-                <ReadOnlyField id="emocion" label="Emociones" value={perfil.emocion} />
+                <ReadOnlyField id="vestimenta" label="Vestimenta" value={vestimenta} {...lockProps("profesion")} />
+                <ReadOnlyField id="emocion" label="Emociones" value={perfil.emocion} {...lockProps("profesion")} />
                 <ReadOnlyField id="mirada" label="Mirada" value={MIRADA_ES} />
-                <ReadOnlyField id="manos" label="Manos" value={manosMostradas} />
+                <ReadOnlyField id="manos" label="Manos" value={manosMostradas} {...lockProps("profesion")} />
                 <div className="md:col-span-2">
-                  <ReadOnlyField id="fondo" label="Fondo estructural" value={perfil.fondo} />
+                  <ReadOnlyField id="fondo" label="Fondo estructural" value={perfil.fondo} {...lockProps("profesion")} />
                 </div>
               </Block>
 
@@ -559,6 +627,7 @@ export default function Home() {
                   options={MARCOS.map((m) => m.es)}
                   onChange={(v) => set("marco", v)}
                   className="md:col-span-2"
+                  {...lockProps("marco")}
                 />
                 <SelectField
                   id="idioma"
@@ -575,6 +644,7 @@ export default function Home() {
                   options={BADGES_OPCIONES}
                   onChange={(v) => set("badge", v)}
                   className="md:col-span-2"
+                  {...lockProps("badge")}
                 />
                 {form.badge === BADGE_ALEATORIO && (
                   <p className="-mt-2 text-xs text-muted-foreground md:col-span-2">
@@ -588,6 +658,7 @@ export default function Home() {
                   options={PALETAS_OPCIONES}
                   onChange={(v) => set("paleta", v)}
                   className="md:col-span-2"
+                  {...lockProps("paleta")}
                 />
                 <p className="-mt-2 text-xs text-muted-foreground md:col-span-2">
                   {form.paleta === PALETA_ALEATORIA && <>Sorteada ahora: <strong>{paletaEf}</strong>. </>}
