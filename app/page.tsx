@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { COMMIT, VERSION } from "@/lib/changelog";
 import { CatalogEditor } from "@/components/catalog-editor";
+import { ImageGenerator } from "@/components/image-generator";
 import { useCatalogo } from "@/lib/use-catalogo";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -884,6 +885,7 @@ export default function Home() {
             <Button variant="secondary" className="w-full" onClick={copy} disabled={!live}>
               Copiar al portapapeles
             </Button>
+            <ImageGenerator prompt={live?.promptText ?? ""} />
             <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
               <Button
                 variant="outline"
