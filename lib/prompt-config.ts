@@ -1572,7 +1572,7 @@ export function buildApiPrompt(i: PromptInput, opts: { texto3d: boolean; referen
   const t = opts.texto3d;
   const marcoEn = c.marco.charAt(0).toUpperCase() + c.marco.slice(1);
 
-  const escena = `The setting is ${c.perfil.en.scene}, with realistic details of the character's workplace softly blurred in the background, such as ${c.perfil.en.props}. ${i.plotter ? `Real physical ${i.marca} large-format plotters stand on their stands in the blurred background, slightly out of focus, with no legible logos or text on them.` : `Real physical ${i.marca} printers sit on shelves and tables in the blurred background, slightly out of focus, with no legible logos or text on them.`} ${c.postura.estado === "impresora" ? "The only printer in the foreground is the single one both hands are touching, on the table at the right-center of the frame and away from the lower corners; every other printer stays in the blurred background." : "There are no printers in the foreground."}`;
+  const escena = `The setting is ${c.perfil.en.scene}, with realistic details of the character's workplace softly blurred in the background, such as ${c.perfil.en.props}. ${i.plotter ? `A large, clearly recognizable ${i.marca} wide-format plotter (a big roll-fed printer on its stand, with a roll of media and a front control panel) is plainly visible in the right-hand background right beside the character, well lit and only mildly out of focus so its shape is easy to identify, and none of the plotters has legible logos or text on them; more large-format plotters stay softly blurred further back.` : `Real physical ${i.marca} printers sit on shelves and tables in the blurred background, slightly out of focus, with no legible logos or text on them.`} ${c.postura.estado === "impresora" ? "The only printer in the foreground is the single one both hands are touching, on the table at the right-center of the frame and away from the lower corners; every other printer stays in the blurred background." : "There are no printers in the foreground."}`;
   const esquina = t
     ? `The lower-left corner of the frame is completely empty negative space: only a clean, softly blurred background, with no objects, no hands, no printers and no graphics. In that corner, and only there, add a tiny, subtle, semi-transparent, elegant typographic watermark reading "${MARCA_AGUA_TEXTO}", slightly inset from the edges, with no box and no icon.`
     : "The lower-left corner of the frame is completely empty negative space: only a clean, softly blurred background, with no objects, no hands, no printers, no graphics and no text, kept clean for post-production.";
@@ -1595,7 +1595,7 @@ export function buildApiPrompt(i: PromptInput, opts: { texto3d: boolean; referen
         "Do not render any text, letters, numbers, logos, badges or labels anywhere in the image. Keep the upper area of the frame clean and uncluttered so titles and badges can be added later in post-production.",
       ];
 
-  const negativos = `Avoid: extra hands, extra arms, extra or missing fingers, deformed hands, distorted faces, duplicate people, logos or brand names on the clothing, any other logos, any object or hand in the lower-left corner, any element in the lower-right corner, blurry or low-quality rendering, ${t ? "misspelled text, any watermark other than the specified one," : "any text at all,"} and glowing neon effects, holograms or floating icons over the environment.`;
+  const negativos = `Avoid: extra hands, extra arms, extra or missing fingers, deformed hands, distorted faces, duplicate people, logos or brand names on the clothing, any other logos, any object or hand in the lower-left corner, any element in the lower-right corner, any border or frame around the image, blurry or low-quality rendering, ${t ? "misspelled text, any watermark other than the specified one," : "any text at all,"} and glowing neon effects, holograms or floating icons over the environment.`;
 
   return [
     "Hyper-realistic cinematic photograph for a YouTube thumbnail, 16:9 widescreen, shot on a full-frame camera with an 85mm lens, shallow depth of field, dramatic high-contrast lighting, ultra-detailed skin and fabric textures, vivid saturated colors.",
@@ -1620,7 +1620,9 @@ export function buildApiPrompt(i: PromptInput, opts: { texto3d: boolean; referen
     ...textos,
     YOUTUBE_API,
     REALISMO_API,
-    `${marcoEn} frames the entire image.`,
+    t
+      ? `${marcoEn} frames the entire image.`
+      : "The photograph runs full-bleed to all four edges: no border, no frame, no outline, no neon edge and no rounded corners around the image, because the frame is added later in post-production.",
     negativos,
   ].join(" ");
 }

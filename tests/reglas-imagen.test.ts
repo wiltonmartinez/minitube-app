@@ -137,7 +137,7 @@ describe("Fase 3 · reglas obligatorias del prompt de imagen", () => {
     for (const e of todas) {
       const p = e.plan.promptImagen;
       expect(p).toContain("no logos, brand names, printed text or emblems on shirts, caps, uniforms or accessories");
-      expect(p).toMatch(e.alta ? /Real physical Epson large-format plotters stand on their stands in the blurred background/ : /Real physical Epson printers sit on shelves and tables in the blurred background/);
+      expect(p).toMatch(e.alta ? /large, clearly recognizable Epson wide-format plotter .* plainly visible in the right-hand background/ : /Real physical Epson printers sit on shelves and tables in the blurred background/);
       expect(p).toContain("with no legible logos or text on them");
     }
   });
@@ -223,7 +223,11 @@ describe("Fase 3 · marco y fondo nunca de la misma familia de color", () => {
         };
         const ok = marcoCompatible(m.es, p.en.scene);
         const frase = ok.en.charAt(0).toUpperCase() + ok.en.slice(1);
-        expect(buildApiPrompt(entrada, { texto3d: false }), `${m.es}/${nombre}`).toContain(`${frase} frames the entire image.`);
+        expect(buildApiPrompt(entrada, { texto3d: true }), `${m.es}/${nombre}`).toContain(`${frase} frames the entire image.`);
+        // sin texto (TexTube compone): la imagen va a sangre, sin marco propio, para no duplicar el de TexTube
+        const sinTexto = buildApiPrompt(entrada, { texto3d: false });
+        expect(sinTexto).toContain("full-bleed to all four edges: no border, no frame");
+        expect(sinTexto).not.toContain("frames the entire image");
         expect(buildPrompt(entrada)).toContain(`${frase} frames the entire image.`);
       }
     }
