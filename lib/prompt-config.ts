@@ -1568,7 +1568,7 @@ function expresionApi(e?: EmocionAB): string {
 
 /** Con el texto compuesto por TexTube ocupando la izquierda, el rostro debe quedar libre de letras. */
 const ROSTRO_DERECHA_EN =
-  "The face is pushed far to the right: the face is centered in the right-hand quarter of the frame, and it is fine, even desired, for the right edge of the image to crop part of the head, hair or shoulder. The person's whole body leans toward the right edge. The entire left half and the middle of the frame contain no part of the person's head or face, only the softly blurred workplace background, because large titles will be placed there.";
+  "The face is pushed all the way to the far right edge: the face is centered in the extreme right-hand strip of the frame, roughly the last sixth of the image width, and the right edge of the image crops part of the head, hair and shoulder, which is desired. Only the right part of the face may be partly cut off, but both eyes and the mouth stay visible. The person's whole body leans toward the right edge. The entire left side and the whole middle of the frame contain no part of the person's head or face, only the softly blurred workplace background, because large titles will be placed there.";
 
 export function buildApiPrompt(i: PromptInput, opts: { texto3d: boolean; referencia?: boolean }): string {
   const ref = !!opts.referencia;
