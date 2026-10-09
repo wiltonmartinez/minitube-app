@@ -138,7 +138,7 @@ describe("Fase 3 · reglas obligatorias del prompt de imagen", () => {
       const p = e.plan.promptImagen;
       expect(p).toContain("no logos, brand names, printed text or emblems on shirts, caps, uniforms or accessories");
       expect(p).toMatch(e.alta ? /large, clearly recognizable Epson wide-format plotter .* plainly visible in the right-hand background/ : /Real physical Epson printers sit on shelves and tables in the blurred background/);
-      expect(p).toContain("with no legible logos or text on them");
+      expect(p).toMatch(/no legible logos or text on (?:them|it)/);
     }
   });
   it("«framed from the waist up at most, no hips, no legs visible»", () => {
