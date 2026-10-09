@@ -1566,6 +1566,10 @@ function expresionApi(e?: EmocionAB): string {
   return e && EMOCIONES_AB[e].expresionEn ? EMOCIONES_AB[e].expresionEn : EXPRESION_API;
 }
 
+/** Con el texto compuesto por TexTube ocupando la izquierda, el rostro debe quedar libre de letras. */
+const ROSTRO_DERECHA_EN =
+  "The face is placed far to the right: the whole head, hair and face sit inside the right-hand third of the frame, with the face centered in that third and the shoulders and body continuing to the right edge. The entire left half and the middle of the frame contain no part of the person's head or face, only the softly blurred workplace background, because large titles will be placed there.";
+
 export function buildApiPrompt(i: PromptInput, opts: { texto3d: boolean; referencia?: boolean }): string {
   const ref = !!opts.referencia;
   const c = preparar(i, ref);
@@ -1601,6 +1605,7 @@ export function buildApiPrompt(i: PromptInput, opts: { texto3d: boolean; referen
     "Hyper-realistic cinematic photograph for a YouTube thumbnail, 16:9 widescreen, shot on a full-frame camera with an 85mm lens, shallow depth of field, dramatic high-contrast lighting, ultra-detailed skin and fabric textures, vivid saturated colors.",
     c.plano,
     c.personaje,
+    ...(t ? [] : [ROSTRO_DERECHA_EN]),
     ...(c.rasgosExtra ? [c.rasgosExtra] : []),
     FRASE_CINTURA,
     ARMONIA_EN,
