@@ -278,3 +278,17 @@ describe("API v1 · MINITUBE_FORZAR_SIMULACION", () => {
     expect(espia).not.toHaveBeenCalled();
   });
 });
+
+describe("API v1 · costo estimado", () => {
+  it("siempre informa lo que costaría generar la imagen, aunque pidas solo el prompt", async () => {
+    const normal = await (await post({ ...OK, generarImagen: false })).json();
+    expect(normal).toMatchObject({ costoAproxUSD: 0, costoEstimadoUSD: 0.03, prioridad: "normal" });
+    const alta = await (await post({ marca: "Epson", modelo: "F570", error: "Almohadillas", generarImagen: false })).json();
+    expect(alta).toMatchObject({ costoAproxUSD: 0, costoEstimadoUSD: 0.0675, prioridad: "alta" });
+  });
+  it("en modo manual no hay costo estimado", async () => {
+    vi.stubEnv("MINITUBE_MODELO_NORMAL", "manual");
+    const j = await (await post({ ...OK, generarImagen: false })).json();
+    expect(j.costoEstimadoUSD).toBe(0);
+  });
+});

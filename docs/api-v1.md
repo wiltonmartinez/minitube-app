@@ -17,7 +17,8 @@ Todas las peticiones llevan `Authorization: Bearer <MINITUBE_API_TOKEN>`.
 
 Respuesta (200 o 202): `version`, `id`, `estado` (`completado` | `en_cola`), `prioridad`, `modeloIA`, `semilla`,
 `personaje`, `profesion`, `plano`, `emocion`, `promptImagen` (inglés), `promptGemini` (español), `imagen`
-(`{url, ancho, alto}` o `null`), `costoAproxUSD`, `simulacion`, `aviso`.
+(`{url, ancho, alto}` o `null`), `costoAproxUSD` (lo gastado en esta petición), `costoEstimadoUSD` (lo que costaría generar la
+imagen aunque no se genere: sirve para estimar un lote), `composicion`, `simulacion`, `aviso`.
 
 - Con imagen real el estado es `en_cola` (HTTP 202) y hay que consultar el `id`.
 - Sin `FAL_KEY` responde en **modo simulación** (`simulacion: true`, imagen de prueba, costo 0).

@@ -38,6 +38,8 @@ export async function POST(req: Request) {
     promptImagen: plan.promptImagen,
     promptGemini: plan.promptGemini,
     composicion: COMPOSICION, // lo que TexTube aplica por código (marca de agua, ventana de error, zonas libres)
+    // Lo que costaría generar la imagen con el modelo elegido (aunque no se genere): sirve para estimar un lote antes de gastar
+    costoEstimadoUSD: ruta.generacion === "manual" ? 0 : ruta.modelo.costoUsd,
   };
 
   // Pruebas locales de errores (nunca en producción): «x-minitube-simular: cuota | proveedor»
