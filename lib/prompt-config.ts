@@ -899,6 +899,12 @@ const BADGE_DATA: Record<string, { emoji: string; icon: string; textos: Record<I
 
 export const BADGES = [NINGUNO, ...Object.keys(BADGE_DATA)];
 
+/** Datos del badge elegido para quien compone la miniatura por su cuenta (TexTube): texto, emoji e icono. */
+export function datosBadge(clave: string, idioma: Idioma = "Español"): { clave: string; texto: string; emoji: string; icono: string } | null {
+  const b = BADGE_DATA[clave];
+  return b ? { clave, texto: b.textos[idioma], emoji: b.emoji, icono: b.icon } : null;
+}
+
 // Badges con valor real (todo menos "Ninguno"): el sorteo aleatorio solo elige entre estos
 export const BADGES_REALES = BADGES.filter((b) => b !== NINGUNO);
 

@@ -292,3 +292,16 @@ describe("API v1 · costo estimado", () => {
     expect(j.costoEstimadoUSD).toBe(0);
   });
 });
+
+describe("API v1 · badge 3D del generador", () => {
+  it("el plan trae el badge elegido con texto, emoji e icono (para que TexTube lo dibuje)", async () => {
+    const { planificar } = await import("@/lib/motor");
+    for (let semilla = 1; semilla <= 40; semilla++) {
+      const p = planificar({ marca: "Epson", modelo: "L3250", error: "Almohadillas", enfoque: "error", generarImagen: false, semilla }, "normal");
+      expect(p.badge, `semilla ${semilla}`).not.toBeNull();
+      expect(p.badge!.texto.length).toBeGreaterThan(2);
+      expect(p.badge!.emoji.length).toBeGreaterThan(0);
+      expect(p.badge!.icono.length).toBeGreaterThan(0);
+    }
+  });
+});

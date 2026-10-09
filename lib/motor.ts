@@ -14,6 +14,7 @@ import {
   resolverAccesorio,
   resolverArquetipo,
   resolverBadge,
+  datosBadge,
   resolverGafas,
   resolverPaleta,
   type EmocionAB,
@@ -149,6 +150,8 @@ export type Plan = {
   plano: string;
   emocion: EmocionAB;
   personaje: PersonajeResumen;
+  /** Badge 3D elegido por el generador (texto, emoji, icono); TexTube lo dibuja sobre la imagen. */
+  badge: { clave: string; texto: string; emoji: string; icono: string } | null;
   /** Prompt en inglés para la API de imágenes (sin texto dentro de la imagen) */
   promptImagen: string;
   /** Prompt completo en español para copiar a Gemini a mano */
@@ -197,6 +200,7 @@ export function planificar(s: Solicitud, prioridad: Prioridad = "normal"): Plan 
     profesion,
     plano,
     emocion,
+    badge: datosBadge(entrada.badge),
     personaje: {
       arquetipo,
       genero: a.genero,

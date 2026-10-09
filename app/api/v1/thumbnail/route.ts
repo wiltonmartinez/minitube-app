@@ -35,6 +35,7 @@ export async function POST(req: Request) {
     profesion: plan.profesion,
     plano: plan.plano,
     emocion: plan.emocion,
+    badge: plan.badge,
     promptImagen: plan.promptImagen,
     promptGemini: plan.promptGemini,
     composicion: COMPOSICION, // lo que TexTube aplica por código (marca de agua, ventana de error, zonas libres)
