@@ -138,7 +138,34 @@ export const LISTAS_BASE: Listas = {
     { id: "elegante", es: "Rostro alargado y elegante", en: "high, elegant cheekbones", rasgos: { forma: "alargado", ojosForma: "almendrados", cejas: "arqueadas", nariz: "recta", labios: "cupido" } },
     { id: "expresivo", es: "Rostro expresivo de ojos grandes", en: "large, very expressive eyes", rasgos: { forma: "ovalado", ojosForma: "redondos", cejas: "arqueadas", nariz: "respingada", labios: "medianos" } },
     { id: "nariz_marcada", es: "Rasgos marcados de nariz prominente", en: "a strong, characterful profile", rasgos: { forma: "alargado", ojosForma: "caidos", cejas: "pobladas", nariz: "aguilena", labios: "finos" } },
+    { id: "latino_clasico", es: "Rasgos latinos clásicos de cejas pobladas", en: "warm, classic Latin features with full, well-defined eyebrows", rasgos: { forma: "ovalado", ojosForma: "almendrados", cejas: "pobladas", nariz: "recta", labios: "medianos" } },
+    { id: "mestizo_andino", es: "Rostro mestizo de pómulos anchos", en: "broad cheekbones and warm mestizo features", rasgos: { forma: "redondo", ojosForma: "almendrados", cejas: "naturales", nariz: "ancha", labios: "medianos" } },
+    { id: "afro_pomulos", es: "Pómulos altos y labios plenos", en: "high, defined cheekbones", rasgos: { forma: "ovalado", ojosForma: "almendrados", cejas: "arqueadas", nariz: "ancha", labios: "gruesos" } },
+    { id: "afro_fuerte", es: "Rostro afro de facciones fuertes y ojos grandes", en: "strong, expressive features and large eyes", rasgos: { forma: "cuadrado", ojosForma: "redondos", cejas: "pobladas", nariz: "ancha", labios: "gruesos" } },
+    { id: "mediterraneo", es: "Rasgos mediterráneos de nariz marcada", en: "defined Mediterranean features and a strong nose", rasgos: { forma: "alargado", ojosForma: "almendrados", cejas: "pobladas", nariz: "aguilena", labios: "medianos" } },
+    { id: "europeo_fino", es: "Rostro caucásico de rasgos finos y mandíbula suave", en: "refined features and a soft jawline", rasgos: { forma: "ovalado", ojosForma: "encapotados", cejas: "rectas", nariz: "recta", labios: "finos" } },
+    { id: "coreano_suave", es: "Rostro coreano redondeado de ojos rasgados", en: "a smooth, youthful Korean complexion and gently slanted eyes", rasgos: { forma: "redondo", ojosForma: "rasgados", cejas: "rectas", nariz: "pequena", labios: "medianos" } },
+    { id: "coreano_definido", es: "Rostro coreano definido de pómulos marcados", en: "defined cheekbones and a softly tapered jawline", rasgos: { forma: "ovalado", ojosForma: "rasgados", cejas: "finas", nariz: "pequena", labios: "cupido" } },
   ],
+};
+
+/** Estilos faciales vinculados a la etnia: cada estilo solo se ofrece (y se sortea) con los grupos que lo hacen coherente. Sin entrada = sirve para todas. */
+export const ESTILO_GRUPOS: Record<string, string[]> = {
+  suaves: ["latina", "asiatica", "afro"],
+  angulosos: ["europea", "latina"],
+  maduro: ["europea", "latina"],
+  joven_fino: ["europea", "asiatica"],
+  mandibula: ["afro", "latina"],
+  calido: ["latina", "afro"],
+  nariz_marcada: ["europea", "latina"],
+  latino_clasico: ["latina"],
+  mestizo_andino: ["latina"],
+  afro_pomulos: ["afro"],
+  afro_fuerte: ["afro"],
+  mediterraneo: ["europea"],
+  europeo_fino: ["europea"],
+  coreano_suave: ["asiatica"],
+  coreano_definido: ["asiatica"],
 };
 
 /* ───────── Selección y personaje concreto ───────── */
@@ -223,6 +250,10 @@ export function esArmonica(campo: CampoLista, id: string | undefined, ctx: Conte
   const mujer = ctx.genero === "Mujer";
   const edadMin = EDAD_MIN[ctx.edad] ?? 30;
   switch (campo) {
+    case "estilo": {
+      const permitidos = ESTILO_GRUPOS[id];
+      return !permitidos || !g || permitidos.includes(g === "latina_oscura" ? "latina" : g);
+    }
     case "ojosColor": {
       const ok = g ? OJOS[g] : "todos";
       return ok === "todos" || ok.includes(id);
@@ -282,7 +313,8 @@ export function resolverPersonaje(listas: Listas, sel: Seleccion, ctx: Contexto,
   const rnd = prng(u);
   const elegir = (campo: CampoLista): string => {
     const lista = listas[campo];
-    if (sel[campo] !== ALEATORIO && lista.some((x) => x.es === sel[campo])) return sel[campo];
+    const elegida = lista.find((x) => x.es === sel[campo]);
+    if (sel[campo] !== ALEATORIO && elegida && (campo !== "estilo" || esArmonica("estilo", elegida.id, ctx))) return sel[campo];
     const ok = lista.filter((x) => esArmonica(campo, x.id, ctx));
     const pool = ok.length ? ok : lista;
     return pool.length ? pool[Math.floor(rnd() * pool.length)].es : "";

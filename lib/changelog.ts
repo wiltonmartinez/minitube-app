@@ -9,6 +9,15 @@ export type Cambio = {
 
 export const CHANGELOG: Cambio[] = [
   {
+    version: "4.6.0",
+    fecha: "2026-10-09",
+    titulo: "Estilos faciales vinculados a la etnia",
+    cambios: [
+      "Cada etnia del panel solo ofrece estilos faciales coherentes: hay 8 estilos propios nuevos (latino clásico, mestizo andino, afro de pómulos altos, afro de facciones fuertes, mediterráneo, caucásico de rasgos finos y dos coreanos) y los 10 anteriores quedan asignados a las etnias con las que encajan.",
+      "El sorteo («Aleatorio», «Generar al azar» y el lote) nunca da un estilo de otra etnia. Si cambias de etnia y el estilo elegido ya no encaja, se sortea uno coherente.",
+    ],
+  },
+  {
     version: "4.5.1",
     fecha: "2026-10-09",
     titulo: "Sin campo de edad exacta",

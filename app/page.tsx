@@ -26,6 +26,7 @@ import {
   type CampoLista,
   type ModoRostro,
   type Seleccion,
+  esArmonica,
 } from "@/lib/rostro";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -445,7 +446,10 @@ export default function Home() {
 
   // Selector de un campo del personaje (con «Aleatorio», candado y el valor sorteado debajo)
   function campoPers(campo: CampoLista, clase = "", desactivado = false) {
-    const opciones = opcionesMenu(listas, campo);
+    const opciones =
+      campo === "estilo"
+        ? [ALEATORIO, ...listas.estilo.filter((x) => esArmonica("estilo", x.id, { genero: generoEf, edad: edadEf, etnia: etniaEf })).map((x) => x.es)]
+        : opcionesMenu(listas, campo);
     const valor = opciones.includes(form.pers[campo]) ? form.pers[campo] : ALEATORIO;
     return (
       <div key={campo} className={clase}>

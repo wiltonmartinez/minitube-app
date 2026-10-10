@@ -60,7 +60,7 @@ describe("Fase 3 · listas de fábrica", () => {
   it("tienen las opciones pedidas", () => {
     const n = (c: CampoLista) => LISTAS_BASE[c].length;
     expect(n("estilo")).toBeGreaterThanOrEqual(8);
-    expect(n("estilo")).toBeLessThanOrEqual(10);
+    expect(n("estilo")).toBeLessThanOrEqual(20);
     expect([n("forma"), n("ojosColor"), n("ojosForma"), n("cejas"), n("nariz"), n("labios")]).toEqual([5, 7, 5, 5, 6, 4]);
     expect([n("cabelloColor"), n("cabelloTipo"), n("cabelloLargo"), n("vello"), n("complexion"), n("hombros")]).toEqual([7, 5, 6, 5, 4, 3]);
   });
