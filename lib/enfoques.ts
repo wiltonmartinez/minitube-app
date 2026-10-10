@@ -28,7 +28,7 @@ export const ENFOQUES: Record<Enfoque, InfoEnfoque> = {
     etnias: [E_LATINO, E_AFRO],
     dispositivo: "Smartphone",
     emocion: "Frustración extrema y shock",
-    mirada: "Ojos muy abiertos por el shock, fijos hacia el espacio del error a la izquierda (un poco por encima de la esquina inferior)",
+    mirada: "Ojos muy abiertos por el shock",
     manos: "Derecha con el teléfono firme; izquierda agarrándose la cabeza, jalándose el cabello o abierta en el aire (incomprensión)",
   },
   2: {
@@ -38,7 +38,7 @@ export const ENFOQUES: Record<Enfoque, InfoEnfoque> = {
     etnias: [E_CAUCASICO, E_LATINO],
     dispositivo: "PC / Laptop",
     emocion: "Pánico absoluto y ansiedad",
-    mirada: "Ojos asustados y muy abiertos, fijos hacia el espacio del error a la izquierda (un poco por encima de la esquina inferior)",
+    mirada: "Ojos asustados y muy abiertos",
     manos: "Cuerpo encorvado o echado hacia atrás; derecha en el ratón; izquierda cubriéndose la boca o frotándose los ojos",
   },
   3: {
@@ -48,7 +48,7 @@ export const ENFOQUES: Record<Enfoque, InfoEnfoque> = {
     etnias: [E_ASIATICO, E_CAUCASICO],
     dispositivo: "PC / Laptop",
     emocion: "Confianza absoluta, triunfo y alivio, con sonrisa",
-    mirada: "Ojos brillantes y seguros, fijos al frente, en la pantalla o en el espectador",
+    mirada: "Ojos brillantes y seguros, con sonrisa",
     manos: "Cuerpo inclinado hacia adelante; derecha en el ratón; izquierda con el pulgar arriba o señalando su propio monitor",
   },
 };

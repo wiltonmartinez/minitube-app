@@ -9,6 +9,15 @@ export type Cambio = {
 
 export const CHANGELOG: Cambio[] = [
   {
+    version: "4.9.0",
+    fecha: "2026-10-09",
+    titulo: "Cuatro direcciones de mirada",
+    cambios: [
+      "El selector «Dirección de la mirada» tiene 4 opciones, siempre con el personaje en el lado derecho: 1) al frente, de derecha a izquierda; 2) diagonal hacia abajo a la izquierda (la de siempre, por defecto); 3) recto hacia abajo, a su dispositivo; 4) a la pantalla, a su derecha.",
+      "Sustituye a las dos direcciones de la versión 4.8.0, que estaban mal planteadas (abajo a la derecha). Todos los enfoques usan las mismas 4 opciones; el enfoque 3 estrena «al frente» y mira con seguridad, sin pánico.",
+    ],
+  },
+  {
     version: "4.8.0",
     fecha: "2026-10-09",
     titulo: "Dos direcciones de mirada",

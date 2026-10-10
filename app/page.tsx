@@ -86,10 +86,10 @@ import {
   GENEROS,
   IDIOMAS,
   MARCOS,
-  MIRADA_ABAJO_DER_ES,
   MIRADA_DEFECTO,
-  MIRADA_ES,
+  MIRADA_DEFECTO_EXPERTO,
   MIRADA_OPCIONES,
+  MIRADA_TEXTO,
   PALETAS_FIJAS,
   PALETAS_OPCIONES,
   PALETA_ALEATORIA,
@@ -119,6 +119,8 @@ type FormState = {
   usarEnfoque: boolean;
   /** Dirección de la mirada (MIRADA_OPCIONES) */
   mirada: string;
+  /** Mirada del enfoque 3 (al frente por defecto) */
+  miradaExperto: string;
   etnia: (typeof ETNIAS_PANEL)[number];
   gafas: string;
   accesorio: string;
@@ -143,6 +145,7 @@ const INITIAL: FormState = {
   dispositivo: DISPOSITIVO_NINGUNO,
   usarEnfoque: true,
   mirada: MIRADA_DEFECTO,
+  miradaExperto: MIRADA_DEFECTO_EXPERTO,
   etnia: ETNIAS_PANEL[0],
   gafas: GAFAS_OPCIONES[0],
   accesorio: ACCESORIO_ALEATORIO,
@@ -414,6 +417,9 @@ export default function Home() {
     if (otras.length) g.push({ label: "Otras profesiones", options: otras });
     return g.filter((x) => x.options.length);
   }, [alta, form.usarEnfoque, profesionesEf]);
+  const miradaEf = enfoqueActivo === 3 ? form.miradaExperto : form.mirada;
+  const afectoMirada = infoEnfoque ? infoEnfoque.mirada : "Ojos desorbitados";
+  const textoMirada = `${afectoMirada}, ${MIRADA_TEXTO[Math.max(0, MIRADA_OPCIONES.indexOf(miradaEf as (typeof MIRADA_OPCIONES)[number]))]}`;
   const nivel = nivelPlano(form.plano);
   // Personalización concreta (modo «Personalizar»): lo elegido a mano se respeta, lo aleatorio es armónico
   const persEf = useMemo(
@@ -450,13 +456,13 @@ export default function Home() {
         accesorio: accesorioEf,
         dispositivo: form.dispositivo === DISPOSITIVO_NINGUNO ? undefined : form.dispositivo,
         enfoque: enfoqueActivo,
-        mirada: form.mirada,
+        mirada: miradaEf,
         personaje: persEf,
         listas,
         arquetipo: arquetipoEf,
         plotter: alta || undefined,
     };
-  }, [form, catalogo, paletaEf, gafasEf, badgeEf, accesorioEf, persEf, listas, arquetipoEf, generoEf, edadEf, etniaEf, alta, enfoqueActivo]);
+  }, [form, catalogo, paletaEf, gafasEf, badgeEf, accesorioEf, persEf, listas, arquetipoEf, generoEf, edadEf, etniaEf, alta, enfoqueActivo, miradaEf]);
 
   // Prompt para copiar a Gemini (formato de siempre)
   const live = useMemo<GeneratedPrompt | null>(
@@ -571,7 +577,7 @@ export default function Home() {
             plotter: alta || undefined,
             dispositivo: f.dispositivo === DISPOSITIVO_NINGUNO ? undefined : f.dispositivo,
             enfoque: enfoqueLote,
-            mirada: f.mirada,
+            mirada: enfoqueLote === 3 ? f.miradaExperto : f.mirada,
           },
           { baseUrl: baseUrl() },
         ),
@@ -910,14 +916,13 @@ export default function Home() {
                 />
                 <ReadOnlyField id="vestimenta" label="Vestimenta" value={vestimenta} {...lockProps("profesion")} />
                 <ReadOnlyField id="emocion" label="Emociones" value={infoEnfoque ? infoEnfoque.emocion : perfil.emocion} {...lockProps("profesion")} />
-                <ReadOnlyField id="mirada" label="Mirada" value={enfoqueActivo === 3 ? infoEnfoque!.mirada : form.mirada === MIRADA_OPCIONES[1] ? MIRADA_ABAJO_DER_ES : infoEnfoque ? infoEnfoque.mirada : MIRADA_ES} />
+                <ReadOnlyField id="mirada" label="Mirada" value={textoMirada} />
                 <SelectField
                   id="direccionMirada"
-                  label="Dirección de la mirada"
-                  value={enfoqueActivo === 3 ? "Al frente (enfoque 3)" : form.mirada}
-                  options={enfoqueActivo === 3 ? ["Al frente (enfoque 3)"] : MIRADA_OPCIONES}
-                  onChange={(v) => set("mirada", v)}
-                  disabled={enfoqueActivo === 3}
+                  label="Dirección de la mirada (el personaje está a la derecha)"
+                  value={miradaEf}
+                  options={MIRADA_OPCIONES}
+                  onChange={(v) => set(enfoqueActivo === 3 ? "miradaExperto" : "mirada", v)}
                   className="md:col-span-2"
                 />
                 <ReadOnlyField id="manos" label="Manos (según accesorio)" value={manosMostradas} />
