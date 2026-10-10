@@ -86,7 +86,10 @@ import {
   GENEROS,
   IDIOMAS,
   MARCOS,
+  MIRADA_ABAJO_DER_ES,
+  MIRADA_DEFECTO,
   MIRADA_ES,
+  MIRADA_OPCIONES,
   PALETAS_FIJAS,
   PALETAS_OPCIONES,
   PALETA_ALEATORIA,
@@ -114,6 +117,8 @@ type FormState = {
   dispositivo: string;
   /** Aplica el enfoque estratégico de la profesión (etnia, edad, dispositivo, emoción, mirada y manos) */
   usarEnfoque: boolean;
+  /** Dirección de la mirada (MIRADA_OPCIONES) */
+  mirada: string;
   etnia: (typeof ETNIAS_PANEL)[number];
   gafas: string;
   accesorio: string;
@@ -137,6 +142,7 @@ const INITIAL: FormState = {
   edad: EDADES[0],
   dispositivo: DISPOSITIVO_NINGUNO,
   usarEnfoque: true,
+  mirada: MIRADA_DEFECTO,
   etnia: ETNIAS_PANEL[0],
   gafas: GAFAS_OPCIONES[0],
   accesorio: ACCESORIO_ALEATORIO,
@@ -444,6 +450,7 @@ export default function Home() {
         accesorio: accesorioEf,
         dispositivo: form.dispositivo === DISPOSITIVO_NINGUNO ? undefined : form.dispositivo,
         enfoque: enfoqueActivo,
+        mirada: form.mirada,
         personaje: persEf,
         listas,
         arquetipo: arquetipoEf,
@@ -564,6 +571,7 @@ export default function Home() {
             plotter: alta || undefined,
             dispositivo: f.dispositivo === DISPOSITIVO_NINGUNO ? undefined : f.dispositivo,
             enfoque: enfoqueLote,
+            mirada: f.mirada,
           },
           { baseUrl: baseUrl() },
         ),
@@ -902,7 +910,16 @@ export default function Home() {
                 />
                 <ReadOnlyField id="vestimenta" label="Vestimenta" value={vestimenta} {...lockProps("profesion")} />
                 <ReadOnlyField id="emocion" label="Emociones" value={infoEnfoque ? infoEnfoque.emocion : perfil.emocion} {...lockProps("profesion")} />
-                <ReadOnlyField id="mirada" label="Mirada" value={infoEnfoque ? infoEnfoque.mirada : MIRADA_ES} />
+                <ReadOnlyField id="mirada" label="Mirada" value={enfoqueActivo === 3 ? infoEnfoque!.mirada : form.mirada === MIRADA_OPCIONES[1] ? MIRADA_ABAJO_DER_ES : infoEnfoque ? infoEnfoque.mirada : MIRADA_ES} />
+                <SelectField
+                  id="direccionMirada"
+                  label="Dirección de la mirada"
+                  value={enfoqueActivo === 3 ? "Al frente (enfoque 3)" : form.mirada}
+                  options={enfoqueActivo === 3 ? ["Al frente (enfoque 3)"] : MIRADA_OPCIONES}
+                  onChange={(v) => set("mirada", v)}
+                  disabled={enfoqueActivo === 3}
+                  className="md:col-span-2"
+                />
                 <ReadOnlyField id="manos" label="Manos (según accesorio)" value={manosMostradas} />
                 <div className="md:col-span-2">
                   <ReadOnlyField id="fondo" label="Fondo estructural" value={perfil.fondo} {...lockProps("profesion")} />

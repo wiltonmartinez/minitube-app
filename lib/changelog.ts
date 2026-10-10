@@ -9,6 +9,15 @@ export type Cambio = {
 
 export const CHANGELOG: Cambio[] = [
   {
+    version: "4.8.0",
+    fecha: "2026-10-09",
+    titulo: "Dos direcciones de mirada",
+    cambios: [
+      "Nuevo selector «Dirección de la mirada» con dos opciones: arriba a la izquierda (de derecha a izquierda, hacia el espacio del error; es la de siempre y queda por defecto) y abajo a la derecha (de izquierda a derecha).",
+      "El enfoque 3 (técnicos e ingenieros) siempre mira al frente, por eso el selector queda desactivado en ese caso. El lote usa la dirección elegida.",
+    ],
+  },
+  {
     version: "4.7.2",
     fecha: "2026-10-09",
     titulo: "Profesiones agrupadas por enfoque y mirada coherente",

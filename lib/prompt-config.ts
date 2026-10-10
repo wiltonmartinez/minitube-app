@@ -1066,6 +1066,8 @@ export type PromptInput = {
   dispositivo?: string;
   /** Enfoque estratégico (1 negocio detenido · 2 pánico profesional · 3 solución del experto): fija emoción, mirada y manos. */
   enfoque?: 1 | 2 | 3;
+  /** Dirección de la mirada (MIRADA_OPCIONES); si falta, arriba a la izquierda. El enfoque 3 siempre mira al frente. */
+  mirada?: string;
   /** Personalización concreta (modo «Personalizar»): rostro, cabello, vello y cuerpo ya sorteados/elegidos. */
   personaje?: Concreto;
   /** Listas editables del personaje (si falta, se usan las de fábrica). */
@@ -1584,11 +1586,20 @@ const MIRADA_FRENTE_REGLA =
 const REGLA_EXPRESION_EXPERTO =
   "REGLA ESTRICTA DE EXPRESIÓN: Está absolutamente prohibido generar expresiones de tristeza, llanto, pucheros, lástima, pánico o resignación pasiva. Prohibido posturas relajadas como manos en la cintura o brazos cruzados. El personaje debe mostrar confianza absoluta, triunfo y alivio, con una sonrisa segura y una postura atenta e inclinada hacia adelante.";
 
+/* Dos direcciones de mirada: de derecha a izquierda y hacia arriba (la de siempre, hacia el espacio del error) o de izquierda a derecha y hacia abajo. */
+export const MIRADA_OPCIONES = ["Arriba a la izquierda (de derecha a izquierda)", "Abajo a la derecha (de izquierda a derecha)"] as const;
+export const MIRADA_DEFECTO = MIRADA_OPCIONES[0];
+export const MIRADA_ABAJO_DER_ES =
+  "Ojos desorbitados y fijos hacia el sector inferior derecho, con la cabeza girada hacia ese lado; nunca a la cámara ni hacia arriba";
+const MIRADA_REGLA_ABAJO_DER =
+  "MIRADA FIJA HACIA ABAJO A LA DERECHA (DE IZQUIERDA A DERECHA): Los ojos del personaje deben estar abiertos, desorbitados por el pánico, y orientados obligatoriamente hacia el sector inferior derecho de la imagen, con la cabeza girada ligeramente hacia ese lado y la mirada descendente, hacia la parte baja de la toma donde está su dispositivo o su zona de trabajo. Los ojos tienen prohibido mirar a la cámara, hacia arriba o hacia el espacio vacío reservado a la izquierda de la imagen.";
+
 /** Regla de mirada con el afecto de la emoción (pánico por defecto: el texto no cambia). */
-function miradaRegla(e?: EmocionAB, enfoque?: 1 | 2 | 3): string {
+function miradaRegla(e?: EmocionAB, enfoque?: 1 | 2 | 3, mirada?: string): string {
   if (enfoque === 3) return MIRADA_FRENTE_REGLA;
-  if (enfoque) return MIRADA_REGLA.replace("por el pánico", ENFOQUE_AFECTO[enfoque]);
-  return e ? MIRADA_REGLA.replace("por el pánico", EMOCIONES_AB[e].afectoEs) : MIRADA_REGLA;
+  const base = mirada === MIRADA_OPCIONES[1] ? MIRADA_REGLA_ABAJO_DER : MIRADA_REGLA;
+  if (enfoque) return base.replace("por el pánico", ENFOQUE_AFECTO[enfoque]);
+  return e ? base.replace("por el pánico", EMOCIONES_AB[e].afectoEs) : base;
 }
 function esteticaMujer(e?: EmocionAB, enfoque?: 1 | 2 | 3): string {
   if (enfoque === 3) return ESTETICA_MUJER.replace("la expresión de alta tensión, pánico o estrés requerida", "la expresión de confianza y triunfo requerida");
@@ -1681,7 +1692,7 @@ export function buildPrompt(i: PromptInput): string {
     ...(gafasText ? [gafasText] : []),
     ...postura.reglas,
     REGLA_BRANDING,
-    miradaRegla(i.emocion, i.enfoque),
+    miradaRegla(i.emocion, i.enfoque, i.mirada),
     ...(mujer ? [esteticaMujer(i.emocion, i.enfoque)] : []),
     "The person is anatomically correct: exactly one person, exactly two arms, two hands with five fingers each, one symmetrical face and natural proportions.",
     ANATOMIA_ES,

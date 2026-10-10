@@ -119,3 +119,23 @@ describe("Coherencia de emoción, mirada y manos en los 3 enfoques", () => {
     });
   }
 });
+
+describe("Dirección de la mirada", () => {
+  it("dos opciones: arriba a la izquierda (por defecto) y abajo a la derecha", async () => {
+    const { MIRADA_OPCIONES } = await import("@/lib/prompt-config");
+    const arriba = buildPrompt(base({ profesion: "Sublimación", enfoque: 1, dispositivo: "Smartphone" }));
+    const arribaExp = buildPrompt(base({ profesion: "Sublimación", enfoque: 1, dispositivo: "Smartphone", mirada: MIRADA_OPCIONES[0] }));
+    const abajo = buildPrompt(base({ profesion: "Sublimación", enfoque: 1, dispositivo: "Smartphone", mirada: MIRADA_OPCIONES[1] }));
+    expect(arriba).toBe(arribaExp);
+    expect(arriba).toContain("MIRADA FIJA Y ALTA HACIA LA IZQUIERDA");
+    expect(abajo).toContain("MIRADA FIJA HACIA ABAJO A LA DERECHA");
+    expect(abajo).not.toContain("MIRADA FIJA Y ALTA HACIA LA IZQUIERDA");
+    expect(abajo).toContain("por la frustración extrema y el shock");
+  });
+  it("el enfoque 3 siempre mira al frente", async () => {
+    const { MIRADA_OPCIONES } = await import("@/lib/prompt-config");
+    const p = buildPrompt(base({ profesion: "Técnico de computadores", enfoque: 3, dispositivo: "PC / Laptop", mirada: MIRADA_OPCIONES[1] }));
+    expect(p).toContain("MIRADA AL FRENTE");
+    expect(p).not.toContain("HACIA ABAJO A LA DERECHA");
+  });
+});
