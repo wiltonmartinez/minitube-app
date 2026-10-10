@@ -118,6 +118,8 @@ type FormState = {
   emocionPanel: string;
   /** Smartphone, PC / Laptop o Tablet: fija la postura de las dos manos */
   dispositivo: string;
+  /** true cuando el dispositivo se eligió a mano: el enfoque ya no lo cambia */
+  dispositivoManual: boolean;
   /** Aplica el enfoque estratégico de la profesión (etnia, edad, dispositivo, emoción, mirada y manos) */
   usarEnfoque: boolean;
   /** Dirección de la mirada (MIRADA_OPCIONES) */
@@ -147,6 +149,7 @@ const INITIAL: FormState = {
   edad: EDADES_PANEL[0],
   emocionPanel: EMOCION_AUTO,
   dispositivo: DISPOSITIVO_NINGUNO,
+  dispositivoManual: false,
   usarEnfoque: true,
   mirada: MIRADA_DEFECTO,
   miradaExperto: MIRADA_DEFECTO_EXPERTO,
@@ -388,7 +391,7 @@ export default function Home() {
     );
 
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) => {
-    setForm((f) => ({ ...f, [key]: value }));
+    setForm((f) => ({ ...f, [key]: value, ...(key === "profesion" ? { dispositivoManual: false } : {}) }));
     sortear();
   };
 
@@ -846,17 +849,11 @@ export default function Home() {
                   label="Dispositivo"
                   value={form.dispositivo}
                   options={[DISPOSITIVO_NINGUNO, ...DISPOSITIVOS]}
-                  onChange={(v) => set("dispositivo", v)}
-                  disabled={!!enfoqueActivo}
+                  onChange={(v) => setForm((f) => ({ ...f, dispositivo: v, dispositivoManual: true }))}
                   className="md:col-span-2"
                 />
                 <p className="-mt-2 text-xs text-muted-foreground md:col-span-2">
-                  {form.dispositivo === "Smartphone" && "Smartphone: la mano derecha sostiene el teléfono; la izquierda va a la sien o a la cabeza, o abierta en el aire (desconcierto)."}
-                  {form.dispositivo === "PC / Laptop" &&
-                    (esPerfilTecnico(form.profesion)
-                      ? "PC / Laptop (perfil técnico): la mano derecha en el ratón; la izquierda con el pulgar arriba o señalando la pantalla (encontró la solución)."
-                      : "PC / Laptop: la mano derecha en el ratón; la izquierda agarrándose la cara o la boca (frustración).")}
-                  {form.dispositivo === "Tablet" && "Tablet: la mano izquierda sostiene la tablet; la derecha queda suspendida a medio camino o en la cabeza."}
+                  {dispositivoActivo && `${form.dispositivo}: ${manosMostradas}.${enfoqueActivo && !form.dispositivoManual ? " (Lo fija el enfoque de la profesión; puedes cambiarlo.)" : ""}`}
                   {!dispositivoActivo && "Ninguno: la postura de las manos se elige abajo. Con un dispositivo, la postura y el accesorio de abajo se desactivan."}
                 </p>
                 <SelectField

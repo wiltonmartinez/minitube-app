@@ -30,7 +30,7 @@ describe("Los 3 enfoques estratégicos", () => {
 
   it("normalizarEnfoque corrige etnia, edad y dispositivo", () => {
     const f = normalizarEnfoque({ profesion: "Técnico de computadores", etnia: "Latino / Mestizo", edad: "18 a 25 años", dispositivo: "Ninguno" });
-    expect(f).toMatchObject({ etnia: "Asiático / Coreano", edad: "36 a 45 años", dispositivo: "PC / Laptop" });
+    expect(f).toMatchObject({ etnia: "Asiático / Coreano", edad: "36 a 45 años", dispositivo: "PC" });
     const g = normalizarEnfoque({ profesion: "Sublimación", etnia: "Afrodescendiente / Afro-latino", edad: "46 a 55 años", dispositivo: "Tablet" });
     expect(g).toMatchObject({ etnia: "Afrodescendiente / Afro-latino", edad: "18 a 25 años", dispositivo: "Smartphone" });
     expect(edadesDelEnfoque("Recepcionista")).toContain("18 a 25 años");
@@ -185,5 +185,26 @@ describe("Edades agrupadas y emociones por tono", () => {
     expect(emocionEfectiva("26 a 35 años", "Serenidad", false)).toBeUndefined(); // no encaja con el tono
     expect(emocionEfectiva("46 a 55 años", EMOCION_AUTO, false)).toBe("Seguridad");
     expect(emocionEfectiva("46 a 55 años", EMOCION_AUTO, true)).toBeUndefined(); // con enfoque manda el enfoque
+  });
+});
+
+describe("Dispositivo editable", () => {
+  it("opciones: Smartphone, Tablet, PC, Laptop y Ninguno", async () => {
+    const { DISPOSITIVOS, DISPOSITIVO_NINGUNO } = await import("@/lib/prompt-config");
+    expect([DISPOSITIVO_NINGUNO, ...DISPOSITIVOS]).toEqual(["Ninguno", "Smartphone", "Tablet", "PC", "Laptop"]);
+  });
+  it("el enfoque fija el dispositivo por defecto, pero una elección a mano se respeta", () => {
+    const f = { profesion: "Sublimación", etnia: "Latino / Mestizo", edad: "18 a 25 años", dispositivo: "Ninguno", dispositivoManual: false };
+    expect(normalizarEnfoque(f).dispositivo).toBe("Smartphone");
+    expect(normalizarEnfoque({ ...f, dispositivo: "Tablet", dispositivoManual: true }).dispositivo).toBe("Tablet");
+    expect(normalizarEnfoque({ ...f, profesion: "Recepcionista" }).dispositivo).toBe("Laptop");
+    expect(normalizarEnfoque({ ...f, profesion: "Ingeniero de sistemas", edad: "36 a 45 años" }).dispositivo).toBe("PC");
+  });
+  it("PC y Laptop cambian el equipo del prompt en los enfoques 2 y 3", () => {
+    const pc = buildPrompt(base({ profesion: "Recepcionista", enfoque: 2, dispositivo: "PC" }));
+    expect(pc).toContain("UN solo monitor de escritorio");
+    const lap = buildPrompt(base({ profesion: "Técnico de computadores", enfoque: 3, dispositivo: "Laptop" }));
+    expect(lap).toContain("UNA sola laptop abierta");
+    expect(lap).toMatch(/thumbs up or points the index finger/);
   });
 });

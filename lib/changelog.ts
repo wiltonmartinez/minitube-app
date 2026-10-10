@@ -9,6 +9,15 @@ export type Cambio = {
 
 export const CHANGELOG: Cambio[] = [
   {
+    version: "4.12.0",
+    fecha: "2026-10-10",
+    titulo: "Dispositivo editable: Smartphone, Tablet, PC, Laptop o Ninguno",
+    cambios: [
+      "El selector «Dispositivo» ya no se bloquea con el enfoque: ofrece Ninguno, Smartphone, Tablet, PC y Laptop. «PC / Laptop» se separó en PC (monitor de escritorio) y Laptop (laptop abierta), cada uno con su postura de manos.",
+      "El enfoque sigue proponiendo uno por defecto al elegir la profesión (Smartphone, Laptop o PC), pero lo que elijas a mano se respeta hasta que cambies de profesión.",
+    ],
+  },
+  {
     version: "4.11.0",
     fecha: "2026-10-10",
     titulo: "Edades agrupadas por papel y emoción",

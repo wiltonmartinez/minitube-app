@@ -50,7 +50,8 @@ describe("Edad exacta", () => {
 describe("Dispositivo y mapeo de las manos", () => {
   const frases: Record<string, RegExp[]> = {
     Smartphone: [/right hand holds a modern smartphone/, /left hand is pressed against the temple/],
-    "PC / Laptop": [/right hand rests on a computer mouse/, /left hand grabs the face or covers the mouth/],
+    PC: [/right hand rests on a computer mouse/, /left hand grabs the face or covers the mouth/, /single desktop monitor/],
+    Laptop: [/right hand rests on a computer mouse/, /left hand grabs the face or covers the mouth/, /single open laptop/],
     Tablet: [/left hand holds a modern tablet/, /right hand is suspended halfway in the air or placed on the head/],
   };
 
@@ -59,7 +60,7 @@ describe("Dispositivo y mapeo de las manos", () => {
       const api = buildApiPrompt(base({ dispositivo: d }), { texto3d: false });
       for (const f of frases[d]) expect(api, d).toMatch(f);
       const gemini = buildPrompt(base({ dispositivo: d }));
-      const bloque = d === "Smartphone" ? "POSTURA CON SMARTPHONE" : d === "Tablet" ? "POSTURA CON TABLET" : "POSTURA CON PC / LAPTOP";
+      const bloque = d === "Smartphone" ? "POSTURA CON SMARTPHONE" : d === "Tablet" ? "POSTURA CON TABLET" : d === "PC" ? "POSTURA CON PC DE ESCRITORIO" : "POSTURA CON LAPTOP";
       expect(gemini, d).toContain(bloque);
     }
   });

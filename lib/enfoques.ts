@@ -38,7 +38,7 @@ export const ENFOQUES: Record<Enfoque, InfoEnfoque> = {
     impacto: "Urgencia de tiempo",
     dolor: "Un jefe exige el reporte, los alumnos esperan o un cierre o una licitación está por vencer.",
     etnias: [E_CAUCASICO, E_LATINO],
-    dispositivo: "PC / Laptop",
+    dispositivo: "Laptop",
     emocion: "Preocupación extrema y desesperación por la fecha límite",
     mirada: "Ojos muy abiertos por la preocupación extrema",
     manos: "Cuerpo encorvado o echado hacia atrás; derecha en el ratón; izquierda cubriéndose la boca o frotándose los ojos",
@@ -48,7 +48,7 @@ export const ENFOQUES: Record<Enfoque, InfoEnfoque> = {
     impacto: "Autoridad técnica",
     dolor: "El experto encontró la herramienta remota y resuelve el problema de su cliente.",
     etnias: [E_ASIATICO, E_CAUCASICO],
-    dispositivo: "PC / Laptop",
+    dispositivo: "PC",
     emocion: "Autoridad, seguridad, profesionalidad y serenidad",
     mirada: "Ojos brillantes, seguros y serenos",
     manos: "Cuerpo inclinado hacia adelante; derecha en el ratón; izquierda con el pulgar arriba o señalando su propio monitor",
@@ -84,8 +84,8 @@ export function edadesDelEnfoque(profesion: string): readonly string[] | undefin
   return GRUPOS_EDAD.find((g) => g.tono === (e === 3 ? "autoridad" : "cliente"))!.opciones;
 }
 
-/** Corrige etnia, edad y dispositivo de un formulario para que respeten el enfoque de su profesión. Sin enfoque, no toca nada. */
-export function normalizarEnfoque<T extends { profesion: string; etnia: string; edad: string; dispositivo: string }>(f: T): T {
+/** Corrige etnia y edad (y el dispositivo, salvo que se haya elegido a mano) de un formulario para que respeten el enfoque de su profesión. Sin enfoque, no toca nada. */
+export function normalizarEnfoque<T extends { profesion: string; etnia: string; edad: string; dispositivo: string; dispositivoManual?: boolean }>(f: T): T {
   const e = enfoqueDe(f.profesion);
   if (!e) return f;
   const info = ENFOQUES[e];
@@ -94,6 +94,6 @@ export function normalizarEnfoque<T extends { profesion: string; etnia: string; 
     ...f,
     etnia: info.etnias.includes(f.etnia) ? f.etnia : info.etnias[0],
     edad: edades.includes(f.edad) ? f.edad : edades[0],
-    dispositivo: info.dispositivo,
+    dispositivo: f.dispositivoManual ? f.dispositivo : info.dispositivo,
   };
 }

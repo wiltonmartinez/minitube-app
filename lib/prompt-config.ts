@@ -1274,8 +1274,8 @@ export function rangoDeEdad(n: number): (typeof EDADES)[number] {
    PC / Laptop → mano DERECHA en el ratón · mano IZQUIERDA agarrándose la cara o la boca (frustración);
                  si el perfil es técnico (encontró la solución): pulgar arriba o señalando la pantalla
    Tablet      → mano IZQUIERDA sostiene la tablet · mano DERECHA suspendida a medio camino o en la cabeza */
-export const DISPOSITIVOS = ["Smartphone", "PC / Laptop", "Tablet"] as const;
-export const DISPOSITIVO_NINGUNO = "Ninguno (usar la postura de abajo)";
+export const DISPOSITIVOS = ["Smartphone", "Tablet", "PC", "Laptop"] as const;
+export const DISPOSITIVO_NINGUNO = "Ninguno";
 export const esPerfilTecnico = (profesion: string) => PERFILES_TECNICOS.has(profesion);
 export type Postura = {
   estado: EstadoPostura;
@@ -1333,6 +1333,51 @@ export const posturaDe = (accesorio: string) =>
           ? POSTURA_ACCESORIO
           : POSTURA_CABEZA;
 
+/** PC (monitor de escritorio) o Laptop: mano derecha en el ratón; la izquierda según el tono (boca/ojos, pulgar arriba o señalando, frustración). */
+function posturaComputador(equipo: "pc" | "laptop" | "generico", izq: "boca" | "experto" | "tecnico" | "frustracion", cuerpo?: "encorvado" | "adelante"): Postura {
+  const objEn = equipo === "pc" ? "a single desktop monitor stands" : equipo === "laptop" ? "a single open laptop stands" : "a single computer (an open laptop or a monitor) stands";
+  const objEs = equipo === "pc" ? "UN solo monitor de escritorio" : equipo === "laptop" ? "UNA sola laptop abierta" : "UN solo computador (laptop abierta o monitor)";
+  const titulo = equipo === "pc" ? "PC DE ESCRITORIO" : equipo === "laptop" ? "LAPTOP" : "PC / LAPTOP";
+  const manoEn = {
+    boca: "covers the mouth in panic or rubs the eyes",
+    experto: "gives a thumbs up or points the index finger at the person's own monitor",
+    tecnico: "gives a thumbs up or points at the screen, as if the solution had just been found",
+    frustracion: "grabs the face or covers the mouth in frustration",
+  }[izq];
+  const manoEs = {
+    boca: "se cubre la boca de pánico o se frota los ojos",
+    experto: "hace el gesto de pulgar arriba o señala con el dedo índice su propio monitor",
+    tecnico: "hace el gesto de pulgar arriba o señala la pantalla (el técnico encontró la solución)",
+    frustracion: "se agarra la cara o se cubre la boca con frustración",
+  }[izq];
+  const cuerpoEn = cuerpo === "encorvado" ? "The body is hunched over or thrown back in stress. " : cuerpo === "adelante" ? "The body leans forward attentively toward the computer. " : "";
+  const cuerpoEs = cuerpo === "encorvado" ? "el cuerpo va encorvado o echado hacia atrás por el estrés; " : cuerpo === "adelante" ? "el cuerpo se inclina hacia adelante con atención; " : "";
+  const cortoEs = {
+    boca: "la izquierda cubriéndose la boca de pánico o frotándose los ojos",
+    experto: "la izquierda con el pulgar arriba o señalando su propio monitor",
+    tecnico: "la izquierda con el pulgar arriba o señalando la pantalla (encontró la solución)",
+    frustracion: "la izquierda agarrándose la cara o la boca (frustración)",
+  }[izq];
+  const cortoEn = {
+    boca: "the left hand covers the mouth in panic or rubs the eyes",
+    experto: "the left hand gives a thumbs up or points the index finger at its own monitor",
+    tecnico: "the left hand gives a thumbs up or points at the screen, as if the solution had just been found",
+    frustracion: "the left hand grabs the face and covers the mouth in frustration",
+  }[izq];
+  return {
+    estado: "dispositivo",
+    accesorio: "Portátil",
+    manosEs: `${cuerpo === "encorvado" ? "Cuerpo encorvado o echado hacia atrás; " : cuerpo === "adelante" ? "Cuerpo inclinado hacia adelante; " : ""}la mano derecha en el ratón y ${cortoEs}`,
+    manosEn: `${cuerpo === "encorvado" ? "the body hunched forward or thrown back in stress, " : cuerpo === "adelante" ? "the body leaning forward attentively, " : ""}the right hand on a computer mouse while ${cortoEn}`,
+    reglasEn: [
+      `${cuerpoEn}The right hand rests on a computer mouse on the desk, and the left hand ${manoEn}. ${objEn.charAt(0).toUpperCase() + objEn.slice(1)} on the desk in front of the person, in the right-center of the frame and well away from both lower corners, with a plain case that has no logo and no legible screen content. Exactly two hands, and no other object in them.`,
+    ],
+    reglas: [
+      `POSTURA CON ${titulo}: ${cuerpoEs}la mano DERECHA descansa sobre el ratón; la mano IZQUIERDA ${manoEs}. Hay ${objEs} sobre el escritorio, delante del personaje, en la parte centro-derecha de la toma y lejos de las esquinas inferiores, sin logos y sin contenido legible en la pantalla. Exactamente dos manos y ningún otro objeto en ellas.`,
+    ],
+  };
+}
+
 /** Postura de las dos manos según el dispositivo elegido, o null si no hay dispositivo. */
 export function posturaDispositivo(dispositivo: string | undefined, tecnico = false, enfoque?: 1 | 2 | 3): Postura | null {
   if (enfoque === 1 && dispositivo === "Smartphone") {
@@ -1347,36 +1392,6 @@ export function posturaDispositivo(dispositivo: string | undefined, tecnico = fa
       ],
       reglas: [
         "POSTURA CON SMARTPHONE (NEGOCIO DETENIDO): la mano DERECHA sostiene el celular con firmeza, pantalla encendida, en la parte baja de la toma y lejos de las esquinas inferiores; la mano IZQUIERDA se agarra la cabeza, se jala el cabello o queda abierta en el aire en gesto de incomprensión. Ningún otro objeto en las manos: exactamente dos manos.",
-      ],
-    };
-  }
-  if (enfoque === 2 && dispositivo === "PC / Laptop") {
-    return {
-      estado: "dispositivo",
-      accesorio: "Portátil",
-      manosEs: "Cuerpo encorvado o echado hacia atrás; la mano derecha en el ratón de la laptop y la izquierda cubriéndose la boca de pánico o frotándose los ojos",
-      manosEn:
-        "the body hunched forward or thrown back in stress, the right hand on the mouse of an open laptop while the left hand covers the mouth in panic or rubs the eyes",
-      reglasEn: [
-        "The body is hunched over or thrown back in stress. The right hand rests on the mouse next to an open laptop on the desk, and the left hand covers the mouth in panic or rubs the eyes. A single laptop stands on the desk in front of the person, in the right-center of the frame and well away from both lower corners, with a plain case that has no logo and no legible screen content. Exactly two hands, and no other object in them.",
-      ],
-      reglas: [
-        "POSTURA CON LAPTOP (PÁNICO PROFESIONAL): el cuerpo va encorvado o echado hacia atrás por el estrés; la mano DERECHA descansa sobre el ratón junto a una laptop abierta y la mano IZQUIERDA se cubre la boca de pánico o se frota los ojos. Hay UNA sola laptop sobre el escritorio, delante del personaje, en la parte centro-derecha de la toma y lejos de las esquinas inferiores, sin logos y sin contenido legible en la pantalla. Exactamente dos manos y ningún otro objeto en ellas.",
-      ],
-    };
-  }
-  if (enfoque === 3 && dispositivo === "PC / Laptop") {
-    return {
-      estado: "dispositivo",
-      accesorio: "Portátil",
-      manosEs: "Cuerpo inclinado hacia adelante; la mano derecha en el ratón y la izquierda con el pulgar arriba o señalando su propio monitor",
-      manosEn:
-        "the body leaning forward attentively, the right hand on a computer mouse while the left hand gives a thumbs up or points the index finger at its own monitor",
-      reglasEn: [
-        "The body leans forward attentively toward a desktop computer. The right hand rests on the mouse, and the left hand gives a thumbs up or points the index finger at the person's own monitor. A single desktop monitor stands on the desk in the right-center of the frame, well away from both lower corners, with a plain frame that has no logo and no legible screen content. Exactly two hands, and no other object in them.",
-      ],
-      reglas: [
-        "POSTURA CON PC DE ESCRITORIO (SOLUCIÓN DEL EXPERTO): el cuerpo se inclina hacia adelante con atención; la mano DERECHA descansa sobre el ratón y la mano IZQUIERDA hace el gesto de pulgar arriba o señala con el dedo índice su propio monitor. Hay UN solo monitor de escritorio sobre la mesa, en la parte centro-derecha de la toma y lejos de las esquinas inferiores, sin logos y sin contenido legible en la pantalla. Exactamente dos manos y ningún otro objeto en ellas.",
       ],
     };
   }
@@ -1395,27 +1410,10 @@ export function posturaDispositivo(dispositivo: string | undefined, tecnico = fa
       ],
     };
   }
-  if (dispositivo === "PC / Laptop") {
-    return {
-      estado: "dispositivo",
-      accesorio: "Portátil",
-      manosEs: tecnico
-        ? "La mano derecha en el ratón; la izquierda con el pulgar arriba o señalando la pantalla (encontró la solución)"
-        : "La mano derecha en el ratón; la izquierda agarrándose la cara o la boca (frustración)",
-      manosEn: tecnico
-        ? "the right hand resting on a computer mouse while the left hand gives a thumbs up or points at the screen, as if the solution had just been found"
-        : "the right hand resting on a computer mouse while the left hand grabs the face and covers the mouth in frustration",
-      reglasEn: [
-        `The right hand rests on a computer mouse on the desk, and the left hand ${
-          tecnico ? "gives a thumbs up or points at the screen, as if the solution had just been found" : "grabs the face or covers the mouth in frustration"
-        }. A single computer (an open laptop or a monitor) stands on the desk in front of the person, in the right-center of the frame and well away from both lower corners, with a plain case that has no logo and no legible screen content. Exactly two hands, and no other object in them.`,
-      ],
-      reglas: [
-        `POSTURA CON PC / LAPTOP: la mano DERECHA descansa sobre el ratón; la mano IZQUIERDA ${
-          tecnico ? "hace el gesto de pulgar arriba o señala la pantalla (el técnico encontró la solución)" : "se agarra la cara o se cubre la boca con frustración"
-        }. Hay UN solo computador (laptop abierta o monitor) sobre el escritorio, delante del personaje, en la parte centro-derecha de la toma y lejos de las esquinas inferiores, sin logos y sin contenido legible en la pantalla. Exactamente dos manos y ningún otro objeto en ellas.`,
-      ],
-    };
+  if (dispositivo === "PC" || dispositivo === "Laptop" || dispositivo === "PC / Laptop") {
+    const equipo = dispositivo === "PC" ? "pc" : dispositivo === "Laptop" ? "laptop" : enfoque === 3 ? "pc" : enfoque === 2 ? "laptop" : "generico";
+    const izq = enfoque === 2 ? "boca" : enfoque === 3 ? "experto" : tecnico ? "tecnico" : "frustracion";
+    return posturaComputador(equipo, izq, enfoque === 2 ? "encorvado" : enfoque === 3 ? "adelante" : undefined);
   }
   if (dispositivo === "Tablet") {
     return {
