@@ -15,7 +15,21 @@ const ESTILO_SELECT = "h-9 w-full rounded-md border bg-transparent px-3 text-sm 
  * Escenario del video (miniatura, gancho, desarrollo y llamado a la acción). No cuesta nada.
  * El panel de imágenes ya no pide marca, modelo ni error: aquí son datos OPCIONALES solo para el guion (la imagen no los usa).
  */
-export function GuionEscenario({ plotter, profesion, fondo }: { plotter: boolean; profesion: string; fondo?: string }) {
+export function GuionEscenario({
+  plotter,
+  profesion,
+  fondo,
+  genero,
+  edadAnios,
+  dispositivo,
+}: {
+  plotter: boolean;
+  profesion: string;
+  fondo?: string;
+  genero?: string;
+  edadAnios?: number;
+  dispositivo?: string;
+}) {
   const [marca, setMarca] = useState("");
   const [modelo, setModelo] = useState("");
   const [errorSel, setErrorSel] = useState<string>(ERRORES[0]);
@@ -24,8 +38,8 @@ export function GuionEscenario({ plotter, profesion, fondo }: { plotter: boolean
 
   const error = errorSel === OTRO ? errorOtro.trim() : errorSel;
   const e = useMemo(
-    () => (error ? generarEscenario({ marca, modelo, error, profesion, plotter, fondoCatalogo: fondo, semilla }) : null),
-    [marca, modelo, error, profesion, plotter, fondo, semilla],
+    () => (error ? generarEscenario({ marca, modelo, error, profesion, plotter, genero, edadAnios, dispositivo, fondoCatalogo: fondo, semilla }) : null),
+    [marca, modelo, error, profesion, plotter, genero, edadAnios, dispositivo, fondo, semilla],
   );
 
   async function copiar(texto: string, que: string) {
@@ -44,7 +58,7 @@ export function GuionEscenario({ plotter, profesion, fondo }: { plotter: boolean
         Guion del video (escenario)
       </h3>
       <p className="text-xs text-muted-foreground">
-        Usa la profesión del bloque 2. Se genera al instante y sin costo. Para una versión más creativa, copia el prompt y pégalo en Claude o ChatGPT. Los
+        Usa la profesión, la edad exacta, el género y el dispositivo del panel (si los eliges). Se genera al instante y sin costo. Para una versión más creativa, copia el prompt y pégalo en Claude o ChatGPT. Los
         datos del equipo son opcionales y solo se usan en este guion: la imagen no los necesita.
       </p>
 
@@ -118,6 +132,16 @@ export function GuionEscenario({ plotter, profesion, fondo }: { plotter: boolean
                 <li>
                   <strong className="text-foreground">Personaje y emoción:</strong> {e.visual.personaje}
                 </li>
+                {e.visual.edadGenero && (
+                  <li>
+                    <strong className="text-foreground">Edad y género:</strong> {e.visual.edadGenero}
+                  </li>
+                )}
+                {e.visual.manos && (
+                  <li>
+                    <strong className="text-foreground">Dispositivo y postura de manos:</strong> {e.visual.manos}
+                  </li>
+                )}
                 <li>
                   <strong className="text-foreground">Fondo y contexto:</strong> {e.visual.fondo}
                 </li>

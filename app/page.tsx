@@ -52,7 +52,6 @@ import {
   ACCESORIO_ALEATORIO,
   ARQUETIPO_NINGUNO,
   ARQUETIPO_ALEATORIO,
-  ARQUETIPO_OPCIONES,
   ARQUETIPOS,
   ARQUETIPOS_LISTA,
   resolverArquetipo,
@@ -68,6 +67,14 @@ import {
   POSTURA_OPCIONES,
   ACCESORIO_NINGUNO,
   ACCESORIOS_MANO,
+  DISPOSITIVOS,
+  DISPOSITIVO_NINGUNO,
+  EDAD_ANIOS_MAX,
+  EDAD_ANIOS_MIN,
+  edadExacta,
+  esPerfilTecnico,
+  posturaDispositivo,
+  rangoDeEdad,
   BADGES,
   BADGES_REALES,
   BADGE_ALEATORIO,
@@ -103,6 +110,10 @@ type FormState = {
   // Bloque 2
   genero: (typeof GENEROS)[number];
   edad: (typeof EDADES)[number];
+  /** Edad exacta en años (opcional): manda sobre el rango de edad */
+  edadAnios: string;
+  /** Smartphone, PC / Laptop o Tablet: fija la postura de las dos manos */
+  dispositivo: string;
   etnia: (typeof ETNIAS)[number];
   gafas: string;
   accesorio: string;
@@ -124,10 +135,12 @@ const INITIAL: FormState = {
   plotter: false,
   genero: GENEROS[0],
   edad: EDADES[0],
+  edadAnios: "",
+  dispositivo: DISPOSITIVO_NINGUNO,
   etnia: ETNIAS[0],
   gafas: GAFAS_OPCIONES[0],
   accesorio: ACCESORIO_ALEATORIO,
-  modoPersonaje: MODOS_PERSONAJE[0],
+  modoPersonaje: MODOS_PERSONAJE[1], // «Personalizar»: el arquetipo físico queda oculto
   modoRostro: MODOS_ROSTRO[0],
   pers: SELECCION_INICIAL,
   arquetipo: ARQUETIPO_ALEATORIO,
@@ -301,7 +314,7 @@ export default function Home() {
   const poolArq: readonly string[] = alta ? ARQUETIPOS_ALTA : ARQUETIPOS_LISTA;
   const form = useMemo(() => {
     const f = catalogo[formBase.profesion] ? formBase : { ...formBase, profesion: profesiones[0] };
-    if (!alta) return f;
+    if (!alta) return { ...f, modoPersonaje: "Personalizar" as FormState["modoPersonaje"] };
     return {
       ...f,
       plano: PLANO_ALTA,
@@ -363,7 +376,8 @@ export default function Home() {
   const arq = ARQUETIPOS[arquetipoEf];
   // Single source of truth: con arquetipo, estos campos se DERIVAN de él; es imposible enviar contradicciones
   const generoEf = arq ? arq.genero : form.genero;
-  const edadEf = arq ? arq.edad : form.edad;
+  const aniosExactos = arq ? undefined : edadExacta(form.edadAnios);
+  const edadEf = arq ? arq.edad : aniosExactos ? rangoDeEdad(aniosExactos) : form.edad;
   const etniaEf = arq ? arq.etnia : form.etnia;
   const nivel = nivelPlano(form.plano);
   // Personalización concreta (modo «Personalizar»): lo elegido a mano se respeta, lo aleatorio es armónico
@@ -375,7 +389,8 @@ export default function Home() {
 
 
   // Manos mostradas: con cable o teléfono, una mano conserva el gesto y la otra sostiene el accesorio
-  const manosMostradas = cerebroPostura(accesorioEf).manosEs;
+  const dispositivoActivo = form.dispositivo !== DISPOSITIVO_NINGUNO;
+  const manosMostradas = (dispositivoActivo ? posturaDispositivo(form.dispositivo, esPerfilTecnico(form.profesion)) : null)?.manosEs ?? cerebroPostura(accesorioEf).manosEs;
 
   // Si se elige un par de gafas, la vestimenta del perfil no las incluye (el prompt las quita para no duplicarlas)
   const vestimenta =
@@ -398,12 +413,14 @@ export default function Home() {
         gafas: gafasEf,
         badge: badgeEf,
         accesorio: accesorioEf,
+        edadAnios: aniosExactos,
+        dispositivo: form.dispositivo === DISPOSITIVO_NINGUNO ? undefined : form.dispositivo,
         personaje: persEf,
         listas,
         arquetipo: arquetipoEf,
         plotter: alta || undefined,
     };
-  }, [form, catalogo, paletaEf, gafasEf, badgeEf, accesorioEf, persEf, listas, arquetipoEf, generoEf, edadEf, etniaEf, alta]);
+  }, [form, catalogo, paletaEf, gafasEf, badgeEf, accesorioEf, persEf, listas, arquetipoEf, generoEf, edadEf, etniaEf, alta, aniosExactos]);
 
   // Prompt para copiar a Gemini (formato de siempre)
   const live = useMemo<GeneratedPrompt | null>(
@@ -490,6 +507,9 @@ export default function Home() {
         if (!profesionesAlta.includes(f.profesion)) f.profesion = profesionesAlta[0];
         if (f.arquetipo !== ARQUETIPO_ALEATORIO && !ARQUETIPOS_ALTA.includes(f.arquetipo)) f.arquetipo = ARQUETIPO_ALEATORIO;
       }
+      if (!alta) f.modoPersonaje = "Personalizar";
+      const aniosLote = alta ? undefined : edadExacta(form.edadAnios);
+      if (aniosLote) f.edad = rangoDeEdad(aniosLote);
       const conArquetipo = f.modoPersonaje === "Arquetipo listo";
       const arquetipo = conArquetipo ? resolverArquetipo(f.arquetipo, uArq, poolArq) : ARQUETIPO_NINGUNO; // distinto del anterior
       uArq = sorteoArquetipoDistinto(uArq, poolArq.length);
@@ -510,6 +530,8 @@ export default function Home() {
             personaje: resolverPersonaje(listas, f.pers, { genero: f.genero, edad: f.edad, etnia: f.etnia }, f.modoRostro),
             arquetipo,
             plotter: alta || undefined,
+            edadAnios: conArquetipo ? undefined : aniosLote,
+            dispositivo: form.dispositivo === DISPOSITIVO_NINGUNO ? undefined : form.dispositivo,
           },
           { baseUrl: baseUrl() },
         ),
@@ -660,35 +682,10 @@ export default function Home() {
                 title="Perfil demográfico"
                 description="Quién aparece en la miniatura."
               >
-                <SelectField
-                  id="modoPersonaje"
-                  label="Modo del personaje"
-                  value={form.modoPersonaje}
-                  options={MODOS_PERSONAJE}
-                  onChange={(v) => set("modoPersonaje", v as FormState["modoPersonaje"])}
-                  disabled={alta}
-                  className="md:col-span-2"
-                  {...lockProps("modoPersonaje")}
-                />
                 {modoArq ? (
-                  <>
-                    <SelectField
-                      id="arquetipo"
-                      label="Arquetipo físico (persona única)"
-                      value={form.arquetipo}
-                      options={alta ? [ARQUETIPO_ALEATORIO, ...ARQUETIPOS_ALTA] : ARQUETIPO_OPCIONES}
-                      onChange={(v) => set("arquetipo", v)}
-                      className="md:col-span-2"
-                      {...lockProps("arquetipo")}
-                    />
-                    {arq && (
-                      <p className="-mt-2 text-xs text-muted-foreground md:col-span-2">
-                        Arquetipo activo: <strong>{arquetipoEf}</strong> — {arq.genero}, {arq.origen?.es ?? arq.etnia}, {arq.edad} ({arq.edadAnios.replace(" to ", "-")} años). {arq.cabello.es}. {arq.rasgosEs}. {arq.cuerpo.es}
-                        {nivel === "detalle" ? " (el plano detalle no muestra el cuerpo)" : nivel === "primer" ? " (el primer plano solo muestra los hombros)" : ""}.
-                        El arquetipo define todo; para elegir cada rasgo usa el modo «Personalizar».
-                      </p>
-                    )}
-                  </>
+                  <p className="text-xs text-muted-foreground md:col-span-2">
+                    Prioridad alta (plotters): la persona es una mujer joven de 20 a 30 años; el género y la edad quedan fijados.
+                  </p>
                 ) : (
                   <>
                     <SelectField
@@ -705,8 +702,29 @@ export default function Home() {
                       value={form.edad}
                       options={EDADES}
                       onChange={(v) => set("edad", v as FormState["edad"])}
+                      disabled={!!aniosExactos}
                       {...lockProps("edad")}
                     />
+                    <div className="space-y-2 md:col-span-2">
+                      <Label htmlFor="edadAnios">Edad exacta en años (opcional)</Label>
+                      <Input
+                        id="edadAnios"
+                        type="number"
+                        inputMode="numeric"
+                        min={EDAD_ANIOS_MIN}
+                        max={EDAD_ANIOS_MAX}
+                        placeholder="Ej: 42"
+                        value={form.edadAnios}
+                        onChange={(e) => set("edadAnios", e.target.value)}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        {form.edadAnios.trim() && !aniosExactos
+                          ? `Escribe un número entero entre ${EDAD_ANIOS_MIN} y ${EDAD_ANIOS_MAX}.`
+                          : aniosExactos
+                            ? `El prompt dirá «aged ${aniosExactos}» y el rango de edad queda desactivado: una edad exacta da rostros reales, no modelos de stock.`
+                            : "Vacío = se usa el rango de edad de arriba."}
+                      </p>
+                    </div>
                     <SelectField
                       id="etnia"
                       label="Etnia"
@@ -778,11 +796,29 @@ export default function Home() {
                   </p>
                 )}
                 <SelectField
+                  id="dispositivo"
+                  label="Dispositivo"
+                  value={form.dispositivo}
+                  options={[DISPOSITIVO_NINGUNO, ...DISPOSITIVOS]}
+                  onChange={(v) => set("dispositivo", v)}
+                  className="md:col-span-2"
+                />
+                <p className="-mt-2 text-xs text-muted-foreground md:col-span-2">
+                  {form.dispositivo === "Smartphone" && "Smartphone: la mano derecha sostiene el teléfono; la izquierda va a la sien o a la cabeza, o abierta en el aire (desconcierto)."}
+                  {form.dispositivo === "PC / Laptop" &&
+                    (esPerfilTecnico(form.profesion)
+                      ? "PC / Laptop (perfil técnico): la mano derecha en el ratón; la izquierda con el pulgar arriba o señalando la pantalla (encontró la solución)."
+                      : "PC / Laptop: la mano derecha en el ratón; la izquierda agarrándose la cara o la boca (frustración).")}
+                  {form.dispositivo === "Tablet" && "Tablet: la mano izquierda sostiene la tablet; la derecha queda suspendida a medio camino o en la cabeza."}
+                  {!dispositivoActivo && "Ninguno: la postura de las manos se elige abajo. Con un dispositivo, la postura y el accesorio de abajo se desactivan."}
+                </p>
+                <SelectField
                   id="postura"
                   label="Postura de las manos"
                   value={posturaDe(form.accesorio)}
                   options={POSTURA_OPCIONES}
                   onChange={(v) => set("accesorio", accesorioDePostura(v, form.accesorio))}
+                  disabled={dispositivoActivo}
                   className="md:col-span-2"
                   {...lockProps("accesorio")}
                 />
@@ -792,7 +828,7 @@ export default function Home() {
                   value={posturaDe(form.accesorio) === POSTURA_ACCESORIO ? form.accesorio : ACCESORIOS_MANO.includes(accesorioEf) ? accesorioEf : ACCESORIO_NINGUNO}
                   options={[ACCESORIO_NINGUNO, ...ACCESORIOS_MANO]}
                   onChange={(v) => v !== ACCESORIO_NINGUNO && set("accesorio", v)}
-                  disabled={posturaDe(form.accesorio) !== POSTURA_ACCESORIO}
+                  disabled={dispositivoActivo || posturaDe(form.accesorio) !== POSTURA_ACCESORIO}
                   className="md:col-span-2"
                 />
                 <p className="-mt-2 text-xs text-muted-foreground md:col-span-2">
@@ -950,7 +986,14 @@ export default function Home() {
                 Vaciar lote
               </Button>
             </div>
-            <GuionEscenario plotter={alta} profesion={form.profesion} fondo={perfil?.fondo} />
+            <GuionEscenario
+              plotter={alta}
+              profesion={form.profesion}
+              fondo={perfil?.fondo}
+              genero={arq ? undefined : generoEf}
+              edadAnios={aniosExactos}
+              dispositivo={dispositivoActivo ? form.dispositivo : undefined}
+            />
           </CardContent>
         </Card>
       </div>

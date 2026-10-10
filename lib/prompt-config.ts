@@ -1049,6 +1049,10 @@ export type PromptInput = {
   gafas: string;
   accesorio: string;
   paleta: string;
+  /** Edad exacta en años (opcional): si existe, el prompt dice «aged 42» en lugar del rango de edad. */
+  edadAnios?: number;
+  /** Dispositivo (opcional): Smartphone, PC / Laptop o Tablet. Fija la postura de las dos manos y manda sobre el accesorio. */
+  dispositivo?: string;
   /** Personalización concreta (modo «Personalizar»): rostro, cabello, vello y cuerpo ya sorteados/elegidos. */
   personaje?: Concreto;
   /** Listas editables del personaje (si falta, se usan las de fábrica). */
@@ -1224,7 +1228,36 @@ const MIRADA_REGLA =
      · portátil/tablet → UNA mano lo sostiene pegado al cuerpo a la altura del pecho · la OTRA, en la mesa o a un lado
      · cabeza  → las DOS manos van a los lados de la cabeza; el accesorio se fuerza a «ninguno»
    Los gestos por profesión ya no se usan en el prompt: la postura la decide solo este cerebro. */
-export type EstadoPostura = "celular" | "cable" | "portatil" | "tablet" | "impresora" | "escribiendo" | "cabeza";
+export type EstadoPostura = "celular" | "cable" | "portatil" | "tablet" | "impresora" | "escribiendo" | "cabeza" | "dispositivo";
+
+/* ───────── Edad exacta ───────── */
+export const EDAD_ANIOS_MIN = 16;
+export const EDAD_ANIOS_MAX = 85;
+
+/** Edad exacta válida (entera, de 16 a 85) o undefined si el campo está vacío o fuera de rango. */
+export function edadExacta(v: string | number | undefined | null): number | undefined {
+  if (v === undefined || v === null || String(v).trim() === "" || !/^\d{1,3}$/.test(String(v).trim())) return undefined;
+  const n = Number(String(v).trim());
+  return n >= EDAD_ANIOS_MIN && n <= EDAD_ANIOS_MAX ? n : undefined;
+}
+
+/** Rango de edad de las listas al que pertenece una edad exacta (sirve para los rasgos del rostro y las coherencias). */
+export function rangoDeEdad(n: number): (typeof EDADES)[number] {
+  if (n <= 25) return "Joven 18-25";
+  if (n <= 40) return "Adulto Joven 30-40";
+  if (n <= 55) return "Adulto Mayor 45-55";
+  if (n <= 65) return "Adulto Maduro 56-65";
+  return "Mayor 66-70";
+}
+
+/* ───────── Dispositivo y mapeo anatómico de las manos ─────────
+   Smartphone  → mano DERECHA sostiene el teléfono · mano IZQUIERDA en la sien, en la cabeza o abierta en el aire (desconcierto)
+   PC / Laptop → mano DERECHA en el ratón · mano IZQUIERDA agarrándose la cara o la boca (frustración);
+                 si el perfil es técnico (encontró la solución): pulgar arriba o señalando la pantalla
+   Tablet      → mano IZQUIERDA sostiene la tablet · mano DERECHA suspendida a medio camino o en la cabeza */
+export const DISPOSITIVOS = ["Smartphone", "PC / Laptop", "Tablet"] as const;
+export const DISPOSITIVO_NINGUNO = "Ninguno (usar la postura de abajo)";
+export const esPerfilTecnico = (profesion: string) => PERFILES_TECNICOS.has(profesion);
 export type Postura = {
   estado: EstadoPostura;
   /** Accesorio efectivo (siempre válido; en «cabeza» se fuerza a «Manos a la cabeza (sin objeto)») */
@@ -1280,6 +1313,63 @@ export const posturaDe = (accesorio: string) =>
         : ACCESORIOS_MANO.includes(accesorio)
           ? POSTURA_ACCESORIO
           : POSTURA_CABEZA;
+
+/** Postura de las dos manos según el dispositivo elegido, o null si no hay dispositivo. */
+export function posturaDispositivo(dispositivo: string | undefined, tecnico = false): Postura | null {
+  if (dispositivo === "Smartphone") {
+    return {
+      estado: "dispositivo",
+      accesorio: "Teléfono celular",
+      manosEs: "La mano derecha sostiene el smartphone; la izquierda, en la sien o abierta en el aire (desconcierto)",
+      manosEn:
+        "the right hand holding a modern smartphone with its screen on in the lower part of the frame while the left hand is pressed against the temple, or open in the air in bewilderment",
+      reglasEn: [
+        "The right hand holds a modern smartphone with its screen on, low in the frame and well away from both lower corners, while the left hand is pressed against the temple or the side of the head, or open in the air in bewilderment. No other object is in either hand, so the person has exactly two hands.",
+      ],
+      reglas: [
+        "POSTURA CON SMARTPHONE: la mano DERECHA sostiene un teléfono moderno con la pantalla encendida, en la parte baja de la toma y lejos de las esquinas inferiores; la mano IZQUIERDA va a la sien o a un lado de la cabeza, o queda abierta en el aire en señal de desconcierto. Ningún otro objeto en las manos: exactamente dos manos.",
+      ],
+    };
+  }
+  if (dispositivo === "PC / Laptop") {
+    return {
+      estado: "dispositivo",
+      accesorio: "Portátil",
+      manosEs: tecnico
+        ? "La mano derecha en el ratón; la izquierda con el pulgar arriba o señalando la pantalla (encontró la solución)"
+        : "La mano derecha en el ratón; la izquierda agarrándose la cara o la boca (frustración)",
+      manosEn: tecnico
+        ? "the right hand resting on a computer mouse while the left hand gives a thumbs up or points at the screen, as if the solution had just been found"
+        : "the right hand resting on a computer mouse while the left hand grabs the face and covers the mouth in frustration",
+      reglasEn: [
+        `The right hand rests on a computer mouse on the desk, and the left hand ${
+          tecnico ? "gives a thumbs up or points at the screen, as if the solution had just been found" : "grabs the face or covers the mouth in frustration"
+        }. A single computer (an open laptop or a monitor) stands on the desk in front of the person, in the right-center of the frame and well away from both lower corners, with a plain case that has no logo and no legible screen content. Exactly two hands, and no other object in them.`,
+      ],
+      reglas: [
+        `POSTURA CON PC / LAPTOP: la mano DERECHA descansa sobre el ratón; la mano IZQUIERDA ${
+          tecnico ? "hace el gesto de pulgar arriba o señala la pantalla (el técnico encontró la solución)" : "se agarra la cara o se cubre la boca con frustración"
+        }. Hay UN solo computador (laptop abierta o monitor) sobre el escritorio, delante del personaje, en la parte centro-derecha de la toma y lejos de las esquinas inferiores, sin logos y sin contenido legible en la pantalla. Exactamente dos manos y ningún otro objeto en ellas.`,
+      ],
+    };
+  }
+  if (dispositivo === "Tablet") {
+    return {
+      estado: "dispositivo",
+      accesorio: "Tablet",
+      manosEs: "La mano izquierda sostiene la tablet; la derecha, suspendida a medio camino o en la cabeza",
+      manosEn:
+        "the left hand holding a modern tablet with its screen on close to the chest while the right hand is suspended halfway in the air or placed on the head in desperation",
+      reglasEn: [
+        "The left hand holds a modern tablet with its screen on, close to the body at chest height and well away from both lower corners, while the right hand is suspended halfway in the air or placed on the head in desperation. No other object is in either hand, so the person has exactly two hands.",
+      ],
+      reglas: [
+        "POSTURA CON TABLET: la mano IZQUIERDA sostiene una tablet moderna con la pantalla encendida, pegada al cuerpo a la altura del pecho y lejos de las esquinas inferiores; la mano DERECHA queda suspendida a medio camino en el aire o va a la cabeza con desesperación. Ningún otro objeto en las manos: exactamente dos manos.",
+      ],
+    };
+  }
+  return null;
+}
 
 export function cerebroPostura(accesorio: string, impresora = "selected printer"): Postura {
   if (accesorio === ACCESORIO_ESCRIBIENDO) {
@@ -1457,7 +1547,7 @@ function preparar(i: PromptInput, referencia = false) {
   // vestimenta del perfil (p. ej. "…and black-framed glasses") para no duplicarlas ni contradecirlas.
   const gafasText = GAFAS[i.gafas] ?? "";
   // Accesorio en las manos: con cable o teléfono, una mano lo sostiene y la otra conserva el gesto (variante de una mano)
-  const postura = ajustarPosturaAEmocion(cerebroPostura(i.accesorio, printer), i.emocion); // el cerebro decide la postura de AMBAS manos
+  const postura = ajustarPosturaAEmocion(posturaDispositivo(i.dispositivo, esPerfilTecnico(i.profesion)) ?? cerebroPostura(i.accesorio, printer), i.emocion); // el cerebro decide la postura de AMBAS manos
   const hands = postura.manosEn;
   const clothingBase = mujer ? perfil.en.clothing.f : perfil.en.clothing.m;
   const clothing = gafasText
@@ -1482,7 +1572,7 @@ function preparar(i: PromptInput, referencia = false) {
     ? "the exact same person shown in the reference photos, keeping the identical face, facial structure, skin tone, hair and apparent age"
     : arq
     ? `${conArticulo((arq.origen?.en ?? ETNIA_EN[arq.etnia]).replace("{n}", sexo))} aged ${arq.edadAnios}, with ${arq.cabello.en}, ${arq.rasgosFaciales.forma}, ${arq.rasgosFaciales.ojos}, ${arq.rasgosFaciales.cejas}, ${arq.rasgosFaciales.nariz} and ${arq.rasgosFaciales.boca}`
-    : `${conArticulo(ETNIA_EN[i.etnia].replace("{n}", sexo))} ${EDAD_EN[i.edad]}${i.personaje ? `, ${describirRostro(listas, i.personaje)}` : ""}`;
+    : `${conArticulo(ETNIA_EN[i.etnia].replace("{n}", sexo))} ${i.edadAnios ? `aged ${i.edadAnios}` : EDAD_EN[i.edad]}${i.personaje ? `, ${describirRostro(listas, i.personaje)}` : ""}`;
   const personaje = `On the right side of the frame, ${descripcion}, working as ${/^[aeiou]/i.test(perfil.en.role) ? "an" : "a"} ${perfil.en.role}, wearing ${clothing}, with ${i.emocion ? EMOCIONES_AB[i.emocion].faceEn : perfil.en.emotion}, and ${hands}.`;
   // Cuerpo: solo hacia arriba y según el plano (detalle = nada · primer plano = hombros · medio = complexión y hombros)
   const rasgosExtra = referencia

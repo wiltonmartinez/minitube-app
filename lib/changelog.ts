@@ -9,6 +9,18 @@ export type Cambio = {
 
 export const CHANGELOG: Cambio[] = [
   {
+    version: "4.4.0",
+    fecha: "2026-10-09",
+    titulo: "Perfil demográfico: género, edad exacta y dispositivo (sin arquetipos)",
+    cambios: [
+      "Se ocultaron «Modo del personaje» y «Arquetipo físico»: la persona se arma con Género, Edad y los demás campos del perfil. (La API para TexTube conserva sus arquetipos.)",
+      "Nuevo campo «Edad exacta en años» (16 a 85): el prompt dice «aged 42» en lugar de un rango, para rostros reales y no modelos de stock. Vacío = se usa el rango de siempre.",
+      "Nuevo campo «Dispositivo» con el mapeo anatómico de las manos: Smartphone (mano derecha con el teléfono; izquierda en la sien o abierta en el aire), PC / Laptop (derecha en el ratón; izquierda en la cara o la boca, o pulgar arriba si el perfil es técnico) y Tablet (izquierda con la tablet; derecha a medio camino o en la cabeza).",
+      "Con un dispositivo, la postura y el accesorio de abajo se desactivan: nunca se mezclan dos posturas. Sin dispositivo, todo queda igual que antes.",
+      "El guion del video suma «Edad y género» y «Dispositivo y postura de manos» cuando se eligen.",
+    ],
+  },
+  {
     version: "4.3.0",
     fecha: "2026-10-09",
     titulo: "Panel manual: solo persona y fondo, sin marca, modelo ni error",

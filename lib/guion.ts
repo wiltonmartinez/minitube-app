@@ -10,6 +10,8 @@
 // y no se hacen reparaciones físicas. Todo el guion habla de rapidez, solución digital y cero desarme (salvo la limpieza previa que
 // exige el error 0014BD, que el guion dice con claridad para no prometer de más).
 //
+import { esPerfilTecnico, posturaDispositivo } from "@/lib/prompt-config";
+
 // Es determinista: la misma semilla da el mismo guion; otra semilla da otra variante. También entrega el prompt completo para
 // pegarlo en Claude o ChatGPT cuando se quiera una versión más creativa.
 
@@ -174,7 +176,7 @@ const GANCHOS = [
 
 export type Escenario = {
   equipo: string;
-  visual: { personaje: string; fondo: string; elemento: string; textoCorto: string; alternativas: string[] };
+  visual: { personaje: string; edadGenero?: string; fondo: string; elemento: string; manos?: string; textoCorto: string; alternativas: string[] };
   gancho: string;
   desarrollo: { broll: string[]; explicacion: string[] };
   cta: string;
@@ -185,7 +187,7 @@ export type Escenario = {
 
 const mayuscula = (t: string) => (t ? t[0].toUpperCase() + t.slice(1) : t);
 
-export function generarEscenario(opts: { marca?: string; modelo?: string; error: string; profesion: string; plotter?: boolean; fondoCatalogo?: string; semilla?: number }): Escenario {
+export function generarEscenario(opts: { marca?: string; modelo?: string; error: string; profesion: string; plotter?: boolean; genero?: string; edadAnios?: number; dispositivo?: string; fondoCatalogo?: string; semilla?: number }): Escenario {
   const { error, profesion } = opts;
   const marca = opts.marca ?? "";
   const modelo = opts.modelo ?? "";
@@ -208,8 +210,15 @@ export function generarEscenario(opts: { marca?: string; modelo?: string; error:
   const textoCorto = opcionesCorto[n % opcionesCorto.length];
   const alternativas = [...new Set(opcionesCorto)].filter((c) => c !== textoCorto).slice(0, 2);
 
+  const edadGenero = opts.edadAnios
+    ? `${opts.genero === "Mujer" ? "Mujer" : opts.genero === "Hombre" ? "Hombre" : "Persona"} de ${opts.edadAnios} años, con el rostro real de esa edad (no un modelo de stock).`
+    : undefined;
+  const postura = opts.dispositivo ? posturaDispositivo(opts.dispositivo, esPerfilTecnico(profesion)) : null;
+  const manos = postura ? `${opts.dispositivo}: ${postura.manosEs}.` : undefined;
   const visual = {
     personaje: `${p.personaje}.`,
+    edadGenero,
+    manos,
     fondo: `${p.fondo}, con sensación de urgencia.`,
     elemento: `${tuEquipo} ${eq.bloqueado} sobre la mesa, a la derecha, y el error visible (${err.mensaje}); el espacio de abajo a la izquierda queda libre para una foto o captura del error.`,
     textoCorto,
@@ -229,6 +238,8 @@ export function generarEscenario(opts: { marca?: string; modelo?: string; error:
     "",
     "1. 🎨 EL GANCHO VISUAL (miniatura)",
     `• Personaje y emoción: ${visual.personaje}`,
+    ...(visual.edadGenero ? [`• Edad y género: ${visual.edadGenero}`] : []),
+    ...(visual.manos ? [`• Dispositivo y postura de manos: ${visual.manos}`] : []),
     `• Fondo y contexto: ${visual.fondo}`,
     `• Elemento clave: ${visual.elemento}`,
     `• Texto corto: ${textoCorto}${alternativas.length ? `  (alternativas: ${alternativas.join(" · ")})` : ""}`,
