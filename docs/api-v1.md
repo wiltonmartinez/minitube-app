@@ -16,7 +16,7 @@ Todas las peticiones llevan `Authorization: Bearer <MINITUBE_API_TOKEN>`.
 - `semilla` (opcional): entero ≥ 0; la misma semilla da la misma escena. La respuesta siempre devuelve la usada.
 
 Respuesta (200 o 202): `version`, `id`, `estado` (`completado` | `en_cola`), `prioridad`, `modeloIA`, `semilla`,
-`personaje`, `profesion`, `plano`, `emocion`, `badge` (texto, emoji e icono del badge 3D elegido por el generador), `promptImagen` (inglés), `promptGemini` (español), `imagen`
+`personaje`, `profesion`, `plano`, `emocion`, `badge` (texto, emoji e icono del badge 3D elegido por el generador), `promptImagen` (inglés), `promptGemini` (español; también solo el fondo, sin texto ni badges), `imagen`
 (`{url, ancho, alto}` o `null`), `costoAproxUSD` (lo gastado en esta petición), `costoEstimadoUSD` (lo que costaría generar la
 imagen aunque no se genere: sirve para estimar un lote), `composicion`, `simulacion`, `aviso`.
 

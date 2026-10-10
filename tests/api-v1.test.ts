@@ -305,3 +305,29 @@ describe("API v1 · badge 3D del generador", () => {
     }
   });
 });
+
+describe("El generador crea SOLO el fondo (sin texto, sin badges, sin marco)", () => {
+  const PROHIBIDO_PEDIR = ["Massive 3D typography", "giant word", "floating 3D badge", "frames the entire image", "MARCA DE AGUA DE SEGURIDAD", "ESTÉTICA DEL BADGE", "REGLA DE COMPOSICIÓN ESPACIAL"];
+
+  it("ni el prompt de la imagen ni el de Gemini piden texto, badge, marco o marca de agua", async () => {
+    const { planificar } = await import("@/lib/motor");
+    for (let semilla = 1; semilla <= 60; semilla++) {
+      for (const modelo of ["L3250", "G6010", "F570"]) {
+        const p = planificar({ marca: "Epson", modelo, error: "Almohadillas", enfoque: "error", generarImagen: false, semilla }, modelo === "F570" ? "alta" : "normal");
+        for (const [nombre, prompt] of [["imagen", p.promptImagen], ["gemini", p.promptGemini]] as const) {
+          for (const t of PROHIBIDO_PEDIR) expect(prompt, `${nombre}/${modelo}/${semilla}: ${t}`).not.toContain(t);
+          expect(prompt, `${nombre} sin ResetEnLinea`).not.toContain("ResetEnLinea");
+        }
+        expect(p.promptGemini).toContain("SOLO EL FONDO");
+        expect(p.promptGemini).toContain("no border, no frame");
+        expect(p.promptImagen).toContain("Do not render any text");
+      }
+    }
+  });
+
+  it("el prompt de Gemini conserva las reglas de la persona y la escena", async () => {
+    const { planificar } = await import("@/lib/motor");
+    const p = planificar({ marca: "Canon", modelo: "G6010", error: "5B00", enfoque: "error", generarImagen: false, semilla: 5 }, "normal");
+    for (const t of ["REGLA DE BRANDING", "ANATOMÍA HUMANA IMPECABLE", "ÁREA DE MONTAJE LIBRE", "far to the right"]) expect(p.promptGemini).toContain(t);
+  });
+});

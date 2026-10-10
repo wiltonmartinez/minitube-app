@@ -228,7 +228,10 @@ describe("Fase 3 · marco y fondo nunca de la misma familia de color", () => {
         const sinTexto = buildApiPrompt(entrada, { texto3d: false });
         expect(sinTexto).toContain("full-bleed to all four edges: no border, no frame");
         expect(sinTexto).not.toContain("frames the entire image");
-        expect(buildPrompt(entrada)).toContain(`${frase} frames the entire image.`);
+        // el prompt de Gemini también es solo fondo: sin marco, sin texto
+        const gemini = buildPrompt(entrada);
+        expect(gemini).not.toContain("frames the entire image");
+        expect(gemini).toContain("no border, no frame");
       }
     }
   });

@@ -1080,12 +1080,16 @@ export const PROHIBICION_IMPRESORAS_MANOS =
   "PROHIBIDO generar más impresoras en primer plano o en la esquina inferior izquierda: la ÚNICA impresora que puede verse de cerca es la que las dos manos tocan, sobre la mesa, en la parte derecha-central del encuadre y lejos de las dos esquinas inferiores; las demás impresoras solo pueden verse al fondo, desenfocadas, y NUNCA dentro del área de montaje libre.";
 
 export const AREA_MONTAJE_ES =
-  "ÁREA DE MONTAJE LIBRE: La esquina inferior izquierda de la imagen debe ser puro ESPACIO NEGATIVO (por ejemplo, una mesa vacía, un fondo desenfocado o pared lisa). Está ESTRICTAMENTE PROHIBIDO generar pantallas, recuadros sólidos, marcos, bordes geométricos o cualquier objeto en esa zona (la ÚNICA excepción es la marca de agua tipográfica sutil descrita en la regla de marca de agua). Debe quedar como un hueco visual limpio para facilitar la superposición de una imagen en postproducción.";
+  "ÁREA DE MONTAJE LIBRE: La esquina inferior izquierda de la imagen debe ser puro ESPACIO NEGATIVO (por ejemplo, una mesa vacía, un fondo desenfocado o pared lisa). Está ESTRICTAMENTE PROHIBIDO generar pantallas, recuadros sólidos, marcos, bordes geométricos o cualquier objeto en esa zona (sin ninguna excepción: tampoco texto ni marca de agua). Debe quedar como un hueco visual limpio para facilitar la superposición de una imagen en postproducción.";
 
 /* ───────── Marca de agua de seguridad corporativa (anti-robo) ─────────
    Texto tipográfico muy sutil dentro del área de montaje (esquina inferior izquierda): protege la autoría de la
    imagen base. Es la única excepción al espacio negativo, a la regla de "sin otro texto" y a "sin marcas de agua". */
 export const MARCA_AGUA_TEXTO = "ResetEnLinea.com";
+
+/** El generador crea SOLO el fondo (persona y entorno): el texto 3D, el badge, el marco y la marca de agua se agregan después, por código. */
+export const SOLO_FONDO_ES =
+  "SOLO EL FONDO: Esta imagen es únicamente la fotografía del personaje y de su entorno de trabajo. Está ESTRICTAMENTE PROHIBIDO generar en la imagen cualquier texto, letra, número, logotipo, marca de agua, badge, etiqueta, botón, recuadro, marco o borde de cualquier tipo. Los títulos 3D, el badge, el marco y la marca de agua se agregan después, por código.";
 export const MARCA_AGUA_ES =
   `MARCA DE AGUA DE SEGURIDAD (PROTECCIÓN ANTI-ROBO): Incluye una pequeña marca de agua tipográfica muy sutil, semitransparente y elegante con el texto "${MARCA_AGUA_TEXTO}", colocada obligatoriamente dentro de la esquina inferior izquierda (exactamente en el área de espacio negativo reservada para el montaje), ligeramente separada del borde. Debe ser discreta, de baja opacidad, sin recuadro ni fondo, sin logotipo ni ícono, y sin tapar ningún otro elemento; el resto del área permanece vacía.`;
 
@@ -1408,7 +1412,7 @@ export const REGLA_YOUTUBE =
 // Branding: la ropa y los accesorios del personaje no llevan logos ni marcas; la marca y el modelo solo van
 // en los textos 3D (somos un servicio técnico independiente, no la marca oficial).
 export const REGLA_BRANDING =
-  "REGLA DE BRANDING (ANTI-LOGOTIPOS DE MARCA): PROHIBICIÓN ABSOLUTA DE LOGOTIPOS: Está estrictamente prohibido que el personaje lleve camisetas, gorras, uniformes o accesorios con logotipos, nombres o marcas comerciales (especialmente \"EPSON\", \"Canon\" o similares). La ropa del personaje debe ser completamente neutra, genérica, de color sólido (como una camisa formal sencilla o un suéter sin marcas visibles). USO EXCLUSIVO DEL TEXTO 3D: La marca y el modelo (ej. \"EPSON L3110\") solo deben aparecer en los bloques de texto 3D flotantes gigantes de la miniatura para identificar el equipo del servicio, pero NUNCA en la indumentaria del personaje. Esto es fundamental para dejar claro que somos un servicio técnico independiente y no la marca oficial.";
+  "REGLA DE BRANDING (ANTI-LOGOTIPOS DE MARCA): PROHIBICIÓN ABSOLUTA DE LOGOTIPOS: Está estrictamente prohibido que el personaje lleve camisetas, gorras, uniformes o accesorios con logotipos, nombres o marcas comerciales (especialmente \"EPSON\", \"Canon\" o similares). La ropa del personaje debe ser completamente neutra, genérica, de color sólido (como una camisa formal sencilla o un suéter sin marcas visibles). NI MARCA NI MODELO EN LA IMAGEN: La marca y el modelo (ej. \"EPSON L3110\") no deben aparecer escritos en ninguna parte de la imagen, y mucho menos en la indumentaria del personaje: se agregan después como texto, por código. Esto es fundamental para dejar claro que somos un servicio técnico independiente y no la marca oficial.";
 
 // Estética del personaje: solo aplica cuando el personaje es una mujer.
 export const ESTETICA_MUJER =
@@ -1490,7 +1494,7 @@ function preparar(i: PromptInput, referencia = false) {
 }
 
 export function buildPrompt(i: PromptInput): string {
-  const { perfil, mujer, printer, errorText, marco, plano, gafasText, postura, color1, color2, color3, badge, badgeSentence, personaje, rasgosExtra } = preparar(i);
+  const { perfil, mujer, plano, gafasText, postura, personaje, rasgosExtra } = preparar(i);
 
   // Entorno contextual (Fondo Estructural del Bloque 3): detalles del trabajo de la profesión + impresoras reales de la
   // marca elegida al fondo desenfocado; el primer plano y el área de montaje (esquina inferior izquierda) quedan libres.
@@ -1512,15 +1516,11 @@ export function buildPrompt(i: PromptInput): string {
     "The person is anatomically correct: exactly one person, exactly two arms, two hands with five fingers each, one symmetrical face and natural proportions.",
     ANATOMIA_ES,
     setting,
-    `Massive 3D typography with volume, beveled edges, thick dark outlines and strong shadows, perfectly legible and sharp: the giant word "RESET" in ${color1}, "${errorText}" in ${color2}, and "${printer.toUpperCase()}" in ${color3}.`,
-    badgeSentence,
-    ...(badge ? [ESTETICA_BADGE] : []),
-    REGLA_COMPOSICION,
-    MARCA_AGUA_ES,
-    REGLA_YOUTUBE,
-    `${marco.charAt(0).toUpperCase()}${marco.slice(1)} frames the entire image.`,
-    `Every quoted text must be rendered exactly as written, letter by letter, with no spelling mistakes or invented characters, and no other text anywhere in the image except the subtle corporate watermark "${MARCA_AGUA_TEXTO}" in the bottom-left corner.`,
-    "Clean, balanced composition with no duplicated elements. Avoid extra limbs, extra or missing fingers, deformed hands, distorted faces, duplicate people, blurry or low-quality rendering, misspelled text, any other watermarks or logos, and incoherent shapes.",
+    SOLO_FONDO_ES,
+    ROSTRO_DERECHA_EN,
+    YOUTUBE_API,
+    "The photograph runs full-bleed to all four edges: no border, no frame, no outline and no rounded corners around the image.",
+    "Clean, balanced composition with no duplicated elements. Avoid extra limbs, extra or missing fingers, deformed hands, distorted faces, duplicate people, blurry or low-quality rendering, any text, letters, numbers, badges, labels, watermarks or logos anywhere in the image, any border or frame, and incoherent shapes.",
   ];
 
   return `${ASPECT_SENTENCE}\n\n${sentences.join(" ")} ${i.emocion && EMOCIONES_AB[i.emocion].expresionEs ? EMOCIONES_AB[i.emocion].expresionEs : REGLA_EXPRESION} ${PROHIBICION_VISUAL}`;

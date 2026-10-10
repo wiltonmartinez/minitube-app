@@ -68,7 +68,6 @@ import {
   ACCESORIO_NINGUNO,
   ACCESORIOS_MANO,
   BADGES,
-  BADGES_OPCIONES,
   BADGES_REALES,
   BADGE_ALEATORIO,
   EDADES,
@@ -83,13 +82,11 @@ import {
   MARCOS,
   MIRADA_ES,
   OTRO,
-  PALETAS,
   PALETAS_FIJAS,
   PALETAS_OPCIONES,
   PALETA_ALEATORIA,
   PLANOS,
   generatePrompt,
-  marcoCompatible,
   resolverAccesorio,
   resolverBadge,
   resolverGafas,
@@ -377,7 +374,6 @@ export default function Home() {
   const edadEf = arq ? arq.edad : form.edad;
   const etniaEf = arq ? arq.etnia : form.etnia;
   const nivel = nivelPlano(form.plano);
-  const marcoOk = marcoCompatible(form.marco, perfil.en.scene);
   // Personalización concreta (modo «Personalizar»): lo elegido a mano se respeta, lo aleatorio es armónico
   const persEf = useMemo(
     () => resolverPersonaje(listas, form.pers, { genero: generoEf, edad: edadEf, etnia: etniaEf }, form.modoRostro, sorteo.up),
@@ -908,8 +904,8 @@ export default function Home() {
 
               <Block
                 step={4}
-                title="Marketing 3D"
-                description="Plano de cámara, marco, idioma, paleta de los textos 3D y badge flotante."
+                title="Cámara"
+                description="Plano de cámara. La imagen se crea solo con el fondo: sin texto, sin badges 3D y sin marco."
               >
                 <SelectField
                   id="plano"
@@ -921,56 +917,6 @@ export default function Home() {
                   className="md:col-span-2"
                   {...lockProps("plano")}
                 />
-                <SelectField
-                  id="marco"
-                  label="Marco"
-                  value={form.marco}
-                  options={MARCOS.map((m) => m.es)}
-                  onChange={(v) => set("marco", v)}
-                  className="md:col-span-2"
-                  {...lockProps("marco")}
-                />
-                {marcoOk.ajustado && (
-                  <p className="-mt-2 text-xs text-amber-500 md:col-span-2">
-                    El marco y el fondo no pueden ser de la misma familia de color (cálidos o fríos): el prompt usa «{marcoOk.es}».
-                  </p>
-                )}
-                <SelectField
-                  id="idioma"
-                  label="Idioma"
-                  value={form.idioma}
-                  options={IDIOMAS}
-                  onChange={(v) => set("idioma", v as Idioma)}
-                  className="md:col-span-2"
-                  {...lockProps("idioma")}
-                />
-                <SelectField
-                  id="badge"
-                  label="Badge 3D"
-                  value={form.badge}
-                  options={BADGES_OPCIONES}
-                  onChange={(v) => set("badge", v)}
-                  className="md:col-span-2"
-                  {...lockProps("badge")}
-                />
-                {form.badge === BADGE_ALEATORIO && (
-                  <p className="-mt-2 text-xs text-muted-foreground md:col-span-2">
-                    Sorteado ahora: {badgeEf}. Siempre un badge real (nunca «Ninguno»).
-                  </p>
-                )}
-                <SelectField
-                  id="paleta"
-                  label="Paleta de colores (textos 3D)"
-                  value={form.paleta}
-                  options={PALETAS_OPCIONES}
-                  onChange={(v) => set("paleta", v)}
-                  className="md:col-span-2"
-                  {...lockProps("paleta")}
-                />
-                <p className="-mt-2 text-xs text-muted-foreground md:col-span-2">
-                  {form.paleta === PALETA_ALEATORIA && <>Sorteada ahora: <strong>{paletaEf}</strong>. </>}
-                  {PALETAS[paletaEf]?.es}
-                </p>
               </Block>
 
               <div className="flex flex-col gap-2 sm:flex-row">
@@ -989,7 +935,7 @@ export default function Home() {
               </div>
               <p className="-mt-2 text-xs text-muted-foreground">
                 El prompt se actualiza solo al cambiar cualquier campo. «Generar al Azar» sortea TODO menos marca, modelo y error
-                (persona, profesión, plano, marco, idioma, gafas, postura, paleta y badge); los campos con candado 🔒 no cambian.
+                (persona, profesión, plano, gafas y postura); los campos con candado 🔒 no cambian.
                 «Añadir al lote» guarda el prompt actual para descargarlo.
               </p>
 

@@ -79,7 +79,7 @@ export function ImageGenerator({
 }) {
   const [modeloElegido, setModeloElegido] = useState<ModeloId>(MODELO_POR_DEFECTO);
   const modeloId = modeloForzado ?? modeloElegido;
-  const [texto3d, setTexto3d] = useState(false);
+  const texto3d = false; // el generador crea SOLO el fondo: sin texto, sin badges, sin marco, sin marca de agua (eso se agrega después)
   const [usarRef, setUsarRef] = useState(false);
   const [refs, setRefs] = useState<string[]>([]); // fotos de esta sesión (1024 px, solo en memoria)
   const [estado, setEstado] = useState<Estado>("reposo");
@@ -115,7 +115,6 @@ export function ImageGenerator({
 
   function elegirModelo(id: ModeloId) {
     setModeloElegido(id);
-    setTexto3d(buscarModelo(id)!.textoEnImagen); // recomendado solo con los modelos que escriben bien el texto
   }
 
   /* ───────── fotos de referencia ───────── */
@@ -370,20 +369,12 @@ export function ImageGenerator({
         )}
       </div>
 
-      <div className="flex items-start gap-3 rounded-md border p-3">
-        <Switch id="texto3d" checked={texto3d} onCheckedChange={setTexto3d} />
-        <div className="space-y-1">
-          <Label htmlFor="texto3d">Texto 3D dentro de la imagen</Label>
-          <p className="text-xs text-muted-foreground">
-            {texto3d
-              ? "Activado: la imagen incluye los textos 3D (RESET, error y modelo), el badge y la marca de agua."
-              : "Desactivado: la imagen se pide SIN texto, con las zonas libres para ponerlo después."}{" "}
-            {!modelo.textoEnImagen && texto3d && (
-              <span className="text-amber-500">Este modelo suele escribir mal el texto; se recomienda desactivarlo.</span>
-            )}
-            {modelo.textoEnImagen && !texto3d && "Recomendado activarlo con este modelo."}
-          </p>
-        </div>
+      <div className="rounded-md border border-dashed p-3">
+        <p className="text-sm font-medium">Solo se crea el fondo</p>
+        <p className="text-xs text-muted-foreground">
+          La imagen es únicamente la persona y su entorno: <strong>sin texto, sin badges 3D, sin marco y sin marca de agua</strong>. El texto,
+          el badge y el marco se agregan después (TexTube), y el espacio de abajo a la izquierda queda libre para la foto del error.
+        </p>
       </div>
 
       <div className="space-y-3 rounded-md border p-3">
@@ -494,8 +485,8 @@ export function ImageGenerator({
         </Button>
       </div>
       <p className="text-xs text-muted-foreground">
-        Las 3 variantes comparten problema, plano, idioma y persona; cambian la emoción (pánico, sorpresa, alivio), la paleta y el
-        badge, para «Probar y comparar» en YouTube Studio. Las paletas y badges con candado 🔒 no cambian.
+        Las 3 variantes comparten problema, plano y persona; cambia la emoción (pánico, sorpresa, alivio), para «Probar y comparar» en
+        YouTube Studio. Todas son solo el fondo: sin texto ni badges.
       </p>
 
       {estado === "generando" && <p className="text-xs text-muted-foreground">{mensaje}</p>}
@@ -539,9 +530,6 @@ export function ImageGenerator({
               <li key={v.letra} className="space-y-2 rounded-md border p-2" aria-label={`Variante ${v.letra}`}>
                 <p className="text-sm font-semibold">
                   {v.letra} · {EMOCIONES_AB[v.emocion].nombre}
-                </p>
-                <p className="text-[11px] leading-tight text-muted-foreground">
-                  {v.entrada.paleta} · {v.entrada.badge}
                 </p>
                 {v.estado === "generando" && (
                   <div className="flex aspect-video items-center justify-center rounded border text-xs text-muted-foreground">

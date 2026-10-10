@@ -113,7 +113,8 @@ describe("Fase 2 · prompt de la API (inglés)", () => {
   it("el prompt de Gemini conserva su formato (reglas en español)", () => {
     const g = buildPrompt(base());
     expect(g).toContain("REGLA DE BRANDING");
-    expect(g).toContain("MARCA DE AGUA DE SEGURIDAD");
+    expect(g).toContain("SOLO EL FONDO");
+    expect(g).not.toContain("MARCA DE AGUA DE SEGURIDAD");
     expect(g).toContain("ANATOMÍA HUMANA IMPECABLE");
   });
 });

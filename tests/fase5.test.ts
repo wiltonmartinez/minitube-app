@@ -136,7 +136,7 @@ describe("Fase 5 · la emoción cambia, el resto de reglas no", () => {
         }
         if (texto3d) expect(api).toContain('"ResetEnLinea.com"');
         const g = buildPrompt(base({ emocion: e }));
-        for (const t of ["REGLA DE BRANDING", "MARCA DE AGUA DE SEGURIDAD", "ANATOMÍA HUMANA IMPECABLE", "POSTURA CON CELULAR"]) {
+        for (const t of ["REGLA DE BRANDING", "SOLO EL FONDO", "ANATOMÍA HUMANA IMPECABLE", "POSTURA CON CELULAR"]) {
           expect(g, `${e}: ${t}`).toContain(t);
         }
       }

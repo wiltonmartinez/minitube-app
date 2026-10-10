@@ -141,14 +141,14 @@ describe("reglas que deben seguir intactas", () => {
     for (const p of [celular, cable]) expect(p.manosEn).toContain("exactly one hand");
     expect(cabeza.manosEn).not.toMatch(/smartphone|USB/);
   });
-  it("cada prompt contiene exactamente una postura y la marca de agua", () => {
+  it("cada prompt contiene exactamente una postura y NO lleva marca de agua (solo el fondo)", () => {
     for (const acc of [...ACCESORIOS_MANO, "Manos en la impresora", "Escribiendo en una laptop", "Manos a la cabeza (sin objeto)"]) {
       const p = buildPrompt(base({ accesorio: acc }));
       const posturas = ["POSTURA CON CELULAR", "POSTURA CON CABLE USB", "POSTURA CON PORTÁTIL", "POSTURA CON TABLET", "POSTURA CON IMPRESORA", "POSTURA ESCRIBIENDO EN LAPTOP", "POSTURA MANOS A LA CABEZA"].filter((t) =>
         p.includes(t),
       );
       expect(posturas).toHaveLength(1);
-      expect(p).toContain("ResetEnLinea.com");
+      expect(p).not.toContain("ResetEnLinea.com");
       expect(p).toContain("ANATOMÍA HUMANA IMPECABLE");
     }
   });

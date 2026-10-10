@@ -9,6 +9,17 @@ export type Cambio = {
 
 export const CHANGELOG: Cambio[] = [
   {
+    version: "4.1.0",
+    fecha: "2026-10-09",
+    titulo: "El generador crea solo el fondo (sin texto ni badges)",
+    cambios: [
+      "La imagen es únicamente la persona y su entorno: sin texto, sin badges 3D, sin marco y sin marca de agua. El texto 3D, el badge y el marco los agrega TexTube después.",
+      "El prompt de Gemini que muestra el panel (y que devuelve la API como promptGemini) ahora también pide solo el fondo: nuevo bloque «SOLO EL FONDO», rostro a la derecha y espacio libre abajo a la izquierda para la foto del error.",
+      "Se quitó del panel el interruptor «Texto 3D dentro de la imagen» y los campos Marco, Idioma, Paleta de colores y Badge 3D, que ya no tienen efecto.",
+      "Las variantes A/B cambian solo la emoción (pánico, sorpresa, alivio); todas son solo fondo.",
+    ],
+  },
+  {
     version: "4.0.0",
     fecha: "2026-10-08",
     titulo: "API pública del motor de miniaturas (para TexTube)",
