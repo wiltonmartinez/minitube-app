@@ -152,16 +152,18 @@ export function infoError(errorCrudo: string): InfoError {
   };
 }
 
-export type Equipo = { nombre: string; tipo: "plotter" | "impresora"; bloqueado: string; el: string; lo: string };
+export type Equipo = { nombre: string; etiqueta: string; tipo: "plotter" | "impresora"; bloqueado: string; el: string; lo: string };
 
-/** Los SureColor (F570, F571, T3170…) son plotters (masculino); el resto, impresoras (femenino). */
-export function equipoGuion(marca: string, modelo: string): Equipo {
-  const m = modelo.trim().toUpperCase();
-  const plotter = /^(F57[01]|T3170X?)$/.test(m.replace(/^SC-?/, "")) || /sure\s*color|-sc$/i.test(marca);
+/** Los SureColor (F570, F571, T3170…) son plotters (masculino); el resto, impresoras (femenino). Marca y modelo son opcionales. */
+export function equipoGuion(marca: string, modelo: string, plotterForzado = false): Equipo {
+  const m = modelo.trim().toUpperCase().replace(/^SC-?/, "");
   const marcaBonita = marca.trim() ? marca.trim().charAt(0).toUpperCase() + marca.trim().slice(1).toLowerCase() : "";
+  const plotter = plotterForzado || /^(F57[01]|T3170X?)$/.test(m) || /sure\s*color|-sc$/i.test(marca);
+  const nombre = plotter ? (m ? `Epson SureColor ${m}` : "") : `${marcaBonita} ${m}`.trim();
+  const tipo = plotter ? "plotter" : "impresora";
   return plotter
-    ? { nombre: `Epson SureColor ${m.replace(/^SC-?/, "")}`, tipo: "plotter", bloqueado: "bloqueado", el: "el", lo: "lo" }
-    : { nombre: `${marcaBonita} ${m}`.trim(), tipo: "impresora", bloqueado: "bloqueada", el: "la", lo: "la" };
+    ? { nombre, etiqueta: nombre || tipo, tipo, bloqueado: "bloqueado", el: "el", lo: "lo" }
+    : { nombre, etiqueta: nombre || tipo, tipo, bloqueado: "bloqueada", el: "la", lo: "la" };
 }
 
 const GANCHOS = [
@@ -183,13 +185,16 @@ export type Escenario = {
 
 const mayuscula = (t: string) => (t ? t[0].toUpperCase() + t.slice(1) : t);
 
-export function generarEscenario(opts: { marca: string; modelo: string; error: string; profesion: string; fondoCatalogo?: string; semilla?: number }): Escenario {
-  const { marca, modelo, error, profesion } = opts;
+export function generarEscenario(opts: { marca?: string; modelo?: string; error: string; profesion: string; plotter?: boolean; fondoCatalogo?: string; semilla?: number }): Escenario {
+  const { error, profesion } = opts;
+  const marca = opts.marca ?? "";
+  const modelo = opts.modelo ?? "";
   const n = Math.abs(Math.trunc(opts.semilla ?? 0));
   const p = datosProfesion(profesion, opts.fondoCatalogo);
   const err = infoError(error);
-  const eq = equipoGuion(marca, modelo);
-  const tuEquipo = `tu ${eq.nombre}`;
+  const eq = equipoGuion(marca, modelo, opts.plotter);
+  const tuEquipo = `tu ${eq.etiqueta}`;
+  const equipoCapital = eq.nombre || `${mayuscula(eq.el)} ${eq.tipo}`;
   const negocioCorto = p.negocio.startsWith("tu ") ? p.negocio.slice(3) : p.negocio;
   const gancho = GANCHOS[n % GANCHOS.length]
     .replace("{tu_equipo_cap}", mayuscula(tuEquipo))
@@ -211,7 +216,7 @@ export function generarEscenario(opts: { marca: string; modelo: string; error: s
     alternativas,
   };
   const desarrollo = {
-    broll: [`Primer plano de la pantalla con ${err.mensaje}.`, `${eq.nombre} con ${err.luces}.`, `Corte rápido a ${p.broll}.`],
+    broll: [`Primer plano de la pantalla con ${err.mensaje}.`, `${equipoCapital} con ${err.luces}.`, `Corte rápido a ${p.broll}.`],
     explicacion: [...err.porque.map((s) => `${mayuscula(s)}.`), `Por eso ${p.negocio} está detenido: ${p.perdida} no pueden esperar.`],
   };
   const extra = err.previo ? " Antes de empezar te indicamos la limpieza previa que este error exige, para que el reset quede definitivo." : "";
@@ -220,7 +225,7 @@ export function generarEscenario(opts: { marca: string; modelo: string; error: s
   const avisos = [err.previo, err.revisar].filter((a): a is string => !!a);
 
   const texto = [
-    `ESCENARIO · ${eq.nombre} · ${error.trim()} · ${profesion}`,
+    `ESCENARIO · ${eq.etiqueta} · ${error.trim()} · ${profesion}`,
     "",
     "1. 🎨 EL GANCHO VISUAL (miniatura)",
     `• Personaje y emoción: ${visual.personaje}`,
@@ -243,7 +248,7 @@ export function generarEscenario(opts: { marca: string; modelo: string; error: s
     ...(avisos.length ? ["", ...avisos.map((a) => `⚠️ ${a}`)] : []),
   ].join("\n");
 
-  return { equipo: eq.nombre, visual, gancho, desarrollo, cta, cierre, avisos, texto };
+  return { equipo: eq.etiqueta, visual, gancho, desarrollo, cta, cierre, avisos, texto };
 }
 
 /* ───────── prompt para pegar en Claude o ChatGPT ───────── */
@@ -275,5 +280,5 @@ Para empezar, genera el primer escenario con estos datos:
 * Bloque 3 (Profesión): {profesion}.`;
 
 export function promptParaIA(marca: string, modelo: string, error: string, profesion: string): string {
-  return PROMPT_BASE.replace("{marca}", marca.trim()).replace("{modelo}", modelo.trim().toUpperCase()).replace("{error}", error.trim()).replace("{profesion}", profesion);
+  return PROMPT_BASE.replace("{marca}", marca.trim() || "(sin indicar)").replace("{modelo}", modelo.trim().toUpperCase() || "(sin indicar)").replace("{error}", error.trim()).replace("{profesion}", profesion);
 }

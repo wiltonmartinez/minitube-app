@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { COMMIT, VERSION } from "@/lib/changelog";
 import { CatalogEditor } from "@/components/catalog-editor";
-import { ImageGenerator } from "@/components/image-generator";
 import { GuionEscenario } from "@/components/guion-escenario";
 import { nombresLote, type LoteItem } from "@/lib/lote";
 import { urlAPng } from "@/lib/imagen-cliente";
@@ -13,7 +12,7 @@ import { useCatalogo } from "@/lib/use-catalogo";
 import { ListsEditor } from "@/components/lists-editor";
 import { useListas } from "@/lib/use-listas";
 import { aplicarTodoAlAzar, sorteoRespetandoBloqueos } from "@/lib/azar";
-import { ARQUETIPOS_ALTA, PLANO_ALTA, PROFESIONES_ALTA, esPrioridadAlta } from "@/lib/prioridad";
+import { ARQUETIPOS_ALTA, PLANO_ALTA, PROFESIONES_ALTA } from "@/lib/prioridad";
 import {
   ALEATORIO,
   CAMPOS_FORMA,
@@ -46,6 +45,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import {
   ACCESORIOS,
@@ -72,17 +72,14 @@ import {
   BADGES_REALES,
   BADGE_ALEATORIO,
   EDADES,
-  ERRORES,
   ETNIAS,
   GAFAS_ALEATORIAS,
   GAFAS_ESTILOS,
   GAFAS_OPCIONES,
   GENEROS,
   IDIOMAS,
-  MARCAS,
   MARCOS,
   MIRADA_ES,
-  OTRO,
   PALETAS_FIJAS,
   PALETAS_OPCIONES,
   PALETA_ALEATORIA,
@@ -101,11 +98,8 @@ import {
 const MODOS_PERSONAJE = ["Arquetipo listo", "Personalizar"] as const;
 
 type FormState = {
-  // Bloque 1
-  marca: string;
-  modelo: string;
-  error: string;
-  errorOtro: string;
+  // Cámara: fondo con plotters de gran formato (prioridad alta)
+  plotter: boolean;
   // Bloque 2
   genero: (typeof GENEROS)[number];
   edad: (typeof EDADES)[number];
@@ -127,10 +121,7 @@ type FormState = {
 };
 
 const INITIAL: FormState = {
-  marca: MARCAS[0],
-  modelo: "",
-  error: ERRORES[0],
-  errorOtro: "",
+  plotter: false,
   genero: GENEROS[0],
   edad: EDADES[0],
   etnia: ETNIAS[0],
@@ -299,9 +290,9 @@ export default function Home() {
   const [mostrarEditor, setMostrarEditor] = useState(false);
   const [formBase, setForm] = useState<FormState>(INITIAL);
   // Si la profesión elegida ya no existe en el catálogo (editada/eliminada), se usa la primera
-  // PRIORIDAD ALTA (plotters F570, F571, T3170 y T3170X en el bloque 1): Seedream, plano detalle, mujer joven de 20 a 30 años
+  // PRIORIDAD ALTA (interruptor «plotters» del bloque Cámara): Seedream, plano detalle, mujer joven de 20 a 30 años
   // y una profesión de gran formato. Se aplica sobre los valores efectivos; al cambiar de modelo se recuperan los elegidos.
-  const alta = esPrioridadAlta(formBase.modelo);
+  const alta = formBase.plotter;
   const profesionesAlta = useMemo(() => {
     const permitidas = profesiones.filter((p) => (PROFESIONES_ALTA as readonly string[]).includes(p));
     return permitidas.length ? permitidas : profesiones;
@@ -355,7 +346,7 @@ export default function Home() {
 
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) => {
     setForm((f) => ({ ...f, [key]: value }));
-    if (key !== "modelo" && key !== "errorOtro") sortear();
+    sortear();
   };
 
   // Controlador Maestro: la profesión define (y bloquea) vestimenta, emoción, manos y fondo; la mirada va siempre clavada en el área libre inferior izquierda
@@ -390,15 +381,15 @@ export default function Home() {
   const vestimenta =
     gafasEf !== GAFAS_OPCIONES[0] ? perfil.vestimenta.replace(/\s+y\s+gafas.*$/i, "") : perfil.vestimenta;
 
-  const errorFinal = form.error === OTRO ? form.errorOtro.trim() : form.error;
-
   // Autogeneración reactiva: el prompt se recalcula en cada render en que cambia CUALQUIER variable del
   // formulario (error, gafas, paleta, badge, perfil…). useMemo lo deriva sin estado extra ni render de más.
   // Entrada común del prompt de Gemini y del prompt de la API de imágenes (null si faltan datos obligatorios)
   const entrada = useMemo<PromptInput | null>(() => {
-    if (!form.modelo.trim() || !errorFinal) return null;
     return {
         ...form,
+        marca: "",
+        modelo: "",
+        error: "",
         genero: generoEf,
         edad: edadEf,
         etnia: etniaEf,
@@ -411,9 +402,8 @@ export default function Home() {
         listas,
         arquetipo: arquetipoEf,
         plotter: alta || undefined,
-        error: errorFinal,
     };
-  }, [form, catalogo, errorFinal, paletaEf, gafasEf, badgeEf, accesorioEf, persEf, listas, arquetipoEf, generoEf, edadEf, etniaEf, alta]);
+  }, [form, catalogo, paletaEf, gafasEf, badgeEf, accesorioEf, persEf, listas, arquetipoEf, generoEf, edadEf, etniaEf, alta]);
 
   // Prompt para copiar a Gemini (formato de siempre)
   const live = useMemo<GeneratedPrompt | null>(
@@ -467,20 +457,7 @@ export default function Home() {
     );
   }
 
-  // Valida los campos obligatorios para el lote al azar
-  function validate() {
-    if (!form.modelo.trim()) {
-      toast.error("Escribe el modelo de la impresora");
-      return false;
-    }
-    if (!errorFinal) {
-      toast.error("Escribe el error en el campo «Otro»");
-      return false;
-    }
-    return true;
-  }
-
-  // «Generar al Azar»: TODO al azar salvo el bloque 1 (marca, modelo y error); los candados 🔒 no cambian
+  // «Generar al Azar»: TODO al azar; los candados 🔒 no cambian
   function randomizeFields() {
     setForm((f) => aplicarTodoAlAzar(f, azarTotal(profesionesEf), locks));
     sortear(); // re-sortea gafas, postura, arquetipo, personaje, paleta y badge que estén en «Aleatorio»
@@ -494,10 +471,9 @@ export default function Home() {
     toast.success(`Añadido al lote (${batch.length + 1})`);
   }
 
-  // N prompts con el bloque 1 fijo (marca, modelo y error). TODO lo demás se sortea en cada prompt (salvo candados 🔒):
+  // N prompts. TODO se sortea en cada prompt (salvo candados 🔒):
   // persona, profesión, plano, marco, idioma, gafas, postura o accesorio, paleta y badge.
   function generateRandomBatch() {
-    if (!validate()) return;
     const total = Math.floor(Number(batchCount));
     if (!Number.isFinite(total) || total < 1 || total > MAX_BATCH) {
       toast.error(`La cantidad debe estar entre 1 y ${MAX_BATCH}`);
@@ -521,9 +497,9 @@ export default function Home() {
         generatePrompt(
           {
             ...f,
-            marca: form.marca,
-            modelo: form.modelo,
-            error: errorFinal,
+            marca: "",
+            modelo: "",
+            error: "",
             catalogo,
             listas,
             paleta: resolverPaleta(f.paleta),
@@ -663,7 +639,7 @@ export default function Home() {
           <CardHeader>
             <CardTitle>Plantilla de miniatura</CardTitle>
             <CardDescription>
-              Completa los bloques 1, 2 y 4; en el bloque 3 solo eliges la profesión.
+              La imagen es solo la persona y el fondo, sin texto. Todo es manual: elige los campos, copia el prompt y pégalo en Gemini o ChatGPT.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -681,53 +657,6 @@ export default function Home() {
             <form onSubmit={(e) => e.preventDefault()} className="space-y-4">
               <Block
                 step={1}
-                title="Problema técnico"
-                description="La impresora y el error que se resolverá."
-              >
-                <SelectField
-                  id="marca"
-                  label="Marca"
-                  value={form.marca}
-                  options={MARCAS}
-                  onChange={(v) => set("marca", v)}
-                />
-                <div className="space-y-2">
-                  <Label htmlFor="modelo">Modelo de impresora</Label>
-                  <Input
-                    id="modelo"
-                    placeholder="Ej: L3250, G6010"
-                    value={form.modelo}
-                    onChange={(e) => set("modelo", e.target.value)}
-                  />
-                  {alta && (
-                    <p role="status" className="rounded-md border border-amber-500/60 bg-amber-500/10 p-2 text-xs text-amber-500">
-                      ⚡ <strong>Prioridad ALTA (plotter)</strong>: Seedream 5.0 Pro · Plano Detalle · mujer joven de 20 a 30 años ·
-                      profesión de gran formato (sublimación, vinilo o fotografía) · plotter de la marca en el fondo.
-                    </p>
-                  )}
-                </div>
-                <SelectField
-                  id="error"
-                  label="Tipo de error"
-                  value={form.error}
-                  options={ERRORES}
-                  onChange={(v) => set("error", v)}
-                />
-                {form.error === OTRO && (
-                  <div className="space-y-2">
-                    <Label htmlFor="errorOtro">Otro error</Label>
-                    <Input
-                      id="errorOtro"
-                      placeholder="Escribe el código o error"
-                      value={form.errorOtro}
-                      onChange={(e) => set("errorOtro", e.target.value)}
-                    />
-                  </div>
-                )}
-              </Block>
-
-              <Block
-                step={2}
                 title="Perfil demográfico"
                 description="Quién aparece en la miniatura."
               >
@@ -881,7 +810,7 @@ export default function Home() {
               </Block>
 
               <Block
-                step={3}
+                step={2}
                 title="Controlador maestro"
                 description="Elige la profesión: vestimenta, emoción, manos y fondo se autocompletan y se bloquean. La mirada siempre va clavada en el centro del área libre inferior izquierda."
               >
@@ -904,7 +833,7 @@ export default function Home() {
               </Block>
 
               <Block
-                step={4}
+                step={3}
                 title="Cámara"
                 description="Plano de cámara. La imagen se crea solo con el fondo: sin texto, sin badges 3D y sin marco."
               >
@@ -918,6 +847,15 @@ export default function Home() {
                   className="md:col-span-2"
                   {...lockProps("plano")}
                 />
+                <div className="flex items-start gap-3 rounded-md border p-3 md:col-span-2">
+                  <Switch id="plotter" checked={form.plotter} onCheckedChange={(v) => set("plotter", v)} />
+                  <div className="space-y-1">
+                    <Label htmlFor="plotter">Fondo con plotters de gran formato</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Para videos de plotters (F570, F571, T3170…): persona joven de gran formato y plotters al fondo. Apagado, el fondo lleva impresoras normales.
+                    </p>
+                  </div>
+                </div>
               </Block>
 
               <div className="flex flex-col gap-2 sm:flex-row">
@@ -935,7 +873,7 @@ export default function Home() {
                 </Button>
               </div>
               <p className="-mt-2 text-xs text-muted-foreground">
-                El prompt se actualiza solo al cambiar cualquier campo. «Generar al Azar» sortea TODO menos marca, modelo y error
+                El prompt se actualiza solo al cambiar cualquier campo. «Generar al Azar» sortea TODO
                 (persona, profesión, plano, gafas y postura); los campos con candado 🔒 no cambian.
                 «Añadir al lote» guarda el prompt actual para descargarlo.
               </p>
@@ -943,7 +881,7 @@ export default function Home() {
               <div className="space-y-2 rounded-lg border p-3">
                 <Label htmlFor="batchCount">Lote al azar</Label>
                 <p className="text-xs text-muted-foreground">
-                  Fijos: marca, modelo y error. Todo lo demás se sortea en cada prompt (salvo los campos con candado 🔒).
+                  Todo se sortea en cada prompt (persona, profesión, plano, gafas y postura), salvo los campos con candado 🔒.
                 </p>
                 <div className="flex flex-col gap-2 sm:flex-row">
                   <Input
@@ -988,12 +926,6 @@ export default function Home() {
             <Button variant="secondary" className="w-full" onClick={copy} disabled={!live}>
               Copiar al portapapeles
             </Button>
-            <ImageGenerator
-              entrada={entrada}
-              modeloForzado={alta ? "seedream-5-pro" : undefined}
-              bloqueos={{ paleta: !!locks.paleta, badge: !!locks.badge }}
-              onAgregarAlLote={(items) => setBatch((b) => [...b, ...items])}
-            />
             <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
               <Button
                 variant="outline"
@@ -1011,14 +943,14 @@ export default function Home() {
                 disabled={!batch.length}
               >
                 <FileArchive className="size-4" />
-                Descargar ZIP (.txt + imágenes)
+                Descargar ZIP (.txt)
               </Button>
               <Button variant="ghost" onClick={() => setBatch([])} disabled={!batch.length}>
                 <Trash2 className="size-4" />
                 Vaciar lote
               </Button>
             </div>
-            <GuionEscenario marca={form.marca} modelo={form.modelo} error={errorFinal} profesion={form.profesion} fondo={perfil?.fondo} />
+            <GuionEscenario plotter={alta} profesion={form.profesion} fondo={perfil?.fondo} />
           </CardContent>
         </Card>
       </div>

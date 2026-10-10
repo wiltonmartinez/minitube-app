@@ -4,27 +4,28 @@ import { ClipboardCopy, Shuffle, Sparkles } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { generarEscenario, promptParaIA } from "@/lib/guion";
+import { ERRORES, MARCAS, OTRO } from "@/lib/prompt-config";
 
-/** Escenario del video (miniatura, gancho, desarrollo y llamado a la acción) con los datos de los bloques 1 y 3. No cuesta nada. */
-export function GuionEscenario({
-  marca,
-  modelo,
-  error,
-  profesion,
-  fondo,
-}: {
-  marca: string;
-  modelo: string;
-  error: string;
-  profesion: string;
-  fondo?: string;
-}) {
+const ESTILO_SELECT = "h-9 w-full rounded-md border bg-transparent px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring";
+
+/**
+ * Escenario del video (miniatura, gancho, desarrollo y llamado a la acción). No cuesta nada.
+ * El panel de imágenes ya no pide marca, modelo ni error: aquí son datos OPCIONALES solo para el guion (la imagen no los usa).
+ */
+export function GuionEscenario({ plotter, profesion, fondo }: { plotter: boolean; profesion: string; fondo?: string }) {
+  const [marca, setMarca] = useState("");
+  const [modelo, setModelo] = useState("");
+  const [errorSel, setErrorSel] = useState<string>(ERRORES[0]);
+  const [errorOtro, setErrorOtro] = useState("");
   const [semilla, setSemilla] = useState(0);
-  const listo = !!modelo.trim() && !!error.trim();
+
+  const error = errorSel === OTRO ? errorOtro.trim() : errorSel;
   const e = useMemo(
-    () => (listo ? generarEscenario({ marca, modelo, error, profesion, fondoCatalogo: fondo, semilla }) : null),
-    [listo, marca, modelo, error, profesion, fondo, semilla],
+    () => (error ? generarEscenario({ marca, modelo, error, profesion, plotter, fondoCatalogo: fondo, semilla }) : null),
+    [marca, modelo, error, profesion, plotter, fondo, semilla],
   );
 
   async function copiar(texto: string, que: string) {
@@ -43,11 +44,45 @@ export function GuionEscenario({
         Guion del video (escenario)
       </h3>
       <p className="text-xs text-muted-foreground">
-        Usa el problema técnico (bloque 1) y la profesión (bloque 3). Se genera al instante y sin costo. Para una versión más creativa, copia el prompt y
-        pégalo en Claude o ChatGPT.
+        Usa la profesión del bloque 2. Se genera al instante y sin costo. Para una versión más creativa, copia el prompt y pégalo en Claude o ChatGPT. Los
+        datos del equipo son opcionales y solo se usan en este guion: la imagen no los necesita.
       </p>
 
-      {!e && <p className="text-sm text-muted-foreground">Escribe el modelo y el error (bloque 1) para ver el escenario.</p>}
+      <div className="grid gap-3 sm:grid-cols-3">
+        <div className="space-y-1">
+          <Label htmlFor="guion-marca">Marca (opcional)</Label>
+          <select id="guion-marca" className={ESTILO_SELECT} value={marca} onChange={(ev) => setMarca(ev.target.value)}>
+            <option value="">Sin indicar</option>
+            {MARCAS.map((m) => (
+              <option key={m} value={m}>
+                {m}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="space-y-1">
+          <Label htmlFor="guion-modelo">Modelo (opcional)</Label>
+          <Input id="guion-modelo" placeholder="L3250, G6010, F570…" value={modelo} onChange={(ev) => setModelo(ev.target.value)} />
+        </div>
+        <div className="space-y-1">
+          <Label htmlFor="guion-error">Error</Label>
+          <select id="guion-error" className={ESTILO_SELECT} value={errorSel} onChange={(ev) => setErrorSel(ev.target.value)}>
+            {ERRORES.map((x) => (
+              <option key={x} value={x}>
+                {x}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+      {errorSel === OTRO && (
+        <div className="space-y-1">
+          <Label htmlFor="guion-error-otro">Otro error</Label>
+          <Input id="guion-error-otro" placeholder="Escribe el código o error" value={errorOtro} onChange={(ev) => setErrorOtro(ev.target.value)} />
+        </div>
+      )}
+
+      {!e && <p className="text-sm text-muted-foreground">Escribe el error para ver el escenario.</p>}
 
       {e && (
         <>
@@ -67,7 +102,7 @@ export function GuionEscenario({
           </div>
 
           <p className="text-xs text-muted-foreground">
-            {e.equipo} · {error.trim()} · {profesion}
+            {e.equipo} · {error} · {profesion}
           </p>
 
           {e.avisos.map((a) => (

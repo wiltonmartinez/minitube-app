@@ -9,6 +9,17 @@ export type Cambio = {
 
 export const CHANGELOG: Cambio[] = [
   {
+    version: "4.3.0",
+    fecha: "2026-10-09",
+    titulo: "Panel manual: solo persona y fondo, sin marca, modelo ni error",
+    cambios: [
+      "Se quitó el bloque «Problema técnico»: el panel ya no pide marca, modelo ni tipo de error. El prompt sale completo desde el primer momento.",
+      "Las impresoras del fondo son genéricas (sin marca). Para videos de plotters hay un interruptor «Fondo con plotters de gran formato» en el bloque Cámara (persona joven de gran formato, plano detalle y plotters al fondo).",
+      "Se quitó «Generar imagen con IA» (créditos de fal.ai, modelo de IA, fotos de referencia, variantes A/B e historial). Todo es manual: se copia el prompt y se pega en Gemini o ChatGPT. La API para TexTube sigue igual.",
+      "El guion del video tiene sus propios datos opcionales (marca, modelo y error) y, si no se llenan, habla de «tu impresora» o «tu plotter».",
+    ],
+  },
+  {
     version: "4.2.0",
     fecha: "2026-10-09",
     titulo: "Guion del video: escenario completo con un clic",
