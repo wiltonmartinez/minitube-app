@@ -1064,6 +1064,8 @@ export type PromptInput = {
   edadAnios?: number;
   /** Dispositivo (opcional): Smartphone, PC / Laptop o Tablet. Fija la postura de las dos manos y manda sobre el accesorio. */
   dispositivo?: string;
+  /** Enfoque estratégico (1 negocio detenido · 2 pánico profesional · 3 solución del experto): fija emoción, mirada y manos. */
+  enfoque?: 1 | 2 | 3;
   /** Personalización concreta (modo «Personalizar»): rostro, cabello, vello y cuerpo ya sorteados/elegidos. */
   personaje?: Concreto;
   /** Listas editables del personaje (si falta, se usan las de fábrica). */
@@ -1326,7 +1328,52 @@ export const posturaDe = (accesorio: string) =>
           : POSTURA_CABEZA;
 
 /** Postura de las dos manos según el dispositivo elegido, o null si no hay dispositivo. */
-export function posturaDispositivo(dispositivo: string | undefined, tecnico = false): Postura | null {
+export function posturaDispositivo(dispositivo: string | undefined, tecnico = false, enfoque?: 1 | 2 | 3): Postura | null {
+  if (enfoque === 1 && dispositivo === "Smartphone") {
+    return {
+      estado: "dispositivo",
+      accesorio: "Teléfono celular",
+      manosEs: "La mano derecha sostiene el celular con firmeza; la izquierda se agarra la cabeza, se jala el cabello o queda abierta en el aire (incomprensión)",
+      manosEn:
+        "the right hand holding a modern smartphone firmly with its screen on in the lower part of the frame while the left hand grabs the head, pulls at the hair or hangs open in the air in disbelief",
+      reglasEn: [
+        "The right hand holds a modern smartphone firmly, screen on, low in the frame and well away from both lower corners, while the left hand grabs the head, pulls at the hair or is held open in the air in a gesture of disbelief. No other object is in either hand, so the person has exactly two hands.",
+      ],
+      reglas: [
+        "POSTURA CON SMARTPHONE (NEGOCIO DETENIDO): la mano DERECHA sostiene el celular con firmeza, pantalla encendida, en la parte baja de la toma y lejos de las esquinas inferiores; la mano IZQUIERDA se agarra la cabeza, se jala el cabello o queda abierta en el aire en gesto de incomprensión. Ningún otro objeto en las manos: exactamente dos manos.",
+      ],
+    };
+  }
+  if (enfoque === 2 && dispositivo === "PC / Laptop") {
+    return {
+      estado: "dispositivo",
+      accesorio: "Portátil",
+      manosEs: "Cuerpo encorvado o echado hacia atrás; la mano derecha en el ratón de la laptop y la izquierda cubriéndose la boca de pánico o frotándose los ojos",
+      manosEn:
+        "the body hunched forward or thrown back in stress, the right hand on the mouse of an open laptop while the left hand covers the mouth in panic or rubs the eyes",
+      reglasEn: [
+        "The body is hunched over or thrown back in stress. The right hand rests on the mouse next to an open laptop on the desk, and the left hand covers the mouth in panic or rubs the eyes. A single laptop stands on the desk in front of the person, in the right-center of the frame and well away from both lower corners, with a plain case that has no logo and no legible screen content. Exactly two hands, and no other object in them.",
+      ],
+      reglas: [
+        "POSTURA CON LAPTOP (PÁNICO PROFESIONAL): el cuerpo va encorvado o echado hacia atrás por el estrés; la mano DERECHA descansa sobre el ratón junto a una laptop abierta y la mano IZQUIERDA se cubre la boca de pánico o se frota los ojos. Hay UNA sola laptop sobre el escritorio, delante del personaje, en la parte centro-derecha de la toma y lejos de las esquinas inferiores, sin logos y sin contenido legible en la pantalla. Exactamente dos manos y ningún otro objeto en ellas.",
+      ],
+    };
+  }
+  if (enfoque === 3 && dispositivo === "PC / Laptop") {
+    return {
+      estado: "dispositivo",
+      accesorio: "Portátil",
+      manosEs: "Cuerpo inclinado hacia adelante; la mano derecha en el ratón y la izquierda con el pulgar arriba o señalando su propio monitor",
+      manosEn:
+        "the body leaning forward attentively, the right hand on a computer mouse while the left hand gives a thumbs up or points the index finger at its own monitor",
+      reglasEn: [
+        "The body leans forward attentively toward a desktop computer. The right hand rests on the mouse, and the left hand gives a thumbs up or points the index finger at the person's own monitor. A single desktop monitor stands on the desk in the right-center of the frame, well away from both lower corners, with a plain frame that has no logo and no legible screen content. Exactly two hands, and no other object in them.",
+      ],
+      reglas: [
+        "POSTURA CON PC DE ESCRITORIO (SOLUCIÓN DEL EXPERTO): el cuerpo se inclina hacia adelante con atención; la mano DERECHA descansa sobre el ratón y la mano IZQUIERDA hace el gesto de pulgar arriba o señala con el dedo índice su propio monitor. Hay UN solo monitor de escritorio sobre la mesa, en la parte centro-derecha de la toma y lejos de las esquinas inferiores, sin logos y sin contenido legible en la pantalla. Exactamente dos manos y ningún otro objeto en ellas.",
+      ],
+    };
+  }
   if (dispositivo === "Smartphone") {
     return {
       estado: "dispositivo",
@@ -1525,11 +1572,27 @@ export const REGLA_BRANDING =
 export const ESTETICA_MUJER =
   "ESTÉTICA DEL PERSONAJE: Las mujeres generadas deben ser atractivas pero reales, de belleza natural y armónica, con proporciones equilibradas y piel con textura realista (poros visibles e imperfecciones sutiles), nunca de modelo irreal, manteniendo siempre la expresión de alta tensión, pánico o estrés requerida.";
 
+/* ───────── Enfoques estratégicos: cara, mirada y expresión ───────── */
+const ENFOQUE_CARA: Record<1 | 2 | 3, string> = {
+  1: "an expression of extreme frustration and shock, brows fiercely furrowed, eyes wide in disbelief, jaw tense, like a business owner watching money slip away while customers wait",
+  2: EMOCION.panico.en,
+  3: "an expression of absolute confidence and triumph, a relieved, confident smile, bright calm eyes, like an expert who has just solved the problem",
+};
+const ENFOQUE_AFECTO: Record<1 | 2, string> = { 1: "por la frustración extrema y el shock", 2: "por el pánico" };
+const MIRADA_FRENTE_REGLA =
+  "MIRADA AL FRENTE: Los ojos del personaje deben estar abiertos, brillantes y fijos hacia el frente, en la pantalla del monitor o en el espectador, con una sonrisa segura. Tienen prohibido mirar hacia abajo, hacia la esquina inferior izquierda o fuera de la imagen, y el rostro no muestra pánico.";
+const REGLA_EXPRESION_EXPERTO =
+  "REGLA ESTRICTA DE EXPRESIÓN: Está absolutamente prohibido generar expresiones de tristeza, llanto, pucheros, lástima, pánico o resignación pasiva. Prohibido posturas relajadas como manos en la cintura o brazos cruzados. El personaje debe mostrar confianza absoluta, triunfo y alivio, con una sonrisa segura y una postura atenta e inclinada hacia adelante.";
+
 /** Regla de mirada con el afecto de la emoción (pánico por defecto: el texto no cambia). */
-function miradaRegla(e?: EmocionAB): string {
+function miradaRegla(e?: EmocionAB, enfoque?: 1 | 2 | 3): string {
+  if (enfoque === 3) return MIRADA_FRENTE_REGLA;
+  if (enfoque) return MIRADA_REGLA.replace("por el pánico", ENFOQUE_AFECTO[enfoque]);
   return e ? MIRADA_REGLA.replace("por el pánico", EMOCIONES_AB[e].afectoEs) : MIRADA_REGLA;
 }
-function esteticaMujer(e?: EmocionAB): string {
+function esteticaMujer(e?: EmocionAB, enfoque?: 1 | 2 | 3): string {
+  if (enfoque === 3) return ESTETICA_MUJER.replace("la expresión de alta tensión, pánico o estrés requerida", "la expresión de confianza y triunfo requerida");
+  if (enfoque === 1) return ESTETICA_MUJER.replace("alta tensión, pánico o estrés", "frustración extrema y shock");
   return e && e !== "panico"
     ? ESTETICA_MUJER.replace("la expresión de alta tensión, pánico o estrés requerida", "la expresión indicada")
     : ESTETICA_MUJER;
@@ -1558,7 +1621,7 @@ function preparar(i: PromptInput, referencia = false) {
   // vestimenta del perfil (p. ej. "…and black-framed glasses") para no duplicarlas ni contradecirlas.
   const gafasText = GAFAS[i.gafas] ?? "";
   // Accesorio en las manos: con cable o teléfono, una mano lo sostiene y la otra conserva el gesto (variante de una mano)
-  const postura = ajustarPosturaAEmocion(posturaDispositivo(i.dispositivo, esPerfilTecnico(i.profesion)) ?? cerebroPostura(i.accesorio, printer), i.emocion); // el cerebro decide la postura de AMBAS manos
+  const postura = ajustarPosturaAEmocion(posturaDispositivo(i.dispositivo, esPerfilTecnico(i.profesion), i.enfoque) ?? cerebroPostura(i.accesorio, printer), i.emocion); // el cerebro decide la postura de AMBAS manos
   const hands = postura.manosEn;
   const clothingBase = mujer ? perfil.en.clothing.f : perfil.en.clothing.m;
   const clothing = gafasText
@@ -1584,7 +1647,7 @@ function preparar(i: PromptInput, referencia = false) {
     : arq
     ? `${conArticulo((arq.origen?.en ?? ETNIA_EN[arq.etnia]).replace("{n}", sexo))} aged ${arq.edadAnios}, with ${arq.cabello.en}, ${arq.rasgosFaciales.forma}, ${arq.rasgosFaciales.ojos}, ${arq.rasgosFaciales.cejas}, ${arq.rasgosFaciales.nariz} and ${arq.rasgosFaciales.boca}`
     : `${conArticulo(ETNIA_EN[i.etnia].replace("{n}", sexo))} ${i.edadAnios ? `aged ${i.edadAnios}` : EDAD_EN[i.edad]}${i.personaje ? `, ${describirRostro(listas, i.personaje)}` : ""}`;
-  const personaje = `On the right side of the frame, ${descripcion}, working as ${/^[aeiou]/i.test(perfil.en.role) ? "an" : "a"} ${perfil.en.role}, wearing ${clothing}, with ${i.emocion ? EMOCIONES_AB[i.emocion].faceEn : perfil.en.emotion}, and ${hands}.`;
+  const personaje = `On the right side of the frame, ${descripcion}, working as ${/^[aeiou]/i.test(perfil.en.role) ? "an" : "a"} ${perfil.en.role}, wearing ${clothing}, with ${i.enfoque ? ENFOQUE_CARA[i.enfoque] : i.emocion ? EMOCIONES_AB[i.emocion].faceEn : perfil.en.emotion}, and ${hands}.`;
   // Cuerpo: solo hacia arriba y según el plano (detalle = nada · primer plano = hombros · medio = complexión y hombros)
   const rasgosExtra = referencia
     ? ""
@@ -1618,8 +1681,8 @@ export function buildPrompt(i: PromptInput): string {
     ...(gafasText ? [gafasText] : []),
     ...postura.reglas,
     REGLA_BRANDING,
-    miradaRegla(i.emocion),
-    ...(mujer ? [esteticaMujer(i.emocion)] : []),
+    miradaRegla(i.emocion, i.enfoque),
+    ...(mujer ? [esteticaMujer(i.emocion, i.enfoque)] : []),
     "The person is anatomically correct: exactly one person, exactly two arms, two hands with five fingers each, one symmetrical face and natural proportions.",
     ANATOMIA_ES,
     setting,
@@ -1630,7 +1693,7 @@ export function buildPrompt(i: PromptInput): string {
     "Clean, balanced composition with no duplicated elements. Avoid extra limbs, extra or missing fingers, deformed hands, distorted faces, duplicate people, blurry or low-quality rendering, any text, letters, numbers, badges, labels, watermarks or logos anywhere in the image, any border or frame, and incoherent shapes.",
   ];
 
-  return `${ASPECT_SENTENCE}\n\n${sentences.join(" ")} ${i.emocion && EMOCIONES_AB[i.emocion].expresionEs ? EMOCIONES_AB[i.emocion].expresionEs : REGLA_EXPRESION} ${PROHIBICION_VISUAL}`;
+  return `${ASPECT_SENTENCE}\n\n${sentences.join(" ")} ${i.enfoque === 3 ? REGLA_EXPRESION_EXPERTO : i.emocion && EMOCIONES_AB[i.emocion].expresionEs ? EMOCIONES_AB[i.emocion].expresionEs : REGLA_EXPRESION} ${PROHIBICION_VISUAL}`;
 }
 
 /* ───────── Resultado estructurado de la generación ───────── */

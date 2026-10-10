@@ -9,6 +9,18 @@ export type Cambio = {
 
 export const CHANGELOG: Cambio[] = [
   {
+    version: "4.7.0",
+    fecha: "2026-10-09",
+    titulo: "Los 3 enfoques estratégicos por profesión",
+    cambios: [
+      "Nuevo interruptor «Enfoque estratégico según la profesión» (activo por defecto): la profesión fija etnia, edad, dispositivo, emoción, mirada y manos, sin mezclar variables entre enfoques.",
+      "Enfoque 1, Negocio Detenido (Sublimación, Fotocopias, Fotografía, Vinilo): Latino/Mestizo o Afro-latino, 30-55 años, smartphone, frustración extrema y shock; la mano izquierda se agarra la cabeza, se jala el cabello o queda abierta.",
+      "Enfoque 2, Pánico Profesional (Litografía, Diseño, Asistente, Recepcionista, Profesores, Administrador…): Caucásico/Mediterráneo o Latino/Mestizo, laptop, pánico, cuerpo encorvado, mano izquierda en la boca o frotándose los ojos.",
+      "Enfoque 3, Solución del Experto (Técnico de computadores, Ingeniero de sistemas): Asiático/Coreano o Caucásico/Mediterráneo, PC de escritorio, confianza y sonrisa, mirada al frente, cuerpo inclinado, pulgar arriba o señalando su monitor.",
+      "Con el enfoque activo, los menús de etnia y edad solo muestran lo permitido y el dispositivo queda fijo. Apagado, todo se elige libremente como antes.",
+    ],
+  },
+  {
     version: "4.6.0",
     fecha: "2026-10-09",
     titulo: "Estilos faciales vinculados a la etnia",

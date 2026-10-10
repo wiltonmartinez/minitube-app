@@ -28,6 +28,7 @@ import {
   type Seleccion,
   esArmonica,
 } from "@/lib/rostro";
+import { ENFOQUES, edadesDelEnfoque, enfoqueDe, normalizarEnfoque } from "@/lib/enfoques";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -109,6 +110,8 @@ type FormState = {
   edad: (typeof EDADES)[number];
   /** Smartphone, PC / Laptop o Tablet: fija la postura de las dos manos */
   dispositivo: string;
+  /** Aplica el enfoque estratégico de la profesión (etnia, edad, dispositivo, emoción, mirada y manos) */
+  usarEnfoque: boolean;
   etnia: (typeof ETNIAS_PANEL)[number];
   gafas: string;
   accesorio: string;
@@ -131,6 +134,7 @@ const INITIAL: FormState = {
   genero: GENEROS[0],
   edad: EDADES[0],
   dispositivo: DISPOSITIVO_NINGUNO,
+  usarEnfoque: true,
   etnia: ETNIAS_PANEL[0],
   gafas: GAFAS_OPCIONES[0],
   accesorio: ACCESORIO_ALEATORIO,
@@ -308,7 +312,10 @@ export default function Home() {
   const poolArq: readonly string[] = alta ? ARQUETIPOS_ALTA : ARQUETIPOS_LISTA;
   const form = useMemo(() => {
     const f = catalogo[formBase.profesion] ? formBase : { ...formBase, profesion: profesiones[0] };
-    if (!alta) return { ...f, modoPersonaje: "Personalizar" as FormState["modoPersonaje"] };
+    if (!alta) {
+      const base = { ...f, modoPersonaje: "Personalizar" as FormState["modoPersonaje"] };
+      return f.usarEnfoque ? normalizarEnfoque(base) : base;
+    }
     return {
       ...f,
       plano: PLANO_ALTA,
@@ -372,6 +379,8 @@ export default function Home() {
   const generoEf = arq ? arq.genero : form.genero;
   const edadEf = arq ? arq.edad : form.edad;
   const etniaEf = arq ? arq.etnia : form.etnia;
+  const enfoqueActivo = !alta && form.usarEnfoque ? enfoqueDe(form.profesion) : undefined;
+  const infoEnfoque = enfoqueActivo ? ENFOQUES[enfoqueActivo] : undefined;
   const nivel = nivelPlano(form.plano);
   // Personalización concreta (modo «Personalizar»): lo elegido a mano se respeta, lo aleatorio es armónico
   const persEf = useMemo(
@@ -383,7 +392,7 @@ export default function Home() {
 
   // Manos mostradas: con cable o teléfono, una mano conserva el gesto y la otra sostiene el accesorio
   const dispositivoActivo = form.dispositivo !== DISPOSITIVO_NINGUNO;
-  const manosMostradas = (dispositivoActivo ? posturaDispositivo(form.dispositivo, esPerfilTecnico(form.profesion)) : null)?.manosEs ?? cerebroPostura(accesorioEf).manosEs;
+  const manosMostradas = (dispositivoActivo ? posturaDispositivo(form.dispositivo, esPerfilTecnico(form.profesion), enfoqueActivo) : null)?.manosEs ?? cerebroPostura(accesorioEf).manosEs;
 
   // Si se elige un par de gafas, la vestimenta del perfil no las incluye (el prompt las quita para no duplicarlas)
   const vestimenta =
@@ -407,12 +416,13 @@ export default function Home() {
         badge: badgeEf,
         accesorio: accesorioEf,
         dispositivo: form.dispositivo === DISPOSITIVO_NINGUNO ? undefined : form.dispositivo,
+        enfoque: enfoqueActivo,
         personaje: persEf,
         listas,
         arquetipo: arquetipoEf,
         plotter: alta || undefined,
     };
-  }, [form, catalogo, paletaEf, gafasEf, badgeEf, accesorioEf, persEf, listas, arquetipoEf, generoEf, edadEf, etniaEf, alta]);
+  }, [form, catalogo, paletaEf, gafasEf, badgeEf, accesorioEf, persEf, listas, arquetipoEf, generoEf, edadEf, etniaEf, alta, enfoqueActivo]);
 
   // Prompt para copiar a Gemini (formato de siempre)
   const live = useMemo<GeneratedPrompt | null>(
@@ -494,7 +504,9 @@ export default function Home() {
     const prompts: GeneratedPrompt[] = [];
     let uArq = sorteoArquetipoDistinto(sorteo.ua, poolArq.length);
     for (let n = 0; n < total; n++) {
-      const f = aplicarTodoAlAzar(form, azarTotal(profesionesEf), locks);
+      let f = aplicarTodoAlAzar(form, azarTotal(profesionesEf), locks);
+      if (!alta && form.usarEnfoque) f = normalizarEnfoque(f);
+      const enfoqueLote = !alta && form.usarEnfoque ? enfoqueDe(f.profesion) : undefined;
       if (alta) {
         // prioridad alta: plano detalle, mujer joven (arquetipo del grupo) y profesión de gran formato, aunque haya candados
         f.plano = PLANO_ALTA;
@@ -523,7 +535,8 @@ export default function Home() {
             personaje: resolverPersonaje(listas, f.pers, { genero: f.genero, edad: f.edad, etnia: f.etnia }, f.modoRostro),
             arquetipo,
             plotter: alta || undefined,
-            dispositivo: form.dispositivo === DISPOSITIVO_NINGUNO ? undefined : form.dispositivo,
+            dispositivo: f.dispositivo === DISPOSITIVO_NINGUNO ? undefined : f.dispositivo,
+            enfoque: enfoqueLote,
           },
           { baseUrl: baseUrl() },
         ),
@@ -692,7 +705,7 @@ export default function Home() {
                       id="edad"
                       label="Edad"
                       value={form.edad}
-                      options={EDADES}
+                      options={enfoqueActivo ? (edadesDelEnfoque(form.profesion) ?? EDADES) : EDADES}
                       onChange={(v) => set("edad", v as FormState["edad"])}
                       {...lockProps("edad")}
                     />
@@ -700,7 +713,7 @@ export default function Home() {
                       id="etnia"
                       label="Etnia"
                       value={form.etnia}
-                      options={ETNIAS_PANEL}
+                      options={infoEnfoque ? infoEnfoque.etnias : ETNIAS_PANEL}
                       onChange={(v) => set("etnia", v as FormState["etnia"])}
                       className="md:col-span-2"
                       {...lockProps("etnia")}
@@ -772,6 +785,7 @@ export default function Home() {
                   value={form.dispositivo}
                   options={[DISPOSITIVO_NINGUNO, ...DISPOSITIVOS]}
                   onChange={(v) => set("dispositivo", v)}
+                  disabled={!!enfoqueActivo}
                   className="md:col-span-2"
                 />
                 <p className="-mt-2 text-xs text-muted-foreground md:col-span-2">
@@ -821,6 +835,34 @@ export default function Home() {
                 title="Controlador maestro"
                 description="Elige la profesión: vestimenta, emoción, manos y fondo se autocompletan y se bloquean. La mirada siempre va clavada en el centro del área libre inferior izquierda."
               >
+                {!alta && (
+                  <div className="space-y-2 rounded-md border p-3 md:col-span-2">
+                    <div className="flex items-start gap-3">
+                      <Switch id="usarEnfoque" checked={form.usarEnfoque} onCheckedChange={(v) => set("usarEnfoque", v)} />
+                      <div className="space-y-1">
+                        <Label htmlFor="usarEnfoque">Enfoque estratégico según la profesión</Label>
+                        <p className="text-xs text-muted-foreground">
+                          La profesión fija la etnia permitida, la edad ideal, el dispositivo, la emoción, la mirada y las manos. Apagado, todo se elige libremente.
+                        </p>
+                      </div>
+                    </div>
+                    {infoEnfoque && (
+                      <ul className="list-disc space-y-1 pl-5 text-xs text-muted-foreground">
+                        <li>
+                          <strong className="text-foreground">
+                            Enfoque {enfoqueActivo}: {infoEnfoque.nombre}
+                          </strong>{" "}
+                          ({infoEnfoque.impacto}). {infoEnfoque.dolor}
+                        </li>
+                        <li>Etnias: {infoEnfoque.etnias.join(" o ")} · Edades: {edadesDelEnfoque(form.profesion)?.join(" o ")}</li>
+                        <li>Emoción: {infoEnfoque.emocion}. Mirada: {infoEnfoque.mirada}.</li>
+                        <li>
+                          {infoEnfoque.dispositivo}: {infoEnfoque.manos}.
+                        </li>
+                      </ul>
+                    )}
+                  </div>
+                )}
                 <SelectField
                   id="profesion"
                   label="Profesión"
@@ -953,6 +995,7 @@ export default function Home() {
               fondo={perfil?.fondo}
               genero={arq ? undefined : generoEf}
               dispositivo={dispositivoActivo ? form.dispositivo : undefined}
+              enfoque={enfoqueActivo}
             />
           </CardContent>
         </Card>

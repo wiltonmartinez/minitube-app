@@ -187,7 +187,7 @@ export type Escenario = {
 
 const mayuscula = (t: string) => (t ? t[0].toUpperCase() + t.slice(1) : t);
 
-export function generarEscenario(opts: { marca?: string; modelo?: string; error: string; profesion: string; plotter?: boolean; genero?: string; edadAnios?: number; dispositivo?: string; fondoCatalogo?: string; semilla?: number }): Escenario {
+export function generarEscenario(opts: { marca?: string; modelo?: string; error: string; profesion: string; plotter?: boolean; genero?: string; edadAnios?: number; dispositivo?: string; enfoque?: 1 | 2 | 3; fondoCatalogo?: string; semilla?: number }): Escenario {
   const { error, profesion } = opts;
   const marca = opts.marca ?? "";
   const modelo = opts.modelo ?? "";
@@ -213,7 +213,7 @@ export function generarEscenario(opts: { marca?: string; modelo?: string; error:
   const edadGenero = opts.edadAnios
     ? `${opts.genero === "Mujer" ? "Mujer" : opts.genero === "Hombre" ? "Hombre" : "Persona"} de ${opts.edadAnios} años, con el rostro real de esa edad (no un modelo de stock).`
     : undefined;
-  const postura = opts.dispositivo ? posturaDispositivo(opts.dispositivo, esPerfilTecnico(profesion)) : null;
+  const postura = opts.dispositivo ? posturaDispositivo(opts.dispositivo, esPerfilTecnico(profesion), opts.enfoque) : null;
   const manos = postura ? `${opts.dispositivo}: ${postura.manosEs}.` : undefined;
   const visual = {
     personaje: `${p.personaje}.`,
