@@ -58,7 +58,14 @@ export const ETNIAS = [
   "Asiática del Este",
   "Sudasiática",
   "Medio Oriente/Árabe",
+  // Las 4 únicas opciones del panel (ver ETNIAS_PANEL); las anteriores quedan solo para los arquetipos de la API.
+  "Latino / Mestizo",
+  "Afrodescendiente / Afro-latino",
+  "Caucásico / Mediterráneo",
+  "Asiático / Coreano",
 ] as const;
+/** Etnia/Fenotipo del panel: solo estas 4 opciones. */
+export const ETNIAS_PANEL = ["Latino / Mestizo", "Afrodescendiente / Afro-latino", "Caucásico / Mediterráneo", "Asiático / Coreano"] as const;
 // "{n}" se sustituye por "woman" o "man"
 const ETNIA_EN: Record<(typeof ETNIAS)[number], string> = {
   "Colombiana Bogotá/Andino": "Colombian {n} from Bogotá with Andean features",
@@ -73,6 +80,10 @@ const ETNIA_EN: Record<(typeof ETNIAS)[number], string> = {
   "Asiática del Este": "East Asian {n}",
   Sudasiática: "South Asian {n}",
   "Medio Oriente/Árabe": "Middle Eastern {n} of Arab descent",
+  "Latino / Mestizo": "Latin American Mestizo {n} with Latino features",
+  "Afrodescendiente / Afro-latino": "Afro-Latin {n} of African descent",
+  "Caucásico / Mediterráneo": "Caucasian {n} with Mediterranean features",
+  "Asiático / Coreano": "Korean {n} of East Asian descent",
 };
 
 /* ───────── Banco de arquetipos físicos (aleatoriedad real) ─────────

@@ -79,7 +79,7 @@ import {
   BADGES_REALES,
   BADGE_ALEATORIO,
   EDADES,
-  ETNIAS,
+  ETNIAS_PANEL,
   GAFAS_ALEATORIAS,
   GAFAS_ESTILOS,
   GAFAS_OPCIONES,
@@ -114,7 +114,7 @@ type FormState = {
   edadAnios: string;
   /** Smartphone, PC / Laptop o Tablet: fija la postura de las dos manos */
   dispositivo: string;
-  etnia: (typeof ETNIAS)[number];
+  etnia: (typeof ETNIAS_PANEL)[number];
   gafas: string;
   accesorio: string;
   modoPersonaje: (typeof MODOS_PERSONAJE)[number];
@@ -137,7 +137,7 @@ const INITIAL: FormState = {
   edad: EDADES[0],
   edadAnios: "",
   dispositivo: DISPOSITIVO_NINGUNO,
-  etnia: ETNIAS[0],
+  etnia: ETNIAS_PANEL[0],
   gafas: GAFAS_OPCIONES[0],
   accesorio: ACCESORIO_ALEATORIO,
   modoPersonaje: MODOS_PERSONAJE[1], // «Personalizar»: el arquetipo físico queda oculto
@@ -165,7 +165,7 @@ function azarTotal(profesiones: readonly string[]): FormState_Azar {
   return {
     genero: pick(GENEROS),
     edad: pick(EDADES),
-    etnia: pick(ETNIAS),
+    etnia: pick(ETNIAS_PANEL),
     profesion: pick(profesiones),
     marco: pick(MARCOS).es,
     plano: PLANOS[0].es, // siempre Plano Detalle
@@ -729,7 +729,7 @@ export default function Home() {
                       id="etnia"
                       label="Etnia"
                       value={form.etnia}
-                      options={ETNIAS}
+                      options={ETNIAS_PANEL}
                       onChange={(v) => set("etnia", v as FormState["etnia"])}
                       className="md:col-span-2"
                       {...lockProps("etnia")}

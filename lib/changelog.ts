@@ -9,6 +9,15 @@ export type Cambio = {
 
 export const CHANGELOG: Cambio[] = [
   {
+    version: "4.5.0",
+    fecha: "2026-10-09",
+    titulo: "Etnia/Fenotipo: solo 4 opciones",
+    cambios: [
+      "El campo Etnia del panel tiene exactamente 4 opciones: Latino / Mestizo, Afrodescendiente / Afro-latino, Caucásico / Mediterráneo y Asiático / Coreano. También las usa «Generar al azar» y el lote.",
+      "Las listas anteriores solo se conservan internamente para los arquetipos de la API de TexTube.",
+    ],
+  },
+  {
     version: "4.4.1",
     fecha: "2026-10-09",
     titulo: "Plano fijo: solo Plano Detalle",

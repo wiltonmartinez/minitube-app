@@ -172,6 +172,10 @@ const GRUPO_ETNIA: Record<string, "europea" | "latina" | "latina_oscura" | "afro
   "Asiática del Este": "asiatica",
   Sudasiática: "sudasiatica",
   "Medio Oriente/Árabe": "arabe",
+  "Latino / Mestizo": "latina",
+  "Afrodescendiente / Afro-latino": "afro",
+  "Caucásico / Mediterráneo": "europea",
+  "Asiático / Coreano": "asiatica",
 };
 const EDAD_MIN: Record<string, number> = {
   "Joven 18-25": 18,
