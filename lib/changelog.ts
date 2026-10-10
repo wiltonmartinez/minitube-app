@@ -9,6 +9,12 @@ export type Cambio = {
 
 export const CHANGELOG: Cambio[] = [
   {
+    version: "4.5.1",
+    fecha: "2026-10-09",
+    titulo: "Sin campo de edad exacta",
+    cambios: ["Se quitó «Edad exacta en años» del panel: la edad se elige solo con el rango."],
+  },
+  {
     version: "4.5.0",
     fecha: "2026-10-09",
     titulo: "Etnia/Fenotipo: solo 4 opciones",

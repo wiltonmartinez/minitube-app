@@ -69,12 +69,8 @@ import {
   ACCESORIOS_MANO,
   DISPOSITIVOS,
   DISPOSITIVO_NINGUNO,
-  EDAD_ANIOS_MAX,
-  EDAD_ANIOS_MIN,
-  edadExacta,
   esPerfilTecnico,
   posturaDispositivo,
-  rangoDeEdad,
   BADGES,
   BADGES_REALES,
   BADGE_ALEATORIO,
@@ -110,8 +106,6 @@ type FormState = {
   // Bloque 2
   genero: (typeof GENEROS)[number];
   edad: (typeof EDADES)[number];
-  /** Edad exacta en años (opcional): manda sobre el rango de edad */
-  edadAnios: string;
   /** Smartphone, PC / Laptop o Tablet: fija la postura de las dos manos */
   dispositivo: string;
   etnia: (typeof ETNIAS_PANEL)[number];
@@ -135,7 +129,6 @@ const INITIAL: FormState = {
   plotter: false,
   genero: GENEROS[0],
   edad: EDADES[0],
-  edadAnios: "",
   dispositivo: DISPOSITIVO_NINGUNO,
   etnia: ETNIAS_PANEL[0],
   gafas: GAFAS_OPCIONES[0],
@@ -376,8 +369,7 @@ export default function Home() {
   const arq = ARQUETIPOS[arquetipoEf];
   // Single source of truth: con arquetipo, estos campos se DERIVAN de él; es imposible enviar contradicciones
   const generoEf = arq ? arq.genero : form.genero;
-  const aniosExactos = arq ? undefined : edadExacta(form.edadAnios);
-  const edadEf = arq ? arq.edad : aniosExactos ? rangoDeEdad(aniosExactos) : form.edad;
+  const edadEf = arq ? arq.edad : form.edad;
   const etniaEf = arq ? arq.etnia : form.etnia;
   const nivel = nivelPlano(form.plano);
   // Personalización concreta (modo «Personalizar»): lo elegido a mano se respeta, lo aleatorio es armónico
@@ -413,14 +405,13 @@ export default function Home() {
         gafas: gafasEf,
         badge: badgeEf,
         accesorio: accesorioEf,
-        edadAnios: aniosExactos,
         dispositivo: form.dispositivo === DISPOSITIVO_NINGUNO ? undefined : form.dispositivo,
         personaje: persEf,
         listas,
         arquetipo: arquetipoEf,
         plotter: alta || undefined,
     };
-  }, [form, catalogo, paletaEf, gafasEf, badgeEf, accesorioEf, persEf, listas, arquetipoEf, generoEf, edadEf, etniaEf, alta, aniosExactos]);
+  }, [form, catalogo, paletaEf, gafasEf, badgeEf, accesorioEf, persEf, listas, arquetipoEf, generoEf, edadEf, etniaEf, alta]);
 
   // Prompt para copiar a Gemini (formato de siempre)
   const live = useMemo<GeneratedPrompt | null>(
@@ -508,8 +499,6 @@ export default function Home() {
         if (f.arquetipo !== ARQUETIPO_ALEATORIO && !ARQUETIPOS_ALTA.includes(f.arquetipo)) f.arquetipo = ARQUETIPO_ALEATORIO;
       }
       if (!alta) f.modoPersonaje = "Personalizar";
-      const aniosLote = alta ? undefined : edadExacta(form.edadAnios);
-      if (aniosLote) f.edad = rangoDeEdad(aniosLote);
       const conArquetipo = f.modoPersonaje === "Arquetipo listo";
       const arquetipo = conArquetipo ? resolverArquetipo(f.arquetipo, uArq, poolArq) : ARQUETIPO_NINGUNO; // distinto del anterior
       uArq = sorteoArquetipoDistinto(uArq, poolArq.length);
@@ -530,7 +519,6 @@ export default function Home() {
             personaje: resolverPersonaje(listas, f.pers, { genero: f.genero, edad: f.edad, etnia: f.etnia }, f.modoRostro),
             arquetipo,
             plotter: alta || undefined,
-            edadAnios: conArquetipo ? undefined : aniosLote,
             dispositivo: form.dispositivo === DISPOSITIVO_NINGUNO ? undefined : form.dispositivo,
           },
           { baseUrl: baseUrl() },
@@ -702,29 +690,8 @@ export default function Home() {
                       value={form.edad}
                       options={EDADES}
                       onChange={(v) => set("edad", v as FormState["edad"])}
-                      disabled={!!aniosExactos}
                       {...lockProps("edad")}
                     />
-                    <div className="space-y-2 md:col-span-2">
-                      <Label htmlFor="edadAnios">Edad exacta en años (opcional)</Label>
-                      <Input
-                        id="edadAnios"
-                        type="number"
-                        inputMode="numeric"
-                        min={EDAD_ANIOS_MIN}
-                        max={EDAD_ANIOS_MAX}
-                        placeholder="Ej: 42"
-                        value={form.edadAnios}
-                        onChange={(e) => set("edadAnios", e.target.value)}
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        {form.edadAnios.trim() && !aniosExactos
-                          ? `Escribe un número entero entre ${EDAD_ANIOS_MIN} y ${EDAD_ANIOS_MAX}.`
-                          : aniosExactos
-                            ? `El prompt dirá «aged ${aniosExactos}» y el rango de edad queda desactivado: una edad exacta da rostros reales, no modelos de stock.`
-                            : "Vacío = se usa el rango de edad de arriba."}
-                      </p>
-                    </div>
                     <SelectField
                       id="etnia"
                       label="Etnia"
@@ -981,7 +948,6 @@ export default function Home() {
               profesion={form.profesion}
               fondo={perfil?.fondo}
               genero={arq ? undefined : generoEf}
-              edadAnios={aniosExactos}
               dispositivo={dispositivoActivo ? form.dispositivo : undefined}
             />
           </CardContent>
