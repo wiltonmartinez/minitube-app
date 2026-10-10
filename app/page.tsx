@@ -168,7 +168,7 @@ function azarTotal(profesiones: readonly string[]): FormState_Azar {
     etnia: pick(ETNIAS),
     profesion: pick(profesiones),
     marco: pick(MARCOS).es,
-    plano: pick(PLANOS).es,
+    plano: PLANOS[0].es, // siempre Plano Detalle
     idioma: pick(IDIOMAS),
     modoPersonaje: pick(MODOS_PERSONAJE),
     modoRostro: pick(MODOS_ROSTRO),
@@ -871,18 +871,8 @@ export default function Home() {
               <Block
                 step={3}
                 title="Cámara"
-                description="Plano de cámara. La imagen se crea solo con el fondo: sin texto, sin badges 3D y sin marco."
+                description="Plano fijo: Plano Detalle (Extreme Close-Up). La imagen se crea solo con el fondo: sin texto, sin badges 3D y sin marco."
               >
-                <SelectField
-                  id="plano"
-                  label="Plano"
-                  value={form.plano}
-                  options={PLANOS.map((p) => p.es)}
-                  onChange={(v) => set("plano", v)}
-                  disabled={alta}
-                  className="md:col-span-2"
-                  {...lockProps("plano")}
-                />
                 <div className="flex items-start gap-3 rounded-md border p-3 md:col-span-2">
                   <Switch id="plotter" checked={form.plotter} onCheckedChange={(v) => set("plotter", v)} />
                   <div className="space-y-1">
