@@ -98,3 +98,24 @@ describe("Enfoque 3 en el guion y en el panel", () => {
     expect(g.visual.personaje).toMatch(/angustia/);
   });
 });
+
+describe("Coherencia de emoción, mirada y manos en los 3 enfoques", () => {
+  const casos: [1 | 2 | 3, string][] = [[1, "Sublimación"], [2, "Recepcionista"], [3, "Técnico de Impresoras"]];
+  for (const [e, prof] of casos) {
+    it(`enfoque ${e}: el texto del panel y el prompt dicen lo mismo`, () => {
+      const info = ENFOQUES[e];
+      const p = buildPrompt(base({ profesion: prof, enfoque: e, dispositivo: info.dispositivo }));
+      if (e === 3) {
+        expect(info.emocion).toMatch(/Confianza/);
+        expect(info.mirada).toMatch(/al frente/);
+        expect(p).toContain("MIRADA AL FRENTE");
+        expect(p).toContain("confidence and triumph");
+      } else {
+        expect(info.mirada).toMatch(/izquierda/);
+        expect(p).toContain("MIRADA FIJA Y ALTA HACIA LA IZQUIERDA");
+        expect(p).toContain(e === 1 ? "extreme frustration and shock" : "panic and desperation");
+      }
+      expect(info.manos.length).toBeGreaterThan(30);
+    });
+  }
+});

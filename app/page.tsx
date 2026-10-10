@@ -43,7 +43,9 @@ import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -237,11 +239,14 @@ function SelectField({
   locked,
   onToggleLock,
   disabled,
+  groups,
 }: {
   id: string;
   label: string;
   value: string;
   options: readonly string[];
+  /** Si existe, las opciones se muestran agrupadas bajo un título */
+  groups?: { label: string; options: readonly string[] }[];
   onChange: (v: string) => void;
   className?: string;
   locked?: boolean;
@@ -259,11 +264,22 @@ function SelectField({
           <SelectValue placeholder="Selecciona..." />
         </SelectTrigger>
         <SelectContent>
-          {options.map((o) => (
-            <SelectItem key={o} value={o}>
-              {o}
-            </SelectItem>
-          ))}
+          {groups
+            ? groups.map((g) => (
+                <SelectGroup key={g.label}>
+                  <SelectLabel>{g.label}</SelectLabel>
+                  {g.options.map((o) => (
+                    <SelectItem key={o} value={o}>
+                      {o}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              ))
+            : options.map((o) => (
+                <SelectItem key={o} value={o}>
+                  {o}
+                </SelectItem>
+              ))}
         </SelectContent>
       </Select>
     </div>
@@ -381,6 +397,17 @@ export default function Home() {
   const etniaEf = arq ? arq.etnia : form.etnia;
   const enfoqueActivo = !alta && form.usarEnfoque ? enfoqueDe(form.profesion) : undefined;
   const infoEnfoque = enfoqueActivo ? ENFOQUES[enfoqueActivo] : undefined;
+  // Profesiones agrupadas por enfoque (solo con el interruptor del enfoque activo)
+  const gruposProfesion = useMemo(() => {
+    if (alta || !form.usarEnfoque) return undefined;
+    const g: { label: string; options: string[] }[] = ([1, 2, 3] as const).map((e) => ({
+      label: `Enfoque ${e} · ${ENFOQUES[e].nombre} (${ENFOQUES[e].impacto.toLowerCase()})`,
+      options: profesionesEf.filter((p) => enfoqueDe(p) === e),
+    }));
+    const otras = profesionesEf.filter((p) => !enfoqueDe(p));
+    if (otras.length) g.push({ label: "Otras profesiones", options: otras });
+    return g.filter((x) => x.options.length);
+  }, [alta, form.usarEnfoque, profesionesEf]);
   const nivel = nivelPlano(form.plano);
   // Personalización concreta (modo «Personalizar»): lo elegido a mano se respeta, lo aleatorio es armónico
   const persEf = useMemo(
@@ -868,13 +895,14 @@ export default function Home() {
                   label="Profesión"
                   value={form.profesion}
                   options={profesionesEf}
+                  groups={gruposProfesion}
                   onChange={(v) => set("profesion", v as Profesion)}
                   className="md:col-span-2"
                   {...lockProps("profesion")}
                 />
                 <ReadOnlyField id="vestimenta" label="Vestimenta" value={vestimenta} {...lockProps("profesion")} />
                 <ReadOnlyField id="emocion" label="Emociones" value={infoEnfoque ? infoEnfoque.emocion : perfil.emocion} {...lockProps("profesion")} />
-                <ReadOnlyField id="mirada" label="Mirada" value={MIRADA_ES} />
+                <ReadOnlyField id="mirada" label="Mirada" value={infoEnfoque ? infoEnfoque.mirada : MIRADA_ES} />
                 <ReadOnlyField id="manos" label="Manos (según accesorio)" value={manosMostradas} />
                 <div className="md:col-span-2">
                   <ReadOnlyField id="fondo" label="Fondo estructural" value={perfil.fondo} {...lockProps("profesion")} />

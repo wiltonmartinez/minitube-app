@@ -9,6 +9,15 @@ export type Cambio = {
 
 export const CHANGELOG: Cambio[] = [
   {
+    version: "4.7.2",
+    fecha: "2026-10-09",
+    titulo: "Profesiones agrupadas por enfoque y mirada coherente",
+    cambios: [
+      "El menú de profesión se agrupa por enfoque: Enfoque 1 (El Negocio Detenido), Enfoque 2 (El Pánico Profesional) y Enfoque 3 (La Solución del Experto).",
+      "El campo «Mirada» del panel muestra la mirada del enfoque (al frente y segura en el enfoque 3; hacia el espacio del error a la izquierda en los enfoques 1 y 2), igual que el prompt.",
+    ],
+  },
+  {
     version: "4.7.1",
     fecha: "2026-10-09",
     titulo: "Técnicos e ingenieros: autoridad y seguridad",
