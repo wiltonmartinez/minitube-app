@@ -9,6 +9,12 @@ export type Cambio = {
 
 export const CHANGELOG: Cambio[] = [
   {
+    version: "4.4.1",
+    fecha: "2026-10-09",
+    titulo: "Plano fijo: solo Plano Detalle",
+    cambios: ["Se quitó el selector «Plano»: la cámara siempre es Plano Detalle (Extreme Close-Up), también en «Generar al azar» y en el lote."],
+  },
+  {
     version: "4.4.0",
     fecha: "2026-10-09",
     titulo: "Perfil demográfico: género, edad exacta y dispositivo (sin arquetipos)",
