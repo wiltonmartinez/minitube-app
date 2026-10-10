@@ -1231,8 +1231,6 @@ export const EMOCIONES_AB: Record<
 /* ───────── Mirada: regla global (todas las profesiones) ───────── */
 export const MIRADA_ES =
   "Ojos desorbitados y fijos hacia el vacío inferior izquierdo, un poco por encima de la esquina; nunca abajo, en la mano ni en la cámara";
-const MIRADA_REGLA =
-  "MIRADA FIJA Y ALTA HACIA LA IZQUIERDA (DIRECCIÓN ELEVADA HACIA EL ESPACIO DE ERROR): Los ojos del personaje deben estar abiertos, desorbitados por el pánico, y orientados obligatoriamente hacia el sector medio-izquierdo de la imagen, un poco por encima de la esquina inferior izquierda, en el borde alto del espacio vacío reservado para el error, con la cabeza girada hacia ese sector. Los ojos tienen prohibido mirar el accesorio (celular, cable, portátil o tablet), la impresora, el teclado, la mano, hacia abajo o a la cámara; la línea visual debe conectar el rostro estresado con el espacio vacío del error.";
 
 /* ───────── Cerebro de Postura (máquina de estados, anatomía exacta de 2 manos) ─────────
    Lógica MUTUAMENTE EXCLUYENTE: el accesorio fija la postura de AMBAS manos; nunca se combinan dos acciones.
@@ -1584,34 +1582,24 @@ const ENFOQUE_AFECTO: Record<1 | 2, string> = { 1: "por la frustración extrema 
 const REGLA_EXPRESION_EXPERTO =
   "REGLA ESTRICTA DE EXPRESIÓN: Está absolutamente prohibido generar expresiones de tristeza, llanto, pucheros, lástima, pánico o resignación pasiva. Prohibido posturas relajadas como manos en la cintura o brazos cruzados. El personaje debe mostrar confianza absoluta, triunfo y alivio, con una sonrisa segura y una postura atenta e inclinada hacia adelante.";
 
-/* Cuatro direcciones de mirada. El personaje está en el lado DERECHO de la imagen:
-   1) al frente, en línea recta de derecha a izquierda, a la altura de los ojos;
-   2) hacia abajo en diagonal a la izquierda (hacia el espacio del error; es la regla de siempre);
-   3) recto hacia abajo, hacia su dispositivo;
-   4) hacia la pantalla, a su derecha y un poco hacia abajo. */
-export const MIRADA_OPCIONES = [
-  "1. Al frente, de derecha a izquierda",
-  "2. Diagonal hacia abajo a la izquierda",
-  "3. Recto hacia abajo, a su dispositivo",
-  "4. A la pantalla, a su derecha",
-] as const;
-/** Por defecto: la diagonal hacia abajo a la izquierda (la regla de siempre). El enfoque 3 estrena «al frente». */
+/* Tres puntos de mirada. El personaje está en el lado DERECHO de la imagen y NUNCA mira hacia arriba:
+   Punto #1: al frente, en línea recta de derecha a izquierda, a la altura de los ojos;
+   Punto #2: en diagonal hacia abajo a la izquierda (hacia la mesa y el espacio del error);
+   Punto #3: recto hacia abajo, hacia la pantalla o el dispositivo. */
+export const MIRADA_OPCIONES = ["Punto #1", "Punto #2", "Punto #3"] as const;
+/** Por defecto: el Punto #2. El enfoque 3 estrena el Punto #1. */
 export const MIRADA_DEFECTO = MIRADA_OPCIONES[1];
 export const MIRADA_DEFECTO_EXPERTO = MIRADA_OPCIONES[0];
-/** Frase corta de cada dirección para el campo «Mirada» del panel. */
+/** Frase corta de cada punto para el campo «Mirada» del panel. */
 export const MIRADA_TEXTO = [
   "fijos al frente en línea recta, de derecha a izquierda, a la altura de los ojos",
-  "fijos hacia abajo en diagonal a la izquierda, hacia el espacio del error",
-  "fijos recto hacia abajo, hacia su dispositivo",
-  "fijos en la pantalla, a su derecha y un poco hacia abajo",
+  "fijos en diagonal hacia abajo a la izquierda, hacia la mesa y el espacio del error",
+  "fijos recto hacia abajo, hacia la pantalla o el dispositivo",
 ] as const;
-const MIRADA_COLA =
-  "Los ojos tienen prohibido mirar a la cámara; la expresión y la dirección de la mirada deben ser inequívocas.";
 const MIRADA_REGLAS: string[] = [
-  "MIRADA FIJA AL FRENTE HACIA LA IZQUIERDA (DE DERECHA A IZQUIERDA): El personaje está en el lado derecho de la imagen. Los ojos del personaje deben estar abiertos, desorbitados por el pánico, y orientados obligatoriamente en línea recta y a la altura de sus propios ojos hacia el lado izquierdo de la imagen, cruzando la toma de derecha a izquierda, con la cabeza girada hacia ese lado, sin mirar hacia arriba ni hacia abajo. Los ojos tienen prohibido mirar a la cámara, el accesorio (celular, cable, portátil o tablet), la impresora, el teclado o la mano; la línea visual debe cruzar el fondo hacia la izquierda.",
-  MIRADA_REGLA,
-  `MIRADA FIJA RECTO HACIA ABAJO (HACIA SU DISPOSITIVO): El personaje está en el lado derecho de la imagen. Los ojos del personaje deben estar abiertos, desorbitados por el pánico, y orientados obligatoriamente recto hacia abajo, hacia la pantalla o el dispositivo que tiene delante, con la cabeza ligeramente inclinada hacia abajo. ${MIRADA_COLA} No miran hacia la izquierda ni hacia arriba.`,
-  `MIRADA FIJA A LA PANTALLA A SU DERECHA: El personaje está en el lado derecho de la imagen. Los ojos del personaje deben estar abiertos, desorbitados por el pánico, y orientados obligatoriamente hacia la pantalla del monitor que queda a su derecha y un poco más abajo, con la cabeza girada ligeramente hacia ese lado. ${MIRADA_COLA} No miran hacia la izquierda ni hacia arriba.`,
+  "MIRADA FIJA AL FRENTE HACIA LA IZQUIERDA (PUNTO #1, DE DERECHA A IZQUIERDA): El personaje está en el lado derecho de la imagen. Los ojos del personaje deben estar abiertos, desorbitados por el pánico, y orientados obligatoriamente en línea recta y a la altura de sus propios ojos hacia el lado izquierdo de la imagen, cruzando la toma de derecha a izquierda, con la cabeza girada hacia ese lado. Los ojos tienen prohibido mirar hacia arriba, hacia abajo, a la cámara, el accesorio (celular, cable, portátil o tablet), la impresora, el teclado o la mano; la línea visual debe cruzar el fondo hacia la izquierda.",
+  "MIRADA FIJA EN DIAGONAL HACIA ABAJO A LA IZQUIERDA (PUNTO #2): El personaje está en el lado derecho de la imagen. Los ojos del personaje deben estar abiertos, desorbitados por el pánico, y orientados obligatoriamente en diagonal descendente hacia el sector inferior izquierdo de la imagen, hacia la superficie de la mesa y el espacio vacío reservado para el error, con la cabeza girada e inclinada ligeramente hacia ese lado. Los ojos tienen prohibido mirar hacia arriba, a la cámara, el accesorio (celular, cable, portátil o tablet), la impresora, el teclado o la mano; la línea visual debe conectar el rostro con el espacio vacío del error.",
+  "MIRADA FIJA RECTO HACIA ABAJO (PUNTO #3): El personaje está en el lado derecho de la imagen. Los ojos del personaje deben estar abiertos, desorbitados por el pánico, y orientados obligatoriamente recto hacia abajo, hacia la pantalla o el dispositivo que tiene delante, con la cabeza ligeramente inclinada hacia abajo. Los ojos tienen prohibido mirar hacia arriba, hacia la izquierda o a la cámara.",
 ];
 
 /** Regla de mirada con el afecto de la emoción (pánico por defecto: el texto no cambia). */

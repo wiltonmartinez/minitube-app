@@ -96,7 +96,7 @@ describe("Accesorios · portátil y tablet", () => {
       expect(api).toContain("lower-left corner of the frame is completely empty");
       expect(api).toContain("lower-right corner free of important elements");
       const g = buildPrompt(base({ accesorio: a }));
-      expect(g).toContain("prohibido mirar el accesorio (celular, cable, portátil o tablet)");
+      expect(g).toContain("prohibido mirar hacia arriba, a la cámara, el accesorio (celular, cable, portátil o tablet), la impresora, el teclado o la mano");
     }
     for (const a of ["Portátil", "Tablet"]) {
       expect(cerebroPostura(a).reglasEn.join(" ")).toContain("away from the lower corners");
@@ -160,7 +160,7 @@ describe("Accesorios · portátil y tablet", () => {
   it("la mirada nunca va a la impresora ni a las manos", () => {
     const api = buildApiPrompt(base({ accesorio: "Manos en la impresora" }), { texto3d: false });
     expect(api).toContain("the tablet, the printer or the keyboard, and never look downward");
-    expect(buildPrompt(base({ accesorio: "Manos en la impresora" }))).toContain("la impresora, el teclado, la mano, hacia abajo o a la cámara");
+    expect(buildPrompt(base({ accesorio: "Manos en la impresora" }))).toContain("la impresora, el teclado o la mano");
   });
 
   it("escribiendo en una laptop: las dos manos teclean en UNA laptop y la mirada no va al teclado", () => {

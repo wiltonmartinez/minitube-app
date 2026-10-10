@@ -9,6 +9,15 @@ export type Cambio = {
 
 export const CHANGELOG: Cambio[] = [
   {
+    version: "4.10.0",
+    fecha: "2026-10-09",
+    titulo: "Mirada: Punto #1, Punto #2 y Punto #3 (nunca hacia arriba)",
+    cambios: [
+      "El selector «Dirección de la mirada» tiene exactamente 3 puntos, con el personaje siempre a la derecha: Punto #1 (al frente, en línea recta de derecha a izquierda), Punto #2 (diagonal hacia abajo a la izquierda, por defecto) y Punto #3 (recto hacia abajo, a la pantalla o dispositivo). El enfoque 3 estrena el Punto #1.",
+      "Se eliminó la mirada hacia arriba a la izquierda (marcada como prohibida): todas las reglas de mirada prohíben mirar hacia arriba. El Punto #2 reemplaza a la regla anterior, que apuntaba un poco por encima de la esquina.",
+    ],
+  },
+  {
     version: "4.9.0",
     fecha: "2026-10-09",
     titulo: "Cuatro direcciones de mirada",

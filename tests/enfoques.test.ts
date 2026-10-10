@@ -43,7 +43,7 @@ describe("Los 3 enfoques estratégicos", () => {
     expect(p).toContain("extreme frustration and shock");
     expect(p).toContain("smartphone firmly");
     expect(p).toMatch(/pulls at the hair/);
-    expect(p).toContain("MIRADA FIJA Y ALTA HACIA LA IZQUIERDA");
+    expect(p).toContain("MIRADA FIJA EN DIAGONAL HACIA ABAJO A LA IZQUIERDA");
   });
 
   it("enfoque 2: laptop, pánico, mano en la boca y cuerpo encorvado", () => {
@@ -51,7 +51,7 @@ describe("Los 3 enfoques estratégicos", () => {
     expect(p).toContain("panic and desperation");
     expect(p).toMatch(/covers the mouth in panic or rubs the eyes/);
     expect(p).toContain("hunched");
-    expect(p).toContain("MIRADA FIJA Y ALTA HACIA LA IZQUIERDA");
+    expect(p).toContain("MIRADA FIJA EN DIAGONAL HACIA ABAJO A LA IZQUIERDA");
   });
 
   it("enfoque 3: PC de escritorio, triunfo, pulgar arriba y mirada al frente", () => {
@@ -118,11 +118,12 @@ describe("Coherencia de emoción, mirada y manos en los 3 enfoques", () => {
 
 describe("Dirección de la mirada (el personaje está a la derecha)", () => {
   const dir = async () => await import("@/lib/prompt-config");
-  const MARCAS_REGLA = ["MIRADA FIJA AL FRENTE HACIA LA IZQUIERDA", "MIRADA FIJA Y ALTA HACIA LA IZQUIERDA", "MIRADA FIJA RECTO HACIA ABAJO", "MIRADA FIJA A LA PANTALLA A SU DERECHA"];
-  it("cuatro opciones y cada una produce su propia regla", async () => {
+  const MARCAS_REGLA = ["MIRADA FIJA AL FRENTE HACIA LA IZQUIERDA", "MIRADA FIJA EN DIAGONAL HACIA ABAJO A LA IZQUIERDA", "MIRADA FIJA RECTO HACIA ABAJO"];
+  it("tres puntos y cada uno produce su propia regla", async () => {
     const { MIRADA_OPCIONES, MIRADA_DEFECTO, MIRADA_TEXTO } = await dir();
-    expect(MIRADA_OPCIONES).toHaveLength(4);
-    expect(MIRADA_TEXTO).toHaveLength(4);
+    expect(MIRADA_OPCIONES).toHaveLength(3);
+    expect(MIRADA_TEXTO).toHaveLength(3);
+    expect(MIRADA_OPCIONES).toEqual(["Punto #1", "Punto #2", "Punto #3"]);
     expect(MIRADA_DEFECTO).toBe(MIRADA_OPCIONES[1]);
     const mk = (mirada?: string) => buildPrompt(base({ profesion: "Sublimación", enfoque: 1, dispositivo: "Smartphone", mirada }));
     expect(mk()).toBe(mk(MIRADA_OPCIONES[1]));
@@ -133,7 +134,7 @@ describe("Dirección de la mirada (el personaje está a la derecha)", () => {
       expect(p).toContain("por la frustración extrema y el shock");
     });
   });
-  it("el enfoque 3 admite las cuatro con mirada segura y por defecto va al frente", async () => {
+  it("el enfoque 3 admite los tres con mirada segura y por defecto va al frente", async () => {
     const { MIRADA_OPCIONES, MIRADA_DEFECTO_EXPERTO } = await dir();
     expect(MIRADA_DEFECTO_EXPERTO).toBe(MIRADA_OPCIONES[0]);
     expect(buildPrompt(base({ profesion: "Técnico de computadores", enfoque: 3, dispositivo: "PC / Laptop" }))).toContain(MARCAS_REGLA[0]);

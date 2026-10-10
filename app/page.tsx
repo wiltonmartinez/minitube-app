@@ -919,7 +919,7 @@ export default function Home() {
                 <ReadOnlyField id="mirada" label="Mirada" value={textoMirada} />
                 <SelectField
                   id="direccionMirada"
-                  label="Dirección de la mirada (el personaje está a la derecha)"
+                  label="Dirección de la mirada"
                   value={miradaEf}
                   options={MIRADA_OPCIONES}
                   onChange={(v) => set(enfoqueActivo === 3 ? "miradaExperto" : "mirada", v)}
