@@ -9,6 +9,12 @@ export type Cambio = {
 
 export const CHANGELOG: Cambio[] = [
   {
+    version: "4.12.1",
+    fecha: "2026-10-10",
+    titulo: "Se quitan Postura de las manos y Accesorio en la mano",
+    cambios: ["Se eliminaron los selectores «Postura de las manos» y «Accesorio en la mano», que repetían al Dispositivo y quedaban desactivados. Con Dispositivo «Ninguno», la postura de las manos se sortea sola según la profesión."],
+  },
+  {
     version: "4.12.0",
     fecha: "2026-10-10",
     titulo: "Dispositivo editable: Smartphone, Tablet, PC, Laptop o Ninguno",

@@ -53,7 +53,6 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  ACCESORIOS,
   ACCESORIO_ALEATORIO,
   ARQUETIPO_NINGUNO,
   ARQUETIPO_ALEATORIO,
@@ -62,16 +61,6 @@ import {
   resolverArquetipo,
   sorteoArquetipoDistinto,
   cerebroPostura,
-  posturaDe,
-  POSTURA_ACCESORIO,
-  POSTURA_IMPRESORA,
-  POSTURA_ESCRIBIENDO,
-  accesorioDePostura,
-  POSTURA_ALEATORIA,
-  POSTURA_CABEZA,
-  POSTURA_OPCIONES,
-  ACCESORIO_NINGUNO,
-  ACCESORIOS_MANO,
   DISPOSITIVOS,
   DISPOSITIVO_NINGUNO,
   esPerfilTecnico,
@@ -854,38 +843,7 @@ export default function Home() {
                 />
                 <p className="-mt-2 text-xs text-muted-foreground md:col-span-2">
                   {dispositivoActivo && `${form.dispositivo}: ${manosMostradas}.${enfoqueActivo && !form.dispositivoManual ? " (Lo fija el enfoque de la profesión; puedes cambiarlo.)" : ""}`}
-                  {!dispositivoActivo && "Ninguno: la postura de las manos se elige abajo. Con un dispositivo, la postura y el accesorio de abajo se desactivan."}
-                </p>
-                <SelectField
-                  id="postura"
-                  label="Postura de las manos"
-                  value={posturaDe(form.accesorio)}
-                  options={POSTURA_OPCIONES}
-                  onChange={(v) => set("accesorio", accesorioDePostura(v, form.accesorio))}
-                  disabled={dispositivoActivo}
-                  className="md:col-span-2"
-                  {...lockProps("accesorio")}
-                />
-                <SelectField
-                  id="accesorio"
-                  label="Accesorio en la mano"
-                  value={posturaDe(form.accesorio) === POSTURA_ACCESORIO ? form.accesorio : ACCESORIOS_MANO.includes(accesorioEf) ? accesorioEf : ACCESORIO_NINGUNO}
-                  options={[ACCESORIO_NINGUNO, ...ACCESORIOS_MANO]}
-                  onChange={(v) => v !== ACCESORIO_NINGUNO && set("accesorio", v)}
-                  disabled={dispositivoActivo || posturaDe(form.accesorio) !== POSTURA_ACCESORIO}
-                  className="md:col-span-2"
-                />
-                <p className="-mt-2 text-xs text-muted-foreground md:col-span-2">
-                  {posturaDe(form.accesorio) === POSTURA_CABEZA &&
-                    "Manos a la cabeza: las dos manos van a los lados de la cabeza; el accesorio queda forzado a «Ninguno» y bloqueado."}
-                  {posturaDe(form.accesorio) === POSTURA_IMPRESORA &&
-                    "Las dos manos tocan la misma impresora del modelo seleccionado (sobre la mesa, lejos de las esquinas inferiores); el accesorio queda forzado a «Ninguno» y bloqueado."}
-                  {posturaDe(form.accesorio) === POSTURA_ESCRIBIENDO &&
-                    "Las dos manos escriben en una laptop abierta sobre la mesa (lejos de las esquinas inferiores); el personaje mira al vacío, no al teclado. El accesorio queda forzado a «Ninguno» y bloqueado."}
-                  {posturaDe(form.accesorio) === POSTURA_ALEATORIA &&
-                    `Sorteado ahora (${form.profesion}): ${ACCESORIOS[accesorioEf].corto}. La postura de ambas manos se decide automáticamente.`}
-                  {posturaDe(form.accesorio) === POSTURA_ACCESORIO &&
-                    "Una mano sostiene el accesorio y la otra descansa o gesticula; tocarse la cabeza o la cara está prohibido."}
+                  {!dispositivoActivo && "Ninguno: la postura de las manos se sortea sola según la profesión."}
                 </p>
               </Block>
 
