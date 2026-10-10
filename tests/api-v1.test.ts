@@ -328,6 +328,6 @@ describe("El generador crea SOLO el fondo (sin texto, sin badges, sin marco)", (
   it("el prompt de Gemini conserva las reglas de la persona y la escena", async () => {
     const { planificar } = await import("@/lib/motor");
     const p = planificar({ marca: "Canon", modelo: "G6010", error: "5B00", enfoque: "error", generarImagen: false, semilla: 5 }, "normal");
-    for (const t of ["REGLA DE BRANDING", "ANATOMÍA HUMANA IMPECABLE", "ÁREA DE MONTAJE LIBRE", "far to the right"]) expect(p.promptGemini).toContain(t);
+    for (const t of ["REGLA DE BRANDING", "ANATOMÍA HUMANA IMPECABLE", "ÁREA DE MONTAJE LIBRE", "far right edge"]) expect(p.promptGemini).toContain(t);
   });
 });
