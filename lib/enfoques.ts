@@ -1,16 +1,17 @@
-// Los 3 enfoques estratégicos: la profesión decide la etnia permitida, la edad ideal, el dispositivo, la emoción, la mirada y las manos.
+// Los 4 enfoques estratégicos: el enfoque decide la etnia permitida, la edad ideal, el dispositivo, la emoción, la mirada y las manos.
 // No se mezclan variables entre enfoques. Solo afecta al panel manual (la API de TexTube no lo usa).
+//   1 Negocio Detenido · 2 Pánico Profesional · 3 Solución del Experto · 4 Cliente Salvado (éxito y alivio)
 
 import { GRUPOS_EDAD } from "@/lib/edades";
 
-export type Enfoque = 1 | 2 | 3;
+export type Enfoque = 1 | 2 | 3 | 4;
 
 export type InfoEnfoque = {
   nombre: string;
   impacto: string;
   dolor: string;
   etnias: readonly string[];
-  /** Dispositivo fijo del enfoque (uno de DISPOSITIVOS) */
+  /** Dispositivo por defecto del enfoque (uno de DISPOSITIVOS) */
   dispositivo: string;
   emocion: string;
   mirada: string;
@@ -53,8 +54,19 @@ export const ENFOQUES: Record<Enfoque, InfoEnfoque> = {
     mirada: "Ojos brillantes, seguros y serenos",
     manos: "Cuerpo inclinado hacia adelante; derecha en el ratón; izquierda con el pulgar arriba o señalando su propio monitor",
   },
+  4: {
+    nombre: "El Cliente Salvado",
+    impacto: "Éxito y alivio",
+    dolor: "El software funcionó y el cliente ve que su máquina vuelve a imprimir.",
+    etnias: [E_LATINO, E_AFRO, E_CAUCASICO],
+    dispositivo: "Smartphone",
+    emocion: "Alivio profundo, euforia o triunfo (a elegir)",
+    mirada: "Ojos brillantes de alegría al ver salir el papel",
+    manos: "Smartphone: derecha con el teléfono; izquierda en el pecho (alivio) o puño en alto (euforia, triunfo). PC o Laptop: derecha en el ratón; izquierda con el pulgar arriba o el brazo en alto celebrando",
+  },
 };
 
+/** Enfoque principal de cada profesión (el que se usa en «Automático»). */
 const PROFESIONES_ENFOQUE: Record<string, Enfoque> = {
   "Sublimación": 1,
   "Fotocopias": 1,
@@ -74,22 +86,41 @@ const PROFESIONES_ENFOQUE: Record<string, Enfoque> = {
   "Ingeniero de sistemas": 3,
 };
 
-/** Enfoque de la profesión (o undefined si la profesión es nueva y no está asignada). */
+/** Profesiones del Enfoque 4 (cliente salvado): operarios y clientes; comparte las del enfoque 1 y algunas del 2. */
+const PROFESIONES_EXITO = ["Sublimación", "Fotocopias", "Fotografía", "Diseñador(a) Gráfico", "Asistente Corporativa", "Administrador de Empresa"];
+
+/** Enfoque principal de la profesión (o undefined si la profesión es nueva y no está asignada). */
 export const enfoqueDe = (profesion: string): Enfoque | undefined => PROFESIONES_ENFOQUE[profesion];
 
-/** Grupos de edad del panel que encajan con el enfoque: operarios y clientes (18 a 35) en los enfoques 1 y 2; autoridad (36 a 55) en el 3. */
-export function edadesDelEnfoque(profesion: string): readonly string[] | undefined {
-  const e = enfoqueDe(profesion);
+/** ¿Encaja esta profesión con el enfoque? El 4 comparte profesiones con el 1 y el 2. */
+export const profesionEnEnfoque = (profesion: string, e: Enfoque): boolean =>
+  e === 4 ? PROFESIONES_EXITO.includes(profesion) : PROFESIONES_ENFOQUE[profesion] === e;
+
+/* ───────── Selector «Enfoque» del panel ───────── */
+export const ENFOQUE_AUTO = "Automático (según la profesión)";
+export const ENFOQUE_LIBRE = "Sin enfoque (todo libre)";
+export const etiquetaEnfoque = (e: Enfoque) => `Enfoque ${e} · ${ENFOQUES[e].nombre}`;
+export const OPCIONES_ENFOQUE: string[] = [ENFOQUE_AUTO, ...([1, 2, 3, 4] as Enfoque[]).map(etiquetaEnfoque), ENFOQUE_LIBRE];
+
+/** Enfoque efectivo según lo elegido en el selector y la profesión: Automático usa el principal de la profesión; Libre, ninguno. */
+export function enfoqueEfectivo(opcion: string, profesion: string): Enfoque | undefined {
+  if (opcion === ENFOQUE_LIBRE) return undefined;
+  if (opcion === ENFOQUE_AUTO) return enfoqueDe(profesion);
+  return ([1, 2, 3, 4] as Enfoque[]).find((e) => etiquetaEnfoque(e) === opcion);
+}
+
+/** Grupos de edad del panel que encajan con el enfoque: operarios y clientes (18 a 35) en los enfoques 1, 2 y 4; autoridad (36 a 55) en el 3. */
+export function edadesDeEnfoque(e: Enfoque | undefined): readonly string[] | undefined {
   if (!e) return undefined;
   return GRUPOS_EDAD.find((g) => g.tono === (e === 3 ? "autoridad" : "cliente"))!.opciones;
 }
 
-/** Corrige etnia y edad (y el dispositivo, salvo que se haya elegido a mano) de un formulario para que respeten el enfoque de su profesión. Sin enfoque, no toca nada. */
-export function normalizarEnfoque<T extends { profesion: string; etnia: string; edad: string; dispositivo: string; dispositivoManual?: boolean }>(f: T): T {
-  const e = enfoqueDe(f.profesion);
-  if (!e) return f;
-  const info = ENFOQUES[e];
-  const edades = edadesDelEnfoque(f.profesion) ?? [];
+/** Corrige etnia y edad (y el dispositivo, salvo que se haya elegido a mano) de un formulario para que respeten el enfoque. Sin enfoque, no toca nada. */
+export function normalizarEnfoque<T extends { profesion: string; etnia: string; edad: string; dispositivo: string; dispositivoManual?: boolean }>(f: T, e?: Enfoque): T {
+  const enf = e ?? enfoqueDe(f.profesion);
+  if (!enf) return f;
+  const info = ENFOQUES[enf];
+  const edades = edadesDeEnfoque(enf) ?? [];
   return {
     ...f,
     etnia: info.etnias.includes(f.etnia) ? f.etnia : info.etnias[0],

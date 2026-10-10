@@ -25,6 +25,13 @@ export type DatosProfesion = {
 };
 
 /** Enfoque 3 (técnicos e ingenieros): ganchos de autoridad y seguridad, sin pánico ni pérdida de dinero. */
+/** Enfoque 4 (cliente salvado): el software ya funcionó, la máquina vuelve a imprimir. */
+const GANCHOS_EXITO = [
+  "Hace unos minutos tu equipo estaba bloqueado… y mira cómo está imprimiendo ahora. Así de rápido se resuelve, sin llevarlo a ningún taller.",
+  "¿Ves ese papel saliendo? Hace nada estaba parado y no imprimía: lo resolvimos por software, en minutos.",
+  "Ya está imprimiendo otra vez, y no tuve que desarmar nada. Te cuento cómo se hizo.",
+];
+const CORTOS_EXITO = ["¡VOLVIÓ A IMPRIMIR!", "¡SALVADO!", "¡FUNCIONÓ!"];
 const GANCHOS_EXPERTO = [
   "Si un cliente te trae un equipo bloqueado, no lo abras ni lo desarmes: hay una forma de dejarlo funcionando en minutos, y es por software.",
   "Esta es la herramienta que usan los técnicos que ya no pierden horas con equipos bloqueados: instalación remota y listo.",
@@ -195,7 +202,7 @@ export type Escenario = {
 
 const mayuscula = (t: string) => (t ? t[0].toUpperCase() + t.slice(1) : t);
 
-export function generarEscenario(opts: { marca?: string; modelo?: string; error: string; profesion: string; plotter?: boolean; genero?: string; edadAnios?: number; dispositivo?: string; enfoque?: 1 | 2 | 3; experto?: boolean; fondoCatalogo?: string; semilla?: number }): Escenario {
+export function generarEscenario(opts: { marca?: string; modelo?: string; error: string; profesion: string; plotter?: boolean; genero?: string; edadAnios?: number; dispositivo?: string; enfoque?: 1 | 2 | 3 | 4; experto?: boolean; fondoCatalogo?: string; semilla?: number }): Escenario {
   const { error, profesion } = opts;
   const marca = opts.marca ?? "";
   const modelo = opts.modelo ?? "";
@@ -206,8 +213,9 @@ export function generarEscenario(opts: { marca?: string; modelo?: string; error:
   const tuEquipo = `tu ${eq.etiqueta}`;
   const equipoCapital = eq.nombre || `${mayuscula(eq.el)} ${eq.tipo}`;
   const negocioCorto = p.negocio.startsWith("tu ") ? p.negocio.slice(3) : p.negocio;
-  const experto = opts.experto ?? opts.enfoque === 3; // Solución del Experto: autoridad y seguridad, no pánico
-  const ganchoBase = experto ? GANCHOS_EXPERTO[n % GANCHOS_EXPERTO.length] : GANCHOS[n % GANCHOS.length];
+  const exito = opts.enfoque === 4; // Cliente Salvado: éxito y alivio
+  const experto = !exito && (opts.experto ?? opts.enfoque === 3); // Solución del Experto: autoridad y seguridad, no pánico
+  const ganchoBase = exito ? GANCHOS_EXITO[n % GANCHOS_EXITO.length] : experto ? GANCHOS_EXPERTO[n % GANCHOS_EXPERTO.length] : GANCHOS[n % GANCHOS.length];
   const gancho = ganchoBase
     .replace("{tu_equipo_cap}", mayuscula(tuEquipo))
     .replace("{tu_equipo}", tuEquipo)
@@ -216,7 +224,7 @@ export function generarEscenario(opts: { marca?: string; modelo?: string; error:
     .replace("{lo}", eq.lo)
     .replace("{perdida}", p.perdida)
     .replace("{negocio_corto}", negocioCorto);
-  const opcionesCorto = experto ? CORTOS_EXPERTO : [...err.cortos, p.corto];
+  const opcionesCorto = exito ? CORTOS_EXITO : experto ? CORTOS_EXPERTO : [...err.cortos, p.corto];
   const textoCorto = opcionesCorto[n % opcionesCorto.length];
   const alternativas = [...new Set(opcionesCorto)].filter((c) => c !== textoCorto).slice(0, 2);
 
@@ -226,21 +234,29 @@ export function generarEscenario(opts: { marca?: string; modelo?: string; error:
   const postura = opts.dispositivo ? posturaDispositivo(opts.dispositivo, esPerfilTecnico(profesion), opts.enfoque) : null;
   const manos = postura ? `${opts.dispositivo}: ${postura.manosEs}.` : undefined;
   const visual = {
-    personaje: experto
+    personaje: exito
+      ? `${profesion} con alivio y alegría: sonrisa amplia y ojos brillantes al ver cómo ${tuEquipo} vuelve a imprimir.`
+      : experto
       ? `${profesion} con seguridad y autoridad: sonrisa confiada, mirada fija al frente y cuerpo inclinado hacia adelante, tras encontrar la herramienta remota que resuelve el equipo de su cliente.`
       : `${p.personaje}.`,
     edadGenero,
     manos,
     fondo: `${p.fondo}, con sensación de urgencia.`,
-    elemento: `${tuEquipo} ${eq.bloqueado} sobre la mesa, a la derecha, y el error visible (${err.mensaje}); el espacio de abajo a la izquierda queda libre para una foto o captura del error.`,
+    elemento: exito
+      ? `${tuEquipo} imprimiendo con normalidad, con el papel saliendo, sobre la mesa, a la derecha; el espacio de abajo a la izquierda queda libre.`
+      : `${tuEquipo} ${eq.bloqueado} sobre la mesa, a la derecha, y el error visible (${err.mensaje}); el espacio de abajo a la izquierda queda libre para una foto o captura del error.`,
     textoCorto,
     alternativas,
   };
   const desarrollo = {
-    broll: experto
+    broll: exito
+      ? [`${equipoCapital} imprimiendo con normalidad.`, "El papel saliendo de la impresora, con la imagen terminada.", "Corte al cliente celebrando frente a su equipo funcionando."]
+      : experto
       ? [`Primer plano de la pantalla con ${err.mensaje} en el equipo del cliente.`, `${equipoCapital} con ${err.luces}.`, "Corte al técnico, seguro y sonriente, instalando el software remoto desde su PC."]
       : [`Primer plano de la pantalla con ${err.mensaje}.`, `${equipoCapital} con ${err.luces}.`, `Corte rápido a ${p.broll}.`],
-    explicacion: experto
+    explicacion: exito
+      ? [`Hace unos minutos ${tuEquipo} estaba ${eq.bloqueado}; ahora vuelve a imprimir.`, "Se resolvió por software, con una instalación remota hecha por un experto, sin mover ni abrir la máquina."]
+      : experto
       ? [...err.porque.map((s) => `${mayuscula(s)}.`), "Tu cliente espera su equipo y tú eres quien lo resuelve: con la herramienta remota lo dejas funcionando sin abrir nada."]
       : [...err.porque.map((s) => `${mayuscula(s)}.`), `Por eso ${p.negocio} está detenido: ${p.perdida} no pueden esperar.`],
   };

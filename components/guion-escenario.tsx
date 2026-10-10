@@ -31,7 +31,7 @@ export function GuionEscenario({
   genero?: string;
   edadAnios?: number;
   dispositivo?: string;
-  enfoque?: 1 | 2 | 3;
+  enfoque?: 1 | 2 | 3 | 4;
   experto?: boolean;
 }) {
   const [marca, setMarca] = useState("");

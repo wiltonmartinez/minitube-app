@@ -3,7 +3,8 @@
 //   36 a 45 y 46 a 55 años → autoridad: autoridad, seguridad, profesionalidad, serenidad, dominio técnico
 // Las listas internas de edad (EDADES de prompt-config) siguen existiendo para los arquetipos y la API.
 
-export type Tono = "cliente" | "autoridad";
+/** «exito»: emociones positivas del Enfoque 4 (cliente salvado). No pertenecen a ningún grupo de edad. */
+export type Tono = "cliente" | "autoridad" | "exito";
 
 export const GRUPOS_EDAD: { label: string; tono: Tono; opciones: readonly string[] }[] = [
   { label: "Operarios y clientes (18 a 35 años)", tono: "cliente", opciones: ["18 a 25 años", "26 a 35 años"] },
@@ -51,6 +52,24 @@ export const EMOCIONES_EDAD: Record<string, { tono: Tono; faceEn: string; afecto
     afectoEs: "por la preocupación extrema",
     resumen: "preocupación extrema",
   },
+  "Alivio profundo": {
+    tono: "exito",
+    faceEn: "an expression of deep relief, a visible exhale, a soft gentle smile and shoulders dropping as the stress is released",
+    afectoEs: "por el alivio",
+    resumen: "alivio profundo",
+  },
+  "Euforia": {
+    tono: "exito",
+    faceEn: "an expression of explosive joy and euphoria, a wide open smile, bright shining eyes full of delight as the paper comes out",
+    afectoEs: "por la euforia",
+    resumen: "euforia",
+  },
+  "Triunfo": {
+    tono: "exito",
+    faceEn: "a proud, victorious smile, chin lifted and eyes sparkling with pride at having solved the problem so fast",
+    afectoEs: "por el triunfo",
+    resumen: "triunfo",
+  },
   "Autoridad": {
     tono: "autoridad",
     faceEn: "a commanding, authoritative expression, steady direct eyes, a firm jaw and a subtle confident smile",
@@ -86,10 +105,12 @@ export const EMOCIONES_EDAD: Record<string, { tono: Tono; faceEn: string; afecto
 export const EMOCIONES_POR_TONO: Record<Tono, string[]> = {
   cliente: Object.keys(EMOCIONES_EDAD).filter((k) => EMOCIONES_EDAD[k].tono === "cliente"),
   autoridad: Object.keys(EMOCIONES_EDAD).filter((k) => EMOCIONES_EDAD[k].tono === "autoridad"),
+  exito: Object.keys(EMOCIONES_EDAD).filter((k) => EMOCIONES_EDAD[k].tono === "exito"),
 };
 
 /** Emoción que se aplica: la elegida (si encaja con el tono de la edad) o, con edad de autoridad y sin enfoque, «Seguridad». Con enfoque, «Automática» deja la emoción del enfoque. */
-export function emocionEfectiva(edad: string, elegida: string, conEnfoque: boolean): string | undefined {
+export function emocionEfectiva(edad: string, elegida: string, conEnfoque: boolean, enfoque?: number): string | undefined {
+  if (enfoque === 4) return EMOCIONES_POR_TONO.exito.includes(elegida) ? elegida : "Alivio profundo";
   const t = tonoDeEdad(edad);
   if (!t) return undefined;
   if (elegida !== EMOCION_AUTO && EMOCIONES_POR_TONO[t].includes(elegida)) return elegida;

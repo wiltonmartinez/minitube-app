@@ -9,6 +9,16 @@ export type Cambio = {
 
 export const CHANGELOG: Cambio[] = [
   {
+    version: "4.13.0",
+    fecha: "2026-10-10",
+    titulo: "Enfoque 4 (cliente salvado), selector de enfoque al inicio y sin guion",
+    cambios: [
+      "Nuevo Enfoque 4 · El Cliente Salvado (éxito y alivio): operarios y clientes de 18 a 35 años, etnias Latino/Mestizo, Afrodescendiente o Caucásico/Mediterráneo, y emociones a elegir: alivio profundo, euforia o triunfo. Manos de celebración: con Smartphone, la derecha con el teléfono y la izquierda en el pecho (alivio) o el puño en alto (euforia, triunfo); con PC o Laptop, la derecha en el ratón y la izquierda con el pulgar arriba o el brazo en alto.",
+      "El selector «Enfoque estratégico» pasa al inicio del formulario y reemplaza al interruptor: Automático (según la profesión), Enfoque 1, 2, 3, 4 o Sin enfoque. El Enfoque 4 comparte profesiones con los enfoques 1 y 2, por eso se elige aquí.",
+      "Se ocultó la tarjeta «Guion del video (escenario)» del panel: no tenía función en el flujo de trabajo.",
+    ],
+  },
+  {
     version: "4.12.1",
     fecha: "2026-10-10",
     titulo: "Se quitan Postura de las manos y Accesorio en la mano",

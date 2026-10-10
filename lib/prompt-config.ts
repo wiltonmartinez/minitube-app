@@ -1067,7 +1067,7 @@ export type PromptInput = {
   /** Dispositivo (opcional): Smartphone, PC / Laptop o Tablet. Fija la postura de las dos manos y manda sobre el accesorio. */
   dispositivo?: string;
   /** Enfoque estratégico (1 negocio detenido · 2 pánico profesional · 3 solución del experto): fija emoción, mirada y manos. */
-  enfoque?: 1 | 2 | 3;
+  enfoque?: 1 | 2 | 3 | 4;
   /** Rango de edad del panel en inglés («26 to 30»): si existe, el prompt dice «aged 26 to 30». */
   edadTexto?: string;
   /** Emoción elegida por tono de edad (clave de EMOCIONES_EDAD): manda sobre la emoción del enfoque. */
@@ -1334,7 +1334,7 @@ export const posturaDe = (accesorio: string) =>
           : POSTURA_CABEZA;
 
 /** PC (monitor de escritorio) o Laptop: mano derecha en el ratón; la izquierda según el tono (boca/ojos, pulgar arriba o señalando, frustración). */
-function posturaComputador(equipo: "pc" | "laptop" | "generico", izq: "boca" | "experto" | "tecnico" | "frustracion", cuerpo?: "encorvado" | "adelante"): Postura {
+function posturaComputador(equipo: "pc" | "laptop" | "generico", izq: "boca" | "experto" | "tecnico" | "frustracion" | "celebra", cuerpo?: "encorvado" | "adelante"): Postura {
   const objEn = equipo === "pc" ? "a single desktop monitor stands" : equipo === "laptop" ? "a single open laptop stands" : "a single computer (an open laptop or a monitor) stands";
   const objEs = equipo === "pc" ? "UN solo monitor de escritorio" : equipo === "laptop" ? "UNA sola laptop abierta" : "UN solo computador (laptop abierta o monitor)";
   const titulo = equipo === "pc" ? "PC DE ESCRITORIO" : equipo === "laptop" ? "LAPTOP" : "PC / LAPTOP";
@@ -1343,12 +1343,14 @@ function posturaComputador(equipo: "pc" | "laptop" | "generico", izq: "boca" | "
     experto: "gives a thumbs up or points the index finger at the person's own monitor",
     tecnico: "gives a thumbs up or points at the screen, as if the solution had just been found",
     frustracion: "grabs the face or covers the mouth in frustration",
+    celebra: "gives a thumbs up or is raised high in celebration",
   }[izq];
   const manoEs = {
     boca: "se cubre la boca de pánico o se frota los ojos",
     experto: "hace el gesto de pulgar arriba o señala con el dedo índice su propio monitor",
     tecnico: "hace el gesto de pulgar arriba o señala la pantalla (el técnico encontró la solución)",
     frustracion: "se agarra la cara o se cubre la boca con frustración",
+    celebra: "hace el gesto de pulgar arriba o levanta el brazo celebrando",
   }[izq];
   const cuerpoEn = cuerpo === "encorvado" ? "The body is hunched over or thrown back in stress. " : cuerpo === "adelante" ? "The body leans forward attentively toward the computer. " : "";
   const cuerpoEs = cuerpo === "encorvado" ? "el cuerpo va encorvado o echado hacia atrás por el estrés; " : cuerpo === "adelante" ? "el cuerpo se inclina hacia adelante con atención; " : "";
@@ -1357,12 +1359,14 @@ function posturaComputador(equipo: "pc" | "laptop" | "generico", izq: "boca" | "
     experto: "la izquierda con el pulgar arriba o señalando su propio monitor",
     tecnico: "la izquierda con el pulgar arriba o señalando la pantalla (encontró la solución)",
     frustracion: "la izquierda agarrándose la cara o la boca (frustración)",
+    celebra: "la izquierda con el pulgar arriba o el brazo en alto celebrando",
   }[izq];
   const cortoEn = {
     boca: "the left hand covers the mouth in panic or rubs the eyes",
     experto: "the left hand gives a thumbs up or points the index finger at its own monitor",
     tecnico: "the left hand gives a thumbs up or points at the screen, as if the solution had just been found",
     frustracion: "the left hand grabs the face and covers the mouth in frustration",
+    celebra: "the left hand gives a thumbs up or the arm is raised high in celebration",
   }[izq];
   return {
     estado: "dispositivo",
@@ -1379,7 +1383,24 @@ function posturaComputador(equipo: "pc" | "laptop" | "generico", izq: "boca" | "
 }
 
 /** Postura de las dos manos según el dispositivo elegido, o null si no hay dispositivo. */
-export function posturaDispositivo(dispositivo: string | undefined, tecnico = false, enfoque?: 1 | 2 | 3): Postura | null {
+export function posturaDispositivo(dispositivo: string | undefined, tecnico = false, enfoque?: 1 | 2 | 3 | 4, emocionExito?: string): Postura | null {
+  if (enfoque === 4 && dispositivo === "Smartphone") {
+    const alivio = emocionExito === "Alivio profundo";
+    const izqEn = alivio ? "the left hand rests on the chest in relief" : "the left fist is closed and raised high in victory";
+    const izqEs = alivio ? "la mano izquierda va al pecho en señal de alivio" : "el puño izquierdo, cerrado y en alto, en señal de victoria";
+    return {
+      estado: "dispositivo",
+      accesorio: "Teléfono celular",
+      manosEs: `La mano derecha sostiene el teléfono; ${izqEs}`,
+      manosEn: `the right hand holding a modern smartphone with its screen on in the lower part of the frame while ${izqEn}`,
+      reglasEn: [
+        `The right hand holds a modern smartphone with its screen on, low in the frame and well away from both lower corners, while ${izqEn}. No other object is in either hand, so the person has exactly two hands.`,
+      ],
+      reglas: [
+        `POSTURA DE CELEBRACIÓN CON SMARTPHONE: la mano DERECHA sostiene un teléfono moderno con la pantalla encendida, en la parte baja de la toma y lejos de las esquinas inferiores; ${izqEs}. Ningún otro objeto en las manos: exactamente dos manos.`,
+      ],
+    };
+  }
   if (enfoque === 1 && dispositivo === "Smartphone") {
     return {
       estado: "dispositivo",
@@ -1412,7 +1433,7 @@ export function posturaDispositivo(dispositivo: string | undefined, tecnico = fa
   }
   if (dispositivo === "PC" || dispositivo === "Laptop" || dispositivo === "PC / Laptop") {
     const equipo = dispositivo === "PC" ? "pc" : dispositivo === "Laptop" ? "laptop" : enfoque === 3 ? "pc" : enfoque === 2 ? "laptop" : "generico";
-    const izq = enfoque === 2 ? "boca" : enfoque === 3 ? "experto" : tecnico ? "tecnico" : "frustracion";
+    const izq = enfoque === 4 ? "celebra" : enfoque === 2 ? "boca" : enfoque === 3 ? "experto" : tecnico ? "tecnico" : "frustracion";
     return posturaComputador(equipo, izq, enfoque === 2 ? "encorvado" : enfoque === 3 ? "adelante" : undefined);
   }
   if (dispositivo === "Tablet") {
@@ -1577,12 +1598,15 @@ export const ESTETICA_MUJER =
   "ESTÉTICA DEL PERSONAJE: Las mujeres generadas deben ser atractivas pero reales, de belleza natural y armónica, con proporciones equilibradas y piel con textura realista (poros visibles e imperfecciones sutiles), nunca de modelo irreal, manteniendo siempre la expresión de alta tensión, pánico o estrés requerida.";
 
 /* ───────── Enfoques estratégicos: cara, mirada y expresión ───────── */
-const ENFOQUE_CARA: Record<1 | 2 | 3, string> = {
+const ENFOQUE_CARA: Record<1 | 2 | 3 | 4, string> = {
   1: "an expression of desperation and frustration, brows fiercely furrowed, eyes wide and pleading, jaw tense, like an operator watching customers wait while the business stands still",
   2: "an expression of extreme worry and desperation over an impending deadline, brows raised and drawn together, wide anxious eyes, lips pressed tight",
+  4: "an expression of deep relief and joy, a visible exhale, a soft smile and bright eyes, like a customer who has just seen the printer working again",
   3: "an expression of authority, confidence and calm professionalism, steady bright eyes, a composed face and a subtle confident smile, like a senior expert in total control",
 };
 const ENFOQUE_AFECTO: Record<1 | 2, string> = { 1: "por la desesperación y la frustración", 2: "por la preocupación extrema y la desesperación" };
+const REGLA_EXPRESION_EXITO =
+  "REGLA ESTRICTA DE EXPRESIÓN: Está absolutamente prohibido generar expresiones de tristeza, llanto, pucheros, lástima, pánico, frustración o resignación pasiva. Prohibido posturas de brazos cruzados o manos en la cintura. El personaje debe mostrar alivio, alegría o triunfo evidentes, con energía positiva y una sonrisa.";
 const REGLA_EXPRESION_EXPERTO =
   "REGLA ESTRICTA DE EXPRESIÓN: Está absolutamente prohibido generar expresiones de tristeza, llanto, pucheros, lástima, pánico o resignación pasiva. Prohibido posturas relajadas como manos en la cintura o brazos cruzados. El personaje debe mostrar autoridad, seguridad, profesionalidad y serenidad, con una sonrisa discreta y una postura firme y atenta.";
 
@@ -1607,20 +1631,22 @@ const MIRADA_REGLAS: string[] = [
 ];
 
 /** Regla de mirada con el afecto de la emoción (pánico por defecto: el texto no cambia). */
-function tonoPrompt(enfoque?: 1 | 2 | 3, emocionEdad?: string): "cliente" | "autoridad" | undefined {
-  return emocionEdad && EMOCIONES_EDAD[emocionEdad] ? EMOCIONES_EDAD[emocionEdad].tono : enfoque === 3 ? "autoridad" : undefined;
+function tonoPrompt(enfoque?: 1 | 2 | 3 | 4, emocionEdad?: string): "cliente" | "autoridad" | "exito" | undefined {
+  return emocionEdad && EMOCIONES_EDAD[emocionEdad] ? EMOCIONES_EDAD[emocionEdad].tono : enfoque === 3 ? "autoridad" : enfoque === 4 ? "exito" : undefined;
 }
-function miradaRegla(e?: EmocionAB, enfoque?: 1 | 2 | 3, mirada?: string, emocionEdad?: string): string {
+function miradaRegla(e?: EmocionAB, enfoque?: 1 | 2 | 3 | 4, mirada?: string, emocionEdad?: string): string {
   const k = (MIRADA_OPCIONES as readonly string[]).indexOf(mirada ?? "");
   const base = MIRADA_REGLAS[k >= 0 ? k : enfoque === 3 ? 0 : 1];
   const tono = tonoPrompt(enfoque, emocionEdad);
   if (tono === "autoridad") return base.replace("abiertos, desorbitados por el pánico,", "abiertos, brillantes, firmes y serenos, con seguridad y una sonrisa discreta, sin ningún gesto de angustia,");
+  if (tono === "exito") return base.replace("abiertos, desorbitados por el pánico,", "abiertos, brillantes y radiantes de alegría, con una sonrisa, sin ningún gesto de angustia,");
   if (emocionEdad && EMOCIONES_EDAD[emocionEdad]) return base.replace("por el pánico", EMOCIONES_EDAD[emocionEdad].afectoEs);
-  if (enfoque && enfoque !== 3) return base.replace("por el pánico", ENFOQUE_AFECTO[enfoque]);
+  if (enfoque === 1 || enfoque === 2) return base.replace("por el pánico", ENFOQUE_AFECTO[enfoque]);
   return e ? base.replace("por el pánico", EMOCIONES_AB[e].afectoEs) : base;
 }
-function esteticaMujer(e?: EmocionAB, enfoque?: 1 | 2 | 3, emocionEdad?: string): string {
+function esteticaMujer(e?: EmocionAB, enfoque?: 1 | 2 | 3 | 4, emocionEdad?: string): string {
   const tono = tonoPrompt(enfoque, emocionEdad);
+  if (tono === "exito") return ESTETICA_MUJER.replace("la expresión de alta tensión, pánico o estrés requerida", "la expresión de alegría y alivio requerida");
   if (tono === "autoridad") return ESTETICA_MUJER.replace("la expresión de alta tensión, pánico o estrés requerida", "la expresión de autoridad y seguridad requerida");
   if (tono === "cliente" && emocionEdad) return ESTETICA_MUJER.replace("alta tensión, pánico o estrés", EMOCIONES_EDAD[emocionEdad].resumen);
   if (enfoque === 1) return ESTETICA_MUJER.replace("alta tensión, pánico o estrés", "desesperación y frustración");
@@ -1652,7 +1678,7 @@ function preparar(i: PromptInput, referencia = false) {
   // vestimenta del perfil (p. ej. "…and black-framed glasses") para no duplicarlas ni contradecirlas.
   const gafasText = GAFAS[i.gafas] ?? "";
   // Accesorio en las manos: con cable o teléfono, una mano lo sostiene y la otra conserva el gesto (variante de una mano)
-  const postura = ajustarPosturaAEmocion(posturaDispositivo(i.dispositivo, esPerfilTecnico(i.profesion), i.enfoque) ?? cerebroPostura(i.accesorio, printer), i.emocion); // el cerebro decide la postura de AMBAS manos
+  const postura = ajustarPosturaAEmocion(posturaDispositivo(i.dispositivo, esPerfilTecnico(i.profesion), i.enfoque, i.emocionEdad) ?? cerebroPostura(i.accesorio, printer), i.emocion); // el cerebro decide la postura de AMBAS manos
   const hands = postura.manosEn;
   const clothingBase = mujer ? perfil.en.clothing.f : perfil.en.clothing.m;
   const clothing = gafasText
@@ -1724,7 +1750,7 @@ export function buildPrompt(i: PromptInput): string {
     "Clean, balanced composition with no duplicated elements. Avoid extra limbs, extra or missing fingers, deformed hands, distorted faces, duplicate people, blurry or low-quality rendering, any text, letters, numbers, badges, labels, watermarks or logos anywhere in the image, any border or frame, and incoherent shapes.",
   ];
 
-  return `${ASPECT_SENTENCE}\n\n${sentences.join(" ")} ${tonoPrompt(i.enfoque, i.emocionEdad) === "autoridad" ? REGLA_EXPRESION_EXPERTO : i.emocion && EMOCIONES_AB[i.emocion].expresionEs ? EMOCIONES_AB[i.emocion].expresionEs : REGLA_EXPRESION} ${PROHIBICION_VISUAL}`;
+  return `${ASPECT_SENTENCE}\n\n${sentences.join(" ")} ${tonoPrompt(i.enfoque, i.emocionEdad) === "exito" ? REGLA_EXPRESION_EXITO : tonoPrompt(i.enfoque, i.emocionEdad) === "autoridad" ? REGLA_EXPRESION_EXPERTO : i.emocion && EMOCIONES_AB[i.emocion].expresionEs ? EMOCIONES_AB[i.emocion].expresionEs : REGLA_EXPRESION} ${PROHIBICION_VISUAL}`;
 }
 
 /* ───────── Resultado estructurado de la generación ───────── */

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { edadInterna, edadTexto } from "@/lib/edades";
-import { ENFOQUES, edadesDelEnfoque, enfoqueDe, normalizarEnfoque } from "@/lib/enfoques";
+import { ENFOQUES, edadesDeEnfoque, enfoqueDe, enfoqueEfectivo, normalizarEnfoque, profesionEnEnfoque, ENFOQUE_AUTO, ENFOQUE_LIBRE, OPCIONES_ENFOQUE } from "@/lib/enfoques";
 import { planificar } from "@/lib/motor";
 import { auditarPrompt } from "@/lib/prohibidos";
 import { DISPOSITIVOS, ETNIAS_PANEL, PROFESIONES, buildPrompt, type PromptInput } from "@/lib/prompt-config";
@@ -33,8 +33,8 @@ describe("Los 3 enfoques estratégicos", () => {
     expect(f).toMatchObject({ etnia: "Asiático / Coreano", edad: "36 a 45 años", dispositivo: "PC" });
     const g = normalizarEnfoque({ profesion: "Sublimación", etnia: "Afrodescendiente / Afro-latino", edad: "46 a 55 años", dispositivo: "Tablet" });
     expect(g).toMatchObject({ etnia: "Afrodescendiente / Afro-latino", edad: "18 a 25 años", dispositivo: "Smartphone" });
-    expect(edadesDelEnfoque("Recepcionista")).toContain("18 a 25 años");
-    expect(edadesDelEnfoque("Contador")).toBeUndefined();
+    expect(edadesDeEnfoque(enfoqueDe("Recepcionista"))).toContain("18 a 25 años");
+    expect(edadesDeEnfoque(enfoqueDe("Contador"))).toBeUndefined();
     const h = { profesion: "Otra", etnia: "x", edad: "y", dispositivo: "z" };
     expect(normalizarEnfoque(h)).toEqual(h);
   });
@@ -162,8 +162,8 @@ describe("Edades agrupadas y emociones por tono", () => {
   });
 
   it("los enfoques 1 y 2 usan 18-35 y el 3 usa 36-55", () => {
-    for (const p of ["Sublimación", "Fotografía", "Litografía", "Recepcionista"]) expect(edadesDelEnfoque(p)).toEqual(["18 a 25 años", "26 a 35 años"]);
-    for (const p of ["Técnico de Impresoras", "Ingeniero de sistemas"]) expect(edadesDelEnfoque(p)).toEqual(["36 a 45 años", "46 a 55 años"]);
+    for (const p of ["Sublimación", "Fotografía", "Litografía", "Recepcionista"]) expect(edadesDeEnfoque(enfoqueDe(p))).toEqual(["18 a 25 años", "26 a 35 años"]);
+    for (const p of ["Técnico de Impresoras", "Ingeniero de sistemas"]) expect(edadesDeEnfoque(enfoqueDe(p))).toEqual(["36 a 45 años", "46 a 55 años"]);
   });
 
   it("el prompt dice «aged 26 to 35» y aplica la emoción elegida", () => {
@@ -206,5 +206,52 @@ describe("Dispositivo editable", () => {
     const lap = buildPrompt(base({ profesion: "Técnico de computadores", enfoque: 3, dispositivo: "Laptop" }));
     expect(lap).toContain("UNA sola laptop abierta");
     expect(lap).toMatch(/thumbs up or points the index finger/);
+  });
+});
+
+describe("Enfoque 4: el cliente salvado (éxito y alivio)", () => {
+  it("se elige en el selector y comparte profesiones con los enfoques 1 y 2", () => {
+    expect(OPCIONES_ENFOQUE).toHaveLength(6);
+    expect(enfoqueEfectivo(OPCIONES_ENFOQUE[4], "Sublimación")).toBe(4);
+    expect(enfoqueEfectivo(ENFOQUE_AUTO, "Sublimación")).toBe(1);
+    expect(enfoqueEfectivo(ENFOQUE_LIBRE, "Sublimación")).toBeUndefined();
+    for (const p of ["Sublimación", "Fotocopias", "Fotografía", "Diseñador(a) Gráfico", "Asistente Corporativa"]) expect(profesionEnEnfoque(p, 4), p).toBe(true);
+    expect(profesionEnEnfoque("Técnico de Impresoras", 4)).toBe(false);
+    expect(ENFOQUES[4].etnias).toEqual(["Latino / Mestizo", "Afrodescendiente / Afro-latino", "Caucásico / Mediterráneo"]);
+    expect(edadesDeEnfoque(4)).toEqual(["18 a 25 años", "26 a 35 años"]);
+  });
+
+  it("emociones de éxito: la elegida o «Alivio profundo»", async () => {
+    const { emocionEfectiva, EMOCIONES_POR_TONO } = await import("@/lib/edades");
+    expect(EMOCIONES_POR_TONO.exito).toEqual(["Alivio profundo", "Euforia", "Triunfo"]);
+    expect(emocionEfectiva("26 a 35 años", "Euforia", true, 4)).toBe("Euforia");
+    expect(emocionEfectiva("26 a 35 años", "Frustración", true, 4)).toBe("Alivio profundo");
+  });
+
+  it("prompt: euforia con smartphone → teléfono en la derecha y puño izquierdo en alto, sin angustia", () => {
+    const p = buildPrompt(base({ profesion: "Sublimación", enfoque: 4, dispositivo: "Smartphone", emocionEdad: "Euforia", edadTexto: "26 to 35", etnia: "Latino / Mestizo" }));
+    expect(p).toContain("explosive joy and euphoria");
+    expect(p).toContain("aged 26 to 35");
+    expect(p).toContain("left fist is closed and raised high in victory");
+    expect(p).toContain("brillantes y radiantes de alegría");
+    expect(p).toContain("alivio, alegría o triunfo evidentes");
+    expect(p).not.toMatch(/por el pánico|desorbitados por/);
+  });
+
+  it("alivio profundo → mano izquierda en el pecho; PC o Laptop → pulgar arriba o brazo en alto", () => {
+    expect(buildPrompt(base({ profesion: "Fotografía", enfoque: 4, dispositivo: "Smartphone", emocionEdad: "Alivio profundo" }))).toContain("left hand rests on the chest in relief");
+    for (const d of ["PC", "Laptop"]) {
+      const p = buildPrompt(base({ profesion: "Fotografía", enfoque: 4, dispositivo: d, emocionEdad: "Triunfo" }));
+      expect(p, d).toMatch(/thumbs up or the arm is raised high in celebration/);
+    }
+  });
+
+  it("el guion del enfoque 4 celebra: vuelve a imprimir, sin pánico", async () => {
+    const { generarEscenario } = await import("@/lib/guion");
+    for (let n = 0; n < 6; n++) {
+      const g = generarEscenario({ error: "Almohadillas", profesion: "Sublimación", dispositivo: "Smartphone", enfoque: 4, semilla: n });
+      expect(g.texto).toMatch(/vuelve a imprimir|imprimiendo/);
+      expect(g.texto).not.toMatch(/pánico|angustia|frustraci|manos en la cabeza|plata que no entra/i);
+    }
   });
 });

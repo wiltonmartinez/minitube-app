@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { COMMIT, VERSION } from "@/lib/changelog";
 import { CatalogEditor } from "@/components/catalog-editor";
-import { GuionEscenario } from "@/components/guion-escenario";
 import { nombresLote, type LoteItem } from "@/lib/lote";
 import { urlAPng } from "@/lib/imagen-cliente";
 import { useCatalogo } from "@/lib/use-catalogo";
@@ -29,7 +28,7 @@ import {
   esArmonica,
 } from "@/lib/rostro";
 import { EDADES_PANEL, EMOCION_AUTO, EMOCIONES_EDAD, EMOCIONES_POR_TONO, GRUPOS_EDAD, edadInterna, edadTexto, emocionEfectiva, tonoDeEdad } from "@/lib/edades";
-import { ENFOQUES, edadesDelEnfoque, enfoqueDe, normalizarEnfoque } from "@/lib/enfoques";
+import { ENFOQUES, ENFOQUE_AUTO, ENFOQUE_LIBRE, OPCIONES_ENFOQUE, edadesDeEnfoque, enfoqueDe, enfoqueEfectivo, etiquetaEnfoque, normalizarEnfoque, profesionEnEnfoque } from "@/lib/enfoques";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -110,7 +109,7 @@ type FormState = {
   /** true cuando el dispositivo se eligió a mano: el enfoque ya no lo cambia */
   dispositivoManual: boolean;
   /** Aplica el enfoque estratégico de la profesión (etnia, edad, dispositivo, emoción, mirada y manos) */
-  usarEnfoque: boolean;
+  enfoqueSel: string;
   /** Dirección de la mirada (MIRADA_OPCIONES) */
   mirada: string;
   /** Mirada del enfoque 3 (al frente por defecto) */
@@ -139,7 +138,7 @@ const INITIAL: FormState = {
   emocionPanel: EMOCION_AUTO,
   dispositivo: DISPOSITIVO_NINGUNO,
   dispositivoManual: false,
-  usarEnfoque: true,
+  enfoqueSel: ENFOQUE_AUTO,
   mirada: MIRADA_DEFECTO,
   miradaExperto: MIRADA_DEFECTO_EXPERTO,
   etnia: ETNIAS_PANEL[0],
@@ -335,7 +334,14 @@ export default function Home() {
     const f = catalogo[formBase.profesion] ? formBase : { ...formBase, profesion: profesiones[0] };
     if (!alta) {
       const base = { ...f, modoPersonaje: "Personalizar" as FormState["modoPersonaje"] };
-      return f.usarEnfoque ? normalizarEnfoque(base) : base;
+      let enf = enfoqueEfectivo(f.enfoqueSel, f.profesion);
+      if (enf && f.enfoqueSel !== ENFOQUE_AUTO && !profesionEnEnfoque(f.profesion, enf)) {
+        // el enfoque elegido manda: si la profesión no encaja, se usa la primera que sí
+        const ok = profesiones.find((p) => profesionEnEnfoque(p, enf!));
+        if (ok) base.profesion = ok as typeof base.profesion;
+        enf = enfoqueEfectivo(f.enfoqueSel, base.profesion);
+      }
+      return enf ? normalizarEnfoque(base, enf) : base;
     }
     return {
       ...f,
@@ -401,21 +407,24 @@ export default function Home() {
   const edadEf = arq ? arq.edad : edadInterna(form.edad);
   const edadTextoEf = arq ? undefined : edadTexto(form.edad);
   const tonoEdad = arq ? undefined : tonoDeEdad(form.edad);
-  const emocionEdadEf = arq ? undefined : emocionEfectiva(form.edad, form.emocionPanel, !alta && form.usarEnfoque && !!enfoqueDe(form.profesion));
+  const enfoqueActivo = !alta ? enfoqueEfectivo(form.enfoqueSel, form.profesion) : undefined;
+  const emocionEdadEf = arq ? undefined : emocionEfectiva(form.edad, form.emocionPanel, enfoqueActivo !== undefined, enfoqueActivo);
   const etniaEf = arq ? arq.etnia : form.etnia;
-  const enfoqueActivo = !alta && form.usarEnfoque ? enfoqueDe(form.profesion) : undefined;
   const infoEnfoque = enfoqueActivo ? ENFOQUES[enfoqueActivo] : undefined;
-  // Profesiones agrupadas por enfoque (solo con el interruptor del enfoque activo)
+  // Profesiones agrupadas por enfoque: Automático las reparte en 3 grupos; un enfoque elegido muestra solo las suyas; Libre, la lista plana
   const gruposProfesion = useMemo(() => {
-    if (alta || !form.usarEnfoque) return undefined;
-    const g: { label: string; options: string[] }[] = ([1, 2, 3] as const).map((e) => ({
+    if (alta || form.enfoqueSel === ENFOQUE_LIBRE) return undefined;
+    const lista = ([1, 2, 3, 4] as const).filter((e) => form.enfoqueSel === ENFOQUE_AUTO ? e !== 4 : etiquetaEnfoque(e) === form.enfoqueSel);
+    const g: { label: string; options: string[] }[] = lista.map((e) => ({
       label: `Enfoque ${e} · ${ENFOQUES[e].nombre} (${ENFOQUES[e].impacto.toLowerCase()})`,
-      options: profesionesEf.filter((p) => enfoqueDe(p) === e),
+      options: profesionesEf.filter((p) => (form.enfoqueSel === ENFOQUE_AUTO ? enfoqueDe(p) === e : profesionEnEnfoque(p, e))),
     }));
-    const otras = profesionesEf.filter((p) => !enfoqueDe(p));
-    if (otras.length) g.push({ label: "Otras profesiones", options: otras });
+    if (form.enfoqueSel === ENFOQUE_AUTO) {
+      const otras = profesionesEf.filter((p) => !enfoqueDe(p));
+      if (otras.length) g.push({ label: "Otras profesiones", options: otras });
+    }
     return g.filter((x) => x.options.length);
-  }, [alta, form.usarEnfoque, profesionesEf]);
+  }, [alta, form.enfoqueSel, profesionesEf]);
   const miradaEf = enfoqueActivo === 3 ? form.miradaExperto : form.mirada;
   const afectoMirada = infoEnfoque ? infoEnfoque.mirada : "Ojos desorbitados";
   const textoMirada = `${afectoMirada}, ${MIRADA_TEXTO[Math.max(0, MIRADA_OPCIONES.indexOf(miradaEf as (typeof MIRADA_OPCIONES)[number]))]}`;
@@ -546,8 +555,13 @@ export default function Home() {
     let uArq = sorteoArquetipoDistinto(sorteo.ua, poolArq.length);
     for (let n = 0; n < total; n++) {
       let f = aplicarTodoAlAzar(form, azarTotal(profesionesEf), locks);
-      if (!alta && form.usarEnfoque) f = normalizarEnfoque(f);
-      const enfoqueLote = !alta && form.usarEnfoque ? enfoqueDe(f.profesion) : undefined;
+      let enfoqueLote = alta ? undefined : enfoqueEfectivo(form.enfoqueSel, f.profesion);
+      if (enfoqueLote && form.enfoqueSel !== ENFOQUE_AUTO && !profesionEnEnfoque(f.profesion, enfoqueLote)) {
+        const ok = profesionesEf.filter((p) => profesionEnEnfoque(p, enfoqueLote!));
+        if (ok.length) f = { ...f, profesion: pick(ok) as typeof f.profesion };
+        enfoqueLote = enfoqueEfectivo(form.enfoqueSel, f.profesion);
+      }
+      if (enfoqueLote) f = normalizarEnfoque(f, enfoqueLote);
       if (alta) {
         // prioridad alta: plano detalle, mujer joven (arquetipo del grupo) y profesión de gran formato, aunque haya candados
         f.plano = PLANO_ALTA;
@@ -576,7 +590,7 @@ export default function Home() {
             personaje: resolverPersonaje(listas, f.pers, { genero: f.genero, edad: edadInterna(f.edad), etnia: f.etnia }, f.modoRostro),
             edad: edadInterna(f.edad),
             edadTexto: conArquetipo ? undefined : edadTexto(f.edad),
-            emocionEdad: conArquetipo ? undefined : emocionEfectiva(f.edad, f.emocionPanel, enfoqueLote !== undefined),
+            emocionEdad: conArquetipo ? undefined : emocionEfectiva(f.edad, f.emocionPanel, enfoqueLote !== undefined, enfoqueLote),
             arquetipo,
             plotter: alta || undefined,
             dispositivo: f.dispositivo === DISPOSITIVO_NINGUNO ? undefined : f.dispositivo,
@@ -727,6 +741,29 @@ export default function Home() {
               )}
             </div>
             <form onSubmit={(e) => e.preventDefault()} className="space-y-4">
+              {!alta && (
+                <div className="space-y-2 rounded-lg border p-4">
+                  <SelectField id="enfoqueSel" label="Enfoque estratégico" value={form.enfoqueSel} options={OPCIONES_ENFOQUE} onChange={(v) => set("enfoqueSel", v)} />
+                  <p className="text-xs text-muted-foreground">
+                    El enfoque fija la etnia permitida, la edad ideal, el dispositivo, la emoción, la mirada y las manos. «Automático» usa el de la profesión; el Enfoque 4 (cliente salvado: éxito y alivio) solo se elige aquí.
+                  </p>
+                  {infoEnfoque && (
+                    <ul className="list-disc space-y-1 pl-5 text-xs text-muted-foreground">
+                      <li>
+                        <strong className="text-foreground">
+                          Enfoque {enfoqueActivo}: {infoEnfoque.nombre}
+                        </strong>{" "}
+                        ({infoEnfoque.impacto}). {infoEnfoque.dolor}
+                      </li>
+                      <li>Etnias: {infoEnfoque.etnias.join(" o ")} · Edades: {edadesDeEnfoque(enfoqueActivo)?.join(" o ")}</li>
+                      <li>Emoción: {infoEnfoque.emocion}. Mirada: {infoEnfoque.mirada}.</li>
+                      <li>
+                        {infoEnfoque.dispositivo}: {infoEnfoque.manos}.
+                      </li>
+                    </ul>
+                  )}
+                </div>
+              )}
               <Block
                 step={1}
                 title="Perfil demográfico"
@@ -750,16 +787,16 @@ export default function Home() {
                       id="edad"
                       label="Edad"
                       value={form.edad}
-                      options={enfoqueActivo ? (edadesDelEnfoque(form.profesion) ?? EDADES_PANEL) : EDADES_PANEL}
-                      groups={GRUPOS_EDAD.filter((g) => !enfoqueActivo || g.opciones.some((o) => edadesDelEnfoque(form.profesion)?.includes(o))).map((g) => ({ label: g.label, options: g.opciones }))}
+                      options={enfoqueActivo ? (edadesDeEnfoque(enfoqueActivo) ?? EDADES_PANEL) : EDADES_PANEL}
+                      groups={GRUPOS_EDAD.filter((g) => !enfoqueActivo || g.opciones.some((o) => edadesDeEnfoque(enfoqueActivo)?.includes(o))).map((g) => ({ label: g.label, options: g.opciones }))}
                       onChange={(v) => set("edad", v)}
                       {...lockProps("edad")}
                     />
                     <SelectField
                       id="emocionPanel"
-                      label={tonoEdad === "autoridad" ? "Emoción (autoridad, 36 a 55 años)" : "Emoción (operario o cliente, 18 a 35 años)"}
-                      value={tonoEdad && form.emocionPanel !== EMOCION_AUTO && EMOCIONES_POR_TONO[tonoEdad].includes(form.emocionPanel) ? form.emocionPanel : EMOCION_AUTO}
-                      options={[EMOCION_AUTO, ...(tonoEdad ? EMOCIONES_POR_TONO[tonoEdad] : [])]}
+                      label={enfoqueActivo === 4 ? "Emoción (cliente salvado)" : tonoEdad === "autoridad" ? "Emoción (autoridad, 36 a 55 años)" : "Emoción (operario o cliente, 18 a 35 años)"}
+                      value={emocionEdadEf && !(enfoqueActivo !== 4 && form.emocionPanel === EMOCION_AUTO) ? emocionEdadEf : EMOCION_AUTO}
+                      options={enfoqueActivo === 4 ? EMOCIONES_POR_TONO.exito : [EMOCION_AUTO, ...(tonoEdad ? EMOCIONES_POR_TONO[tonoEdad] : [])]}
                       onChange={(v) => set("emocionPanel", v)}
                       className="md:col-span-2"
                     />
@@ -852,34 +889,6 @@ export default function Home() {
                 title="Controlador maestro"
                 description="Elige la profesión: vestimenta, emoción, manos y fondo se autocompletan y se bloquean. La mirada siempre va clavada en el centro del área libre inferior izquierda."
               >
-                {!alta && (
-                  <div className="space-y-2 rounded-md border p-3 md:col-span-2">
-                    <div className="flex items-start gap-3">
-                      <Switch id="usarEnfoque" checked={form.usarEnfoque} onCheckedChange={(v) => set("usarEnfoque", v)} />
-                      <div className="space-y-1">
-                        <Label htmlFor="usarEnfoque">Enfoque estratégico según la profesión</Label>
-                        <p className="text-xs text-muted-foreground">
-                          La profesión fija la etnia permitida, la edad ideal, el dispositivo, la emoción, la mirada y las manos. Apagado, todo se elige libremente.
-                        </p>
-                      </div>
-                    </div>
-                    {infoEnfoque && (
-                      <ul className="list-disc space-y-1 pl-5 text-xs text-muted-foreground">
-                        <li>
-                          <strong className="text-foreground">
-                            Enfoque {enfoqueActivo}: {infoEnfoque.nombre}
-                          </strong>{" "}
-                          ({infoEnfoque.impacto}). {infoEnfoque.dolor}
-                        </li>
-                        <li>Etnias: {infoEnfoque.etnias.join(" o ")} · Edades: {edadesDelEnfoque(form.profesion)?.join(" o ")}</li>
-                        <li>Emoción: {infoEnfoque.emocion}. Mirada: {infoEnfoque.mirada}.</li>
-                        <li>
-                          {infoEnfoque.dispositivo}: {infoEnfoque.manos}.
-                        </li>
-                      </ul>
-                    )}
-                  </div>
-                )}
                 <SelectField
                   id="profesion"
                   label="Profesión"
@@ -891,7 +900,7 @@ export default function Home() {
                   {...lockProps("profesion")}
                 />
                 <ReadOnlyField id="vestimenta" label="Vestimenta" value={vestimenta} {...lockProps("profesion")} />
-                <ReadOnlyField id="emocion" label="Emociones" value={emocionEdadEf ? `${emocionEdadEf} (${EMOCIONES_EDAD[emocionEdadEf].tono === "autoridad" ? "autoridad" : "operario o cliente"})` : infoEnfoque ? infoEnfoque.emocion : perfil.emocion} {...lockProps("profesion")} />
+                <ReadOnlyField id="emocion" label="Emociones" value={emocionEdadEf ? `${emocionEdadEf} (${EMOCIONES_EDAD[emocionEdadEf].tono === "autoridad" ? "autoridad" : EMOCIONES_EDAD[emocionEdadEf].tono === "exito" ? "éxito" : "operario o cliente"})` : infoEnfoque ? infoEnfoque.emocion : perfil.emocion} {...lockProps("profesion")} />
                 <ReadOnlyField id="mirada" label="Mirada" value={textoMirada} />
                 <SelectField
                   id="direccionMirada"
@@ -1015,15 +1024,6 @@ export default function Home() {
                 Vaciar lote
               </Button>
             </div>
-            <GuionEscenario
-              plotter={alta}
-              profesion={form.profesion}
-              fondo={perfil?.fondo}
-              genero={arq ? undefined : generoEf}
-              dispositivo={dispositivoActivo ? form.dispositivo : undefined}
-              enfoque={enfoqueActivo}
-              experto={tonoEdad ? tonoEdad === "autoridad" : undefined}
-            />
           </CardContent>
         </Card>
       </div>
