@@ -1,6 +1,8 @@
 // Los 3 enfoques estratégicos: la profesión decide la etnia permitida, la edad ideal, el dispositivo, la emoción, la mirada y las manos.
 // No se mezclan variables entre enfoques. Solo afecta al panel manual (la API de TexTube no lo usa).
 
+import { GRUPOS_EDAD } from "@/lib/edades";
+
 export type Enfoque = 1 | 2 | 3;
 
 export type InfoEnfoque = {
@@ -27,8 +29,8 @@ export const ENFOQUES: Record<Enfoque, InfoEnfoque> = {
     dolor: "El negocio no factura y hay clientes esperando.",
     etnias: [E_LATINO, E_AFRO],
     dispositivo: "Smartphone",
-    emocion: "Frustración extrema y shock",
-    mirada: "Ojos muy abiertos por el shock",
+    emocion: "Desesperación y frustración por los clientes que esperan",
+    mirada: "Ojos muy abiertos por la desesperación",
     manos: "Derecha con el teléfono firme; izquierda agarrándose la cabeza, jalándose el cabello o abierta en el aire (incomprensión)",
   },
   2: {
@@ -37,8 +39,8 @@ export const ENFOQUES: Record<Enfoque, InfoEnfoque> = {
     dolor: "Un jefe exige el reporte, los alumnos esperan o un cierre o una licitación está por vencer.",
     etnias: [E_CAUCASICO, E_LATINO],
     dispositivo: "PC / Laptop",
-    emocion: "Pánico absoluto y ansiedad",
-    mirada: "Ojos asustados y muy abiertos",
+    emocion: "Preocupación extrema y desesperación por la fecha límite",
+    mirada: "Ojos muy abiertos por la preocupación extrema",
     manos: "Cuerpo encorvado o echado hacia atrás; derecha en el ratón; izquierda cubriéndose la boca o frotándose los ojos",
   },
   3: {
@@ -47,8 +49,8 @@ export const ENFOQUES: Record<Enfoque, InfoEnfoque> = {
     dolor: "El experto encontró la herramienta remota y resuelve el problema de su cliente.",
     etnias: [E_ASIATICO, E_CAUCASICO],
     dispositivo: "PC / Laptop",
-    emocion: "Confianza absoluta, triunfo y alivio, con sonrisa",
-    mirada: "Ojos brillantes y seguros, con sonrisa",
+    emocion: "Autoridad, seguridad, profesionalidad y serenidad",
+    mirada: "Ojos brillantes, seguros y serenos",
     manos: "Cuerpo inclinado hacia adelante; derecha en el ratón; izquierda con el pulgar arriba o señalando su propio monitor",
   },
 };
@@ -75,14 +77,11 @@ const PROFESIONES_ENFOQUE: Record<string, Enfoque> = {
 /** Enfoque de la profesión (o undefined si la profesión es nueva y no está asignada). */
 export const enfoqueDe = (profesion: string): Enfoque | undefined => PROFESIONES_ENFOQUE[profesion];
 
-const JOVENES = new Set(["Asistente Corporativa", "Recepcionista", "Teletrabajadora", "Coordinadora"]);
-
-/** Rangos de edad del panel que encajan con la edad ideal del enfoque (22-30 en asistentes y recepcionistas; 35-55 en dueños, 25-55 en técnicos). */
+/** Grupos de edad del panel que encajan con el enfoque: operarios y clientes (18 a 35) en los enfoques 1 y 2; autoridad (36 a 55) en el 3. */
 export function edadesDelEnfoque(profesion: string): readonly string[] | undefined {
   const e = enfoqueDe(profesion);
   if (!e) return undefined;
-  if (e === 2 && JOVENES.has(profesion)) return ["Joven 18-25", "Adulto Joven 30-40"];
-  return ["Adulto Joven 30-40", "Adulto Mayor 45-55"];
+  return GRUPOS_EDAD.find((g) => g.tono === (e === 3 ? "autoridad" : "cliente"))!.opciones;
 }
 
 /** Corrige etnia, edad y dispositivo de un formulario para que respeten el enfoque de su profesión. Sin enfoque, no toca nada. */

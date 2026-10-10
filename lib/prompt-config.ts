@@ -45,6 +45,8 @@ const EDAD_EN: Record<(typeof EDADES)[number], string> = {
   "Mayor 66-70": "aged 66 to 70",
 };
 
+import { EMOCIONES_EDAD } from "@/lib/edades";
+
 export const ETNIAS = [
   "Colombiana Bogotá/Andino",
   "Colombiana Medellín/Paisa",
@@ -1066,6 +1068,10 @@ export type PromptInput = {
   dispositivo?: string;
   /** Enfoque estratégico (1 negocio detenido · 2 pánico profesional · 3 solución del experto): fija emoción, mirada y manos. */
   enfoque?: 1 | 2 | 3;
+  /** Rango de edad del panel en inglés («26 to 30»): si existe, el prompt dice «aged 26 to 30». */
+  edadTexto?: string;
+  /** Emoción elegida por tono de edad (clave de EMOCIONES_EDAD): manda sobre la emoción del enfoque. */
+  emocionEdad?: string;
   /** Dirección de la mirada (MIRADA_OPCIONES); si falta, arriba a la izquierda. El enfoque 3 siempre mira al frente. */
   mirada?: string;
   /** Personalización concreta (modo «Personalizar»): rostro, cabello, vello y cuerpo ya sorteados/elegidos. */
@@ -1574,13 +1580,13 @@ export const ESTETICA_MUJER =
 
 /* ───────── Enfoques estratégicos: cara, mirada y expresión ───────── */
 const ENFOQUE_CARA: Record<1 | 2 | 3, string> = {
-  1: "an expression of extreme frustration and shock, brows fiercely furrowed, eyes wide in disbelief, jaw tense, like a business owner watching money slip away while customers wait",
-  2: EMOCION.panico.en,
-  3: "an expression of absolute confidence and triumph, a relieved, confident smile, bright calm eyes, like an expert who has just solved the problem",
+  1: "an expression of desperation and frustration, brows fiercely furrowed, eyes wide and pleading, jaw tense, like an operator watching customers wait while the business stands still",
+  2: "an expression of extreme worry and desperation over an impending deadline, brows raised and drawn together, wide anxious eyes, lips pressed tight",
+  3: "an expression of authority, confidence and calm professionalism, steady bright eyes, a composed face and a subtle confident smile, like a senior expert in total control",
 };
-const ENFOQUE_AFECTO: Record<1 | 2, string> = { 1: "por la frustración extrema y el shock", 2: "por el pánico" };
+const ENFOQUE_AFECTO: Record<1 | 2, string> = { 1: "por la desesperación y la frustración", 2: "por la preocupación extrema y la desesperación" };
 const REGLA_EXPRESION_EXPERTO =
-  "REGLA ESTRICTA DE EXPRESIÓN: Está absolutamente prohibido generar expresiones de tristeza, llanto, pucheros, lástima, pánico o resignación pasiva. Prohibido posturas relajadas como manos en la cintura o brazos cruzados. El personaje debe mostrar confianza absoluta, triunfo y alivio, con una sonrisa segura y una postura atenta e inclinada hacia adelante.";
+  "REGLA ESTRICTA DE EXPRESIÓN: Está absolutamente prohibido generar expresiones de tristeza, llanto, pucheros, lástima, pánico o resignación pasiva. Prohibido posturas relajadas como manos en la cintura o brazos cruzados. El personaje debe mostrar autoridad, seguridad, profesionalidad y serenidad, con una sonrisa discreta y una postura firme y atenta.";
 
 /* Tres puntos de mirada. El personaje está en el lado DERECHO de la imagen y NUNCA mira hacia arriba:
    Punto #1: al frente, en línea recta de derecha a izquierda, a la altura de los ojos;
@@ -1603,16 +1609,23 @@ const MIRADA_REGLAS: string[] = [
 ];
 
 /** Regla de mirada con el afecto de la emoción (pánico por defecto: el texto no cambia). */
-function miradaRegla(e?: EmocionAB, enfoque?: 1 | 2 | 3, mirada?: string): string {
+function tonoPrompt(enfoque?: 1 | 2 | 3, emocionEdad?: string): "cliente" | "autoridad" | undefined {
+  return emocionEdad && EMOCIONES_EDAD[emocionEdad] ? EMOCIONES_EDAD[emocionEdad].tono : enfoque === 3 ? "autoridad" : undefined;
+}
+function miradaRegla(e?: EmocionAB, enfoque?: 1 | 2 | 3, mirada?: string, emocionEdad?: string): string {
   const k = (MIRADA_OPCIONES as readonly string[]).indexOf(mirada ?? "");
   const base = MIRADA_REGLAS[k >= 0 ? k : enfoque === 3 ? 0 : 1];
-  if (enfoque === 3) return base.replace("abiertos, desorbitados por el pánico,", "abiertos, brillantes y seguros, con confianza y una sonrisa segura, sin ningún gesto de pánico,");
-  if (enfoque) return base.replace("por el pánico", ENFOQUE_AFECTO[enfoque]);
+  const tono = tonoPrompt(enfoque, emocionEdad);
+  if (tono === "autoridad") return base.replace("abiertos, desorbitados por el pánico,", "abiertos, brillantes, firmes y serenos, con seguridad y una sonrisa discreta, sin ningún gesto de angustia,");
+  if (emocionEdad && EMOCIONES_EDAD[emocionEdad]) return base.replace("por el pánico", EMOCIONES_EDAD[emocionEdad].afectoEs);
+  if (enfoque && enfoque !== 3) return base.replace("por el pánico", ENFOQUE_AFECTO[enfoque]);
   return e ? base.replace("por el pánico", EMOCIONES_AB[e].afectoEs) : base;
 }
-function esteticaMujer(e?: EmocionAB, enfoque?: 1 | 2 | 3): string {
-  if (enfoque === 3) return ESTETICA_MUJER.replace("la expresión de alta tensión, pánico o estrés requerida", "la expresión de confianza y triunfo requerida");
-  if (enfoque === 1) return ESTETICA_MUJER.replace("alta tensión, pánico o estrés", "frustración extrema y shock");
+function esteticaMujer(e?: EmocionAB, enfoque?: 1 | 2 | 3, emocionEdad?: string): string {
+  const tono = tonoPrompt(enfoque, emocionEdad);
+  if (tono === "autoridad") return ESTETICA_MUJER.replace("la expresión de alta tensión, pánico o estrés requerida", "la expresión de autoridad y seguridad requerida");
+  if (tono === "cliente" && emocionEdad) return ESTETICA_MUJER.replace("alta tensión, pánico o estrés", EMOCIONES_EDAD[emocionEdad].resumen);
+  if (enfoque === 1) return ESTETICA_MUJER.replace("alta tensión, pánico o estrés", "desesperación y frustración");
   return e && e !== "panico"
     ? ESTETICA_MUJER.replace("la expresión de alta tensión, pánico o estrés requerida", "la expresión indicada")
     : ESTETICA_MUJER;
@@ -1666,8 +1679,8 @@ function preparar(i: PromptInput, referencia = false) {
     ? "the exact same person shown in the reference photos, keeping the identical face, facial structure, skin tone, hair and apparent age"
     : arq
     ? `${conArticulo((arq.origen?.en ?? ETNIA_EN[arq.etnia]).replace("{n}", sexo))} aged ${arq.edadAnios}, with ${arq.cabello.en}, ${arq.rasgosFaciales.forma}, ${arq.rasgosFaciales.ojos}, ${arq.rasgosFaciales.cejas}, ${arq.rasgosFaciales.nariz} and ${arq.rasgosFaciales.boca}`
-    : `${conArticulo(ETNIA_EN[i.etnia].replace("{n}", sexo))} ${i.edadAnios ? `aged ${i.edadAnios}` : EDAD_EN[i.edad]}${i.personaje ? `, ${describirRostro(listas, i.personaje)}` : ""}`;
-  const personaje = `On the right side of the frame, ${descripcion}, working as ${/^[aeiou]/i.test(perfil.en.role) ? "an" : "a"} ${perfil.en.role}, wearing ${clothing}, with ${i.enfoque ? ENFOQUE_CARA[i.enfoque] : i.emocion ? EMOCIONES_AB[i.emocion].faceEn : perfil.en.emotion}, and ${hands}.`;
+    : `${conArticulo(ETNIA_EN[i.etnia].replace("{n}", sexo))} ${i.edadAnios ? `aged ${i.edadAnios}` : i.edadTexto ? `aged ${i.edadTexto}` : EDAD_EN[i.edad]}${i.personaje ? `, ${describirRostro(listas, i.personaje)}` : ""}`;
+  const personaje = `On the right side of the frame, ${descripcion}, working as ${/^[aeiou]/i.test(perfil.en.role) ? "an" : "a"} ${perfil.en.role}, wearing ${clothing}, with ${i.emocionEdad && EMOCIONES_EDAD[i.emocionEdad] ? EMOCIONES_EDAD[i.emocionEdad].faceEn : i.enfoque ? ENFOQUE_CARA[i.enfoque] : i.emocion ? EMOCIONES_AB[i.emocion].faceEn : perfil.en.emotion}, and ${hands}.`;
   // Cuerpo: solo hacia arriba y según el plano (detalle = nada · primer plano = hombros · medio = complexión y hombros)
   const rasgosExtra = referencia
     ? ""
@@ -1701,8 +1714,8 @@ export function buildPrompt(i: PromptInput): string {
     ...(gafasText ? [gafasText] : []),
     ...postura.reglas,
     REGLA_BRANDING,
-    miradaRegla(i.emocion, i.enfoque, i.mirada),
-    ...(mujer ? [esteticaMujer(i.emocion, i.enfoque)] : []),
+    miradaRegla(i.emocion, i.enfoque, i.mirada, i.emocionEdad),
+    ...(mujer ? [esteticaMujer(i.emocion, i.enfoque, i.emocionEdad)] : []),
     "The person is anatomically correct: exactly one person, exactly two arms, two hands with five fingers each, one symmetrical face and natural proportions.",
     ANATOMIA_ES,
     setting,
@@ -1713,7 +1726,7 @@ export function buildPrompt(i: PromptInput): string {
     "Clean, balanced composition with no duplicated elements. Avoid extra limbs, extra or missing fingers, deformed hands, distorted faces, duplicate people, blurry or low-quality rendering, any text, letters, numbers, badges, labels, watermarks or logos anywhere in the image, any border or frame, and incoherent shapes.",
   ];
 
-  return `${ASPECT_SENTENCE}\n\n${sentences.join(" ")} ${i.enfoque === 3 ? REGLA_EXPRESION_EXPERTO : i.emocion && EMOCIONES_AB[i.emocion].expresionEs ? EMOCIONES_AB[i.emocion].expresionEs : REGLA_EXPRESION} ${PROHIBICION_VISUAL}`;
+  return `${ASPECT_SENTENCE}\n\n${sentences.join(" ")} ${tonoPrompt(i.enfoque, i.emocionEdad) === "autoridad" ? REGLA_EXPRESION_EXPERTO : i.emocion && EMOCIONES_AB[i.emocion].expresionEs ? EMOCIONES_AB[i.emocion].expresionEs : REGLA_EXPRESION} ${PROHIBICION_VISUAL}`;
 }
 
 /* ───────── Resultado estructurado de la generación ───────── */

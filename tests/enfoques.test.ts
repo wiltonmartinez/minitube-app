@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { edadInterna, edadTexto } from "@/lib/edades";
 import { ENFOQUES, edadesDelEnfoque, enfoqueDe, normalizarEnfoque } from "@/lib/enfoques";
 import { planificar } from "@/lib/motor";
 import { auditarPrompt } from "@/lib/prohibidos";
@@ -28,11 +29,11 @@ describe("Los 3 enfoques estratégicos", () => {
   });
 
   it("normalizarEnfoque corrige etnia, edad y dispositivo", () => {
-    const f = normalizarEnfoque({ profesion: "Técnico de computadores", etnia: "Latino / Mestizo", edad: "Joven 18-25", dispositivo: "Ninguno" });
-    expect(f).toMatchObject({ etnia: "Asiático / Coreano", edad: "Adulto Joven 30-40", dispositivo: "PC / Laptop" });
-    const g = normalizarEnfoque({ profesion: "Sublimación", etnia: "Afrodescendiente / Afro-latino", edad: "Adulto Mayor 45-55", dispositivo: "Tablet" });
-    expect(g).toMatchObject({ etnia: "Afrodescendiente / Afro-latino", edad: "Adulto Mayor 45-55", dispositivo: "Smartphone" });
-    expect(edadesDelEnfoque("Recepcionista")).toContain("Joven 18-25");
+    const f = normalizarEnfoque({ profesion: "Técnico de computadores", etnia: "Latino / Mestizo", edad: "18 a 25 años", dispositivo: "Ninguno" });
+    expect(f).toMatchObject({ etnia: "Asiático / Coreano", edad: "36 a 45 años", dispositivo: "PC / Laptop" });
+    const g = normalizarEnfoque({ profesion: "Sublimación", etnia: "Afrodescendiente / Afro-latino", edad: "46 a 55 años", dispositivo: "Tablet" });
+    expect(g).toMatchObject({ etnia: "Afrodescendiente / Afro-latino", edad: "18 a 25 años", dispositivo: "Smartphone" });
+    expect(edadesDelEnfoque("Recepcionista")).toContain("18 a 25 años");
     expect(edadesDelEnfoque("Contador")).toBeUndefined();
     const h = { profesion: "Otra", etnia: "x", edad: "y", dispositivo: "z" };
     expect(normalizarEnfoque(h)).toEqual(h);
@@ -40,7 +41,7 @@ describe("Los 3 enfoques estratégicos", () => {
 
   it("enfoque 1: smartphone, frustración y mirada hacia el error", () => {
     const p = buildPrompt(base({ profesion: "Sublimación", enfoque: 1, dispositivo: "Smartphone" }));
-    expect(p).toContain("extreme frustration and shock");
+    expect(p).toContain("desperation and frustration");
     expect(p).toContain("smartphone firmly");
     expect(p).toMatch(/pulls at the hair/);
     expect(p).toContain("MIRADA FIJA EN DIAGONAL HACIA ABAJO A LA IZQUIERDA");
@@ -48,7 +49,7 @@ describe("Los 3 enfoques estratégicos", () => {
 
   it("enfoque 2: laptop, pánico, mano en la boca y cuerpo encorvado", () => {
     const p = buildPrompt(base({ profesion: "Recepcionista", enfoque: 2, dispositivo: "PC / Laptop" }));
-    expect(p).toContain("panic and desperation");
+    expect(p).toContain("extreme worry and desperation");
     expect(p).toMatch(/covers the mouth in panic or rubs the eyes/);
     expect(p).toContain("hunched");
     expect(p).toContain("MIRADA FIJA EN DIAGONAL HACIA ABAJO A LA IZQUIERDA");
@@ -56,14 +57,14 @@ describe("Los 3 enfoques estratégicos", () => {
 
   it("enfoque 3: PC de escritorio, triunfo, pulgar arriba y mirada al frente", () => {
     const p = buildPrompt(base({ profesion: "Técnico de computadores", enfoque: 3, dispositivo: "PC / Laptop", genero: "Mujer" }));
-    expect(p).toContain("confidence and triumph");
+    expect(p).toContain("authority, confidence and calm professionalism");
     expect(p).toMatch(/thumbs up or points the index finger/);
     expect(p).toContain("leaning forward");
     expect(p).toContain("MIRADA FIJA AL FRENTE HACIA LA IZQUIERDA");
-    expect(p).toContain("brillantes y seguros");
-    expect(p).not.toMatch(/panic and desperation/);
+    expect(p).toContain("brillantes, firmes y serenos");
+    expect(p).not.toMatch(/extreme worry and desperation/);
     expect(p).toContain("REGLA ESTRICTA DE EXPRESIÓN");
-    expect(p).toContain("confianza absoluta");
+    expect(p).toContain("autoridad, seguridad");
   });
 
   it("auditoría: las 16 profesiones con su enfoque no generan texto ni marcas en el prompt", () => {
@@ -71,7 +72,7 @@ describe("Los 3 enfoques estratégicos", () => {
       const e = enfoqueDe(prof)!;
       const f = normalizarEnfoque({ profesion: prof, etnia: "Latino / Mestizo", edad: "Joven 18-25", dispositivo: "Ninguno" });
       expect(DISPOSITIVOS as readonly string[]).toContain(f.dispositivo);
-      const p = buildPrompt(base({ profesion: prof, enfoque: e, dispositivo: f.dispositivo, etnia: f.etnia as PromptInput["etnia"], edad: f.edad as PromptInput["edad"] }));
+      const p = buildPrompt(base({ profesion: prof, enfoque: e, dispositivo: f.dispositivo, etnia: f.etnia as PromptInput["etnia"], edad: edadInterna(f.edad), edadTexto: edadTexto(f.edad) }));
       expect(auditarPrompt(p), prof).toEqual([]);
     }
   });
@@ -99,7 +100,7 @@ describe("Enfoque 3 en el guion y en el panel", () => {
 });
 
 describe("Coherencia de emoción, mirada y manos en los 3 enfoques", () => {
-  const casos: [1 | 2 | 3, string, string][] = [[1, "Sublimación", "extreme frustration and shock"], [2, "Recepcionista", "panic and desperation"], [3, "Técnico de Impresoras", "confidence and triumph"]];
+  const casos: [1 | 2 | 3, string, string][] = [[1, "Sublimación", "desperation and frustration"], [2, "Recepcionista", "extreme worry and desperation"], [3, "Técnico de Impresoras", "authority, confidence and calm professionalism"]];
   for (const [e, prof, cara] of casos) {
     it(`enfoque ${e}: el texto del panel y el prompt dicen lo mismo`, () => {
       const info = ENFOQUES[e];
@@ -108,8 +109,8 @@ describe("Coherencia de emoción, mirada y manos en los 3 enfoques", () => {
       expect(info.mirada.length).toBeGreaterThan(10);
       expect(info.manos.length).toBeGreaterThan(30);
       if (e === 3) {
-        expect(info.emocion).toMatch(/Confianza/);
-        expect(p).toContain("brillantes y seguros");
+        expect(info.emocion).toMatch(/Autoridad/);
+        expect(p).toContain("brillantes, firmes y serenos");
         expect(p).not.toContain("desorbitados por el pánico");
       }
     });
@@ -131,7 +132,7 @@ describe("Dirección de la mirada (el personaje está a la derecha)", () => {
       const p = mk(o);
       expect(p).toContain(MARCAS_REGLA[i]);
       MARCAS_REGLA.forEach((m, j) => j !== i && expect(p).not.toContain(m));
-      expect(p).toContain("por la frustración extrema y el shock");
+      expect(p).toContain("por la desesperación y la frustración");
     });
   });
   it("el enfoque 3 admite los tres con mirada segura y por defecto va al frente", async () => {
@@ -140,8 +141,49 @@ describe("Dirección de la mirada (el personaje está a la derecha)", () => {
     expect(buildPrompt(base({ profesion: "Técnico de computadores", enfoque: 3, dispositivo: "PC / Laptop" }))).toContain(MARCAS_REGLA[0]);
     for (const m of MIRADA_OPCIONES) {
       const p = buildPrompt(base({ profesion: "Técnico de computadores", enfoque: 3, dispositivo: "PC / Laptop", mirada: m }));
-      expect(p).toContain("brillantes y seguros");
+      expect(p).toContain("brillantes, firmes y serenos");
       expect(p).not.toMatch(/desorbitados por el pánico|por la frustración/);
     }
+  });
+});
+
+describe("Edades agrupadas y emociones por tono", () => {
+  it("cuatro grupos: 18 a 25, 26 a 35 (operarios y clientes) y 36 a 45, 46 a 55 (autoridad)", async () => {
+    const { GRUPOS_EDAD, EDADES_PANEL, tonoDeEdad, edadInterna: ei, edadTexto: et, EMOCIONES_POR_TONO } = await import("@/lib/edades");
+    expect(EDADES_PANEL).toEqual(["18 a 25 años", "26 a 35 años", "36 a 45 años", "46 a 55 años"]);
+    expect(GRUPOS_EDAD.map((g) => g.tono)).toEqual(["cliente", "autoridad"]);
+    expect(tonoDeEdad("26 a 35 años")).toBe("cliente");
+    expect(tonoDeEdad("36 a 45 años")).toBe("autoridad");
+    expect(ei("18 a 25 años")).toBe("Joven 18-25");
+    expect(ei("46 a 55 años")).toBe("Adulto Mayor 45-55");
+    expect(et("26 a 35 años")).toBe("26 to 35");
+    expect(EMOCIONES_POR_TONO.cliente).toEqual(["Desesperación", "Frustración", "Preocupación extrema"]);
+    expect(EMOCIONES_POR_TONO.autoridad).toEqual(["Autoridad", "Seguridad", "Profesionalidad", "Dominio técnico", "Serenidad"]);
+  });
+
+  it("los enfoques 1 y 2 usan 18-35 y el 3 usa 36-55", () => {
+    for (const p of ["Sublimación", "Fotografía", "Litografía", "Recepcionista"]) expect(edadesDelEnfoque(p)).toEqual(["18 a 25 años", "26 a 35 años"]);
+    for (const p of ["Técnico de Impresoras", "Ingeniero de sistemas"]) expect(edadesDelEnfoque(p)).toEqual(["36 a 45 años", "46 a 55 años"]);
+  });
+
+  it("el prompt dice «aged 26 to 35» y aplica la emoción elegida", () => {
+    const p = buildPrompt(base({ profesion: "Fotografía", edadTexto: "26 to 35", emocionEdad: "Preocupación extrema" }));
+    expect(p).toContain("aged 26 to 35");
+    expect(p).toContain("extreme worry and anxiety");
+    expect(p).toContain("por la preocupación extrema");
+    const a = buildPrompt(base({ profesion: "Ingeniero de sistemas", edadTexto: "46 to 55", emocionEdad: "Dominio técnico" }));
+    expect(a).toContain("aged 46 to 55");
+    expect(a).toContain("technical mastery");
+    expect(a).toContain("brillantes, firmes y serenos");
+    expect(a).toContain("autoridad, seguridad, profesionalidad y serenidad");
+    expect(a).not.toMatch(/desorbitados por el pánico/);
+  });
+
+  it("emoción efectiva: la elegida, o «Seguridad» con edad de autoridad y sin enfoque", async () => {
+    const { emocionEfectiva, EMOCION_AUTO } = await import("@/lib/edades");
+    expect(emocionEfectiva("26 a 35 años", "Frustración", false)).toBe("Frustración");
+    expect(emocionEfectiva("26 a 35 años", "Serenidad", false)).toBeUndefined(); // no encaja con el tono
+    expect(emocionEfectiva("46 a 55 años", EMOCION_AUTO, false)).toBe("Seguridad");
+    expect(emocionEfectiva("46 a 55 años", EMOCION_AUTO, true)).toBeUndefined(); // con enfoque manda el enfoque
   });
 });

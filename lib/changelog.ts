@@ -9,6 +9,17 @@ export type Cambio = {
 
 export const CHANGELOG: Cambio[] = [
   {
+    version: "4.11.0",
+    fecha: "2026-10-10",
+    titulo: "Edades agrupadas por papel y emoción",
+    cambios: [
+      "La edad se elige por grupos: «Operarios y clientes» (18 a 25 y 26 a 35 años) y «Autoridad» (36 a 45 y 46 a 55 años). El prompt dice, por ejemplo, «aged 26 to 35».",
+      "Nuevo selector de emoción según la edad. 18 a 35 años: desesperación, frustración o preocupación extrema. 36 a 55 años: autoridad, seguridad, profesionalidad, dominio técnico o serenidad. «Automática» deja la emoción del enfoque.",
+      "Los enfoques 1 y 2 solo ofrecen 18 a 35 años (operarios y clientes) y el enfoque 3, 36 a 55 (autoridad). Las emociones de los enfoques se alinearon: Enfoque 1 desesperación y frustración, Enfoque 2 preocupación extrema y desesperación por la fecha límite, Enfoque 3 autoridad, seguridad, profesionalidad y serenidad.",
+      "Sin enfoque, una edad de autoridad aplica «Seguridad» por defecto y el guion adopta el tono de solución del experto. Se quitaron las edades de 56 a 70 años del panel (la API de TexTube conserva sus rangos).",
+    ],
+  },
+  {
     version: "4.10.0",
     fecha: "2026-10-09",
     titulo: "Mirada: Punto #1, Punto #2 y Punto #3 (nunca hacia arriba)",

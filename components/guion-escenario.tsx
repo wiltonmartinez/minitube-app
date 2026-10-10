@@ -23,6 +23,7 @@ export function GuionEscenario({
   edadAnios,
   dispositivo,
   enfoque,
+  experto,
 }: {
   plotter: boolean;
   profesion: string;
@@ -31,6 +32,7 @@ export function GuionEscenario({
   edadAnios?: number;
   dispositivo?: string;
   enfoque?: 1 | 2 | 3;
+  experto?: boolean;
 }) {
   const [marca, setMarca] = useState("");
   const [modelo, setModelo] = useState("");
@@ -40,8 +42,8 @@ export function GuionEscenario({
 
   const error = errorSel === OTRO ? errorOtro.trim() : errorSel;
   const e = useMemo(
-    () => (error ? generarEscenario({ marca, modelo, error, profesion, plotter, genero, edadAnios, dispositivo, enfoque, fondoCatalogo: fondo, semilla }) : null),
-    [marca, modelo, error, profesion, plotter, genero, edadAnios, dispositivo, enfoque, fondo, semilla],
+    () => (error ? generarEscenario({ marca, modelo, error, profesion, plotter, genero, edadAnios, dispositivo, enfoque, experto, fondoCatalogo: fondo, semilla }) : null),
+    [marca, modelo, error, profesion, plotter, genero, edadAnios, dispositivo, enfoque, experto, fondo, semilla],
   );
 
   async function copiar(texto: string, que: string) {

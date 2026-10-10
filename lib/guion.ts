@@ -195,7 +195,7 @@ export type Escenario = {
 
 const mayuscula = (t: string) => (t ? t[0].toUpperCase() + t.slice(1) : t);
 
-export function generarEscenario(opts: { marca?: string; modelo?: string; error: string; profesion: string; plotter?: boolean; genero?: string; edadAnios?: number; dispositivo?: string; enfoque?: 1 | 2 | 3; fondoCatalogo?: string; semilla?: number }): Escenario {
+export function generarEscenario(opts: { marca?: string; modelo?: string; error: string; profesion: string; plotter?: boolean; genero?: string; edadAnios?: number; dispositivo?: string; enfoque?: 1 | 2 | 3; experto?: boolean; fondoCatalogo?: string; semilla?: number }): Escenario {
   const { error, profesion } = opts;
   const marca = opts.marca ?? "";
   const modelo = opts.modelo ?? "";
@@ -206,7 +206,7 @@ export function generarEscenario(opts: { marca?: string; modelo?: string; error:
   const tuEquipo = `tu ${eq.etiqueta}`;
   const equipoCapital = eq.nombre || `${mayuscula(eq.el)} ${eq.tipo}`;
   const negocioCorto = p.negocio.startsWith("tu ") ? p.negocio.slice(3) : p.negocio;
-  const experto = opts.enfoque === 3; // Solución del Experto: autoridad y seguridad, no pánico
+  const experto = opts.experto ?? opts.enfoque === 3; // Solución del Experto: autoridad y seguridad, no pánico
   const ganchoBase = experto ? GANCHOS_EXPERTO[n % GANCHOS_EXPERTO.length] : GANCHOS[n % GANCHOS.length];
   const gancho = ganchoBase
     .replace("{tu_equipo_cap}", mayuscula(tuEquipo))

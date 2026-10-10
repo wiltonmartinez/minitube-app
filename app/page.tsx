@@ -28,6 +28,7 @@ import {
   type Seleccion,
   esArmonica,
 } from "@/lib/rostro";
+import { EDADES_PANEL, EMOCION_AUTO, EMOCIONES_EDAD, EMOCIONES_POR_TONO, GRUPOS_EDAD, edadInterna, edadTexto, emocionEfectiva, tonoDeEdad } from "@/lib/edades";
 import { ENFOQUES, edadesDelEnfoque, enfoqueDe, normalizarEnfoque } from "@/lib/enfoques";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -78,7 +79,6 @@ import {
   BADGES,
   BADGES_REALES,
   BADGE_ALEATORIO,
-  EDADES,
   ETNIAS_PANEL,
   GAFAS_ALEATORIAS,
   GAFAS_ESTILOS,
@@ -112,7 +112,10 @@ type FormState = {
   plotter: boolean;
   // Bloque 2
   genero: (typeof GENEROS)[number];
-  edad: (typeof EDADES)[number];
+  /** Grupo de edad del panel (EDADES_PANEL): 18 a 25, 26 a 35, 36 a 45 o 46 a 55 años */
+  edad: string;
+  /** Emoción elegida según el tono de la edad (o «Automática») */
+  emocionPanel: string;
   /** Smartphone, PC / Laptop o Tablet: fija la postura de las dos manos */
   dispositivo: string;
   /** Aplica el enfoque estratégico de la profesión (etnia, edad, dispositivo, emoción, mirada y manos) */
@@ -141,7 +144,8 @@ type FormState = {
 const INITIAL: FormState = {
   plotter: false,
   genero: GENEROS[0],
-  edad: EDADES[0],
+  edad: EDADES_PANEL[0],
+  emocionPanel: EMOCION_AUTO,
   dispositivo: DISPOSITIVO_NINGUNO,
   usarEnfoque: true,
   mirada: MIRADA_DEFECTO,
@@ -173,7 +177,7 @@ const pick = <T,>(list: readonly T[]) => list[Math.floor(Math.random() * list.le
 function azarTotal(profesiones: readonly string[]): FormState_Azar {
   return {
     genero: pick(GENEROS),
-    edad: pick(EDADES),
+    edad: pick(EDADES_PANEL),
     etnia: pick(ETNIAS_PANEL),
     profesion: pick(profesiones),
     marco: pick(MARCOS).es,
@@ -402,7 +406,10 @@ export default function Home() {
   const arq = ARQUETIPOS[arquetipoEf];
   // Single source of truth: con arquetipo, estos campos se DERIVAN de él; es imposible enviar contradicciones
   const generoEf = arq ? arq.genero : form.genero;
-  const edadEf = arq ? arq.edad : form.edad;
+  const edadEf = arq ? arq.edad : edadInterna(form.edad);
+  const edadTextoEf = arq ? undefined : edadTexto(form.edad);
+  const tonoEdad = arq ? undefined : tonoDeEdad(form.edad);
+  const emocionEdadEf = arq ? undefined : emocionEfectiva(form.edad, form.emocionPanel, !alta && form.usarEnfoque && !!enfoqueDe(form.profesion));
   const etniaEf = arq ? arq.etnia : form.etnia;
   const enfoqueActivo = !alta && form.usarEnfoque ? enfoqueDe(form.profesion) : undefined;
   const infoEnfoque = enfoqueActivo ? ENFOQUES[enfoqueActivo] : undefined;
@@ -456,13 +463,15 @@ export default function Home() {
         accesorio: accesorioEf,
         dispositivo: form.dispositivo === DISPOSITIVO_NINGUNO ? undefined : form.dispositivo,
         enfoque: enfoqueActivo,
+        edadTexto: edadTextoEf,
+        emocionEdad: emocionEdadEf,
         mirada: miradaEf,
         personaje: persEf,
         listas,
         arquetipo: arquetipoEf,
         plotter: alta || undefined,
     };
-  }, [form, catalogo, paletaEf, gafasEf, badgeEf, accesorioEf, persEf, listas, arquetipoEf, generoEf, edadEf, etniaEf, alta, enfoqueActivo, miradaEf]);
+  }, [form, catalogo, paletaEf, gafasEf, badgeEf, accesorioEf, persEf, listas, arquetipoEf, generoEf, edadEf, etniaEf, alta, enfoqueActivo, miradaEf, edadTextoEf, emocionEdadEf]);
 
   // Prompt para copiar a Gemini (formato de siempre)
   const live = useMemo<GeneratedPrompt | null>(
@@ -572,7 +581,10 @@ export default function Home() {
             badge: resolverBadge(f.badge), // el lote siempre lleva un badge real
             accesorio: resolverAccesorio(f.accesorio, f.profesion), // según el perfil de ese prompt
             // Personalización armónica propia de cada prompt
-            personaje: resolverPersonaje(listas, f.pers, { genero: f.genero, edad: f.edad, etnia: f.etnia }, f.modoRostro),
+            personaje: resolverPersonaje(listas, f.pers, { genero: f.genero, edad: edadInterna(f.edad), etnia: f.etnia }, f.modoRostro),
+            edad: edadInterna(f.edad),
+            edadTexto: conArquetipo ? undefined : edadTexto(f.edad),
+            emocionEdad: conArquetipo ? undefined : emocionEfectiva(f.edad, f.emocionPanel, enfoqueLote !== undefined),
             arquetipo,
             plotter: alta || undefined,
             dispositivo: f.dispositivo === DISPOSITIVO_NINGUNO ? undefined : f.dispositivo,
@@ -746,9 +758,18 @@ export default function Home() {
                       id="edad"
                       label="Edad"
                       value={form.edad}
-                      options={enfoqueActivo ? (edadesDelEnfoque(form.profesion) ?? EDADES) : EDADES}
-                      onChange={(v) => set("edad", v as FormState["edad"])}
+                      options={enfoqueActivo ? (edadesDelEnfoque(form.profesion) ?? EDADES_PANEL) : EDADES_PANEL}
+                      groups={GRUPOS_EDAD.filter((g) => !enfoqueActivo || g.opciones.some((o) => edadesDelEnfoque(form.profesion)?.includes(o))).map((g) => ({ label: g.label, options: g.opciones }))}
+                      onChange={(v) => set("edad", v)}
                       {...lockProps("edad")}
+                    />
+                    <SelectField
+                      id="emocionPanel"
+                      label={tonoEdad === "autoridad" ? "Emoción (autoridad, 36 a 55 años)" : "Emoción (operario o cliente, 18 a 35 años)"}
+                      value={tonoEdad && form.emocionPanel !== EMOCION_AUTO && EMOCIONES_POR_TONO[tonoEdad].includes(form.emocionPanel) ? form.emocionPanel : EMOCION_AUTO}
+                      options={[EMOCION_AUTO, ...(tonoEdad ? EMOCIONES_POR_TONO[tonoEdad] : [])]}
+                      onChange={(v) => set("emocionPanel", v)}
+                      className="md:col-span-2"
                     />
                     <SelectField
                       id="etnia"
@@ -915,7 +936,7 @@ export default function Home() {
                   {...lockProps("profesion")}
                 />
                 <ReadOnlyField id="vestimenta" label="Vestimenta" value={vestimenta} {...lockProps("profesion")} />
-                <ReadOnlyField id="emocion" label="Emociones" value={infoEnfoque ? infoEnfoque.emocion : perfil.emocion} {...lockProps("profesion")} />
+                <ReadOnlyField id="emocion" label="Emociones" value={emocionEdadEf ? `${emocionEdadEf} (${EMOCIONES_EDAD[emocionEdadEf].tono === "autoridad" ? "autoridad" : "operario o cliente"})` : infoEnfoque ? infoEnfoque.emocion : perfil.emocion} {...lockProps("profesion")} />
                 <ReadOnlyField id="mirada" label="Mirada" value={textoMirada} />
                 <SelectField
                   id="direccionMirada"
@@ -1046,6 +1067,7 @@ export default function Home() {
               genero={arq ? undefined : generoEf}
               dispositivo={dispositivoActivo ? form.dispositivo : undefined}
               enfoque={enfoqueActivo}
+              experto={tonoEdad ? tonoEdad === "autoridad" : undefined}
             />
           </CardContent>
         </Card>
