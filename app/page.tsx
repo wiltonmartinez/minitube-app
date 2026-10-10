@@ -6,6 +6,7 @@ import { useMemo, useState } from "react";
 import { COMMIT, VERSION } from "@/lib/changelog";
 import { CatalogEditor } from "@/components/catalog-editor";
 import { ImageGenerator } from "@/components/image-generator";
+import { GuionEscenario } from "@/components/guion-escenario";
 import { nombresLote, type LoteItem } from "@/lib/lote";
 import { urlAPng } from "@/lib/imagen-cliente";
 import { useCatalogo } from "@/lib/use-catalogo";
@@ -1017,6 +1018,7 @@ export default function Home() {
                 Vaciar lote
               </Button>
             </div>
+            <GuionEscenario marca={form.marca} modelo={form.modelo} error={errorFinal} profesion={form.profesion} fondo={perfil?.fondo} />
           </CardContent>
         </Card>
       </div>

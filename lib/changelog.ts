@@ -9,6 +9,17 @@ export type Cambio = {
 
 export const CHANGELOG: Cambio[] = [
   {
+    version: "4.2.0",
+    fecha: "2026-10-09",
+    titulo: "Guion del video: escenario completo con un clic",
+    cambios: [
+      "Nueva tarjeta «Guion del video (escenario)» en el panel: con el problema técnico (bloque 1) y la profesión (bloque 3) arma el gancho visual de la miniatura, el gancho narrativo de los primeros 5 segundos, el desarrollo (b-roll y explicación) y el llamado a la acción.",
+      "Sigue la regla de negocio: solo instalación remota de software, sin desarme ni reparaciones físicas. Con el error 0014BD avisa de la limpieza previa que exige, para no prometer de más.",
+      "Las 16 profesiones del panel tienen su propio personaje, fondo, pérdida y plano de apoyo; los plotters van en masculino y las impresoras en femenino. «Otra variante» cambia el gancho y el texto corto.",
+      "Botones para copiar el guion y para copiar un prompt completo (con las variables ya puestas) y pegarlo en Claude o ChatGPT. No cuesta nada.",
+    ],
+  },
+  {
     version: "4.1.0",
     fecha: "2026-10-09",
     titulo: "El generador crea solo el fondo (sin texto ni badges)",
