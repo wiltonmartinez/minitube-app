@@ -873,7 +873,7 @@ export default function Home() {
                   {...lockProps("profesion")}
                 />
                 <ReadOnlyField id="vestimenta" label="Vestimenta" value={vestimenta} {...lockProps("profesion")} />
-                <ReadOnlyField id="emocion" label="Emociones" value={perfil.emocion} {...lockProps("profesion")} />
+                <ReadOnlyField id="emocion" label="Emociones" value={infoEnfoque ? infoEnfoque.emocion : perfil.emocion} {...lockProps("profesion")} />
                 <ReadOnlyField id="mirada" label="Mirada" value={MIRADA_ES} />
                 <ReadOnlyField id="manos" label="Manos (según accesorio)" value={manosMostradas} />
                 <div className="md:col-span-2">

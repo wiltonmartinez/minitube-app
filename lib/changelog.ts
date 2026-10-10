@@ -9,6 +9,15 @@ export type Cambio = {
 
 export const CHANGELOG: Cambio[] = [
   {
+    version: "4.7.1",
+    fecha: "2026-10-09",
+    titulo: "Técnicos e ingenieros: autoridad y seguridad",
+    cambios: [
+      "El campo «Emociones» del panel muestra la emoción del enfoque (confianza y triunfo en técnicos e ingenieros), no la del perfil de pánico.",
+      "El guion de Técnico de Impresoras, Técnico de computadores e Ingeniero de sistemas ya no habla de pánico, angustia ni manos en la cabeza: personaje seguro y con autoridad, ganchos de solución («no lo abras ni lo desarmes») y textos cortos como «¡SOLUCIONADO!».",
+    ],
+  },
+  {
     version: "4.7.0",
     fecha: "2026-10-09",
     titulo: "Los 3 enfoques estratégicos por profesión",

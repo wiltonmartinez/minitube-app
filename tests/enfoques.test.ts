@@ -77,3 +77,24 @@ describe("Los 3 enfoques estratégicos", () => {
     }
   });
 });
+
+describe("Enfoque 3 en el guion y en el panel", () => {
+  it("técnicos e ingenieros: autoridad y seguridad, sin pánico ni angustia", async () => {
+    const { generarEscenario } = await import("@/lib/guion");
+    for (const prof of ["Técnico de Impresoras", "Técnico de computadores", "Ingeniero de sistemas"]) {
+      for (let n = 0; n < 6; n++) {
+        const g = generarEscenario({ error: "Almohadillas", profesion: prof, dispositivo: "PC / Laptop", enfoque: 3, semilla: n });
+        expect(g.texto, prof).not.toMatch(/pánico|angustia|frustraci|manos en la cabeza|plata que no entra|desesper/i);
+        expect(g.visual.personaje).toMatch(/seguridad y autoridad/);
+        expect(g.visual.manos).toMatch(/pulgar arriba|monitor/);
+        expect(g.gancho).not.toMatch(/\{/);
+      }
+    }
+  });
+
+  it("sin enfoque, el guion de un técnico no cambia", async () => {
+    const { generarEscenario } = await import("@/lib/guion");
+    const g = generarEscenario({ error: "Almohadillas", profesion: "Técnico de computadores", semilla: 0 });
+    expect(g.visual.personaje).toMatch(/angustia/);
+  });
+});

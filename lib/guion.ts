@@ -24,6 +24,14 @@ export type DatosProfesion = {
   corto: string; // texto corto de miniatura propio de la profesión
 };
 
+/** Enfoque 3 (técnicos e ingenieros): ganchos de autoridad y seguridad, sin pánico ni pérdida de dinero. */
+const GANCHOS_EXPERTO = [
+  "Si un cliente te trae un equipo bloqueado, no lo abras ni lo desarmes: hay una forma de dejarlo funcionando en minutos, y es por software.",
+  "Esta es la herramienta que usan los técnicos que ya no pierden horas con equipos bloqueados: instalación remota y listo.",
+  "Cuando el cliente cree que no tiene arreglo, tú lo resuelves en minutos y sin tocar un destornillador. Te muestro cómo.",
+];
+const CORTOS_EXPERTO = ["¡SOLUCIONADO!", "SOLUCIÓN REMOTA", "SIN DESARMAR"];
+
 export const PROFESIONES_GUION: Record<string, DatosProfesion> = {
   "Asistente Corporativa": { personaje: "Asistente corporativa con blusa formal y gafas, con una mano en la frente y la otra sobre una pila de papeles", fondo: "Oficina moderna desenfocada con luz azulada", negocio: "tu oficina", perdida: "reportes, facturas y documentos que tu jefe espera hoy", broll: "la bandeja de impresión vacía y el reloj de la oficina", corto: "¡OFICINA PARADA!" },
   Teletrabajadora: { personaje: "Teletrabajadora en su escritorio de casa, con las manos en la cabeza frente a la laptop y la impresora", fondo: "Escritorio de home office con luces LED", negocio: "tu trabajo desde casa", perdida: "contratos y entregables que tienes que imprimir y firmar hoy", broll: "tu escritorio de home office con papeles pendientes", corto: "¡NO PUEDO IMPRIMIR!" },
@@ -198,7 +206,9 @@ export function generarEscenario(opts: { marca?: string; modelo?: string; error:
   const tuEquipo = `tu ${eq.etiqueta}`;
   const equipoCapital = eq.nombre || `${mayuscula(eq.el)} ${eq.tipo}`;
   const negocioCorto = p.negocio.startsWith("tu ") ? p.negocio.slice(3) : p.negocio;
-  const gancho = GANCHOS[n % GANCHOS.length]
+  const experto = opts.enfoque === 3; // Solución del Experto: autoridad y seguridad, no pánico
+  const ganchoBase = experto ? GANCHOS_EXPERTO[n % GANCHOS_EXPERTO.length] : GANCHOS[n % GANCHOS.length];
+  const gancho = ganchoBase
     .replace("{tu_equipo_cap}", mayuscula(tuEquipo))
     .replace("{tu_equipo}", tuEquipo)
     .replace("{bloqueado}", eq.bloqueado)
@@ -206,7 +216,7 @@ export function generarEscenario(opts: { marca?: string; modelo?: string; error:
     .replace("{lo}", eq.lo)
     .replace("{perdida}", p.perdida)
     .replace("{negocio_corto}", negocioCorto);
-  const opcionesCorto = [...err.cortos, p.corto];
+  const opcionesCorto = experto ? CORTOS_EXPERTO : [...err.cortos, p.corto];
   const textoCorto = opcionesCorto[n % opcionesCorto.length];
   const alternativas = [...new Set(opcionesCorto)].filter((c) => c !== textoCorto).slice(0, 2);
 
@@ -216,7 +226,9 @@ export function generarEscenario(opts: { marca?: string; modelo?: string; error:
   const postura = opts.dispositivo ? posturaDispositivo(opts.dispositivo, esPerfilTecnico(profesion), opts.enfoque) : null;
   const manos = postura ? `${opts.dispositivo}: ${postura.manosEs}.` : undefined;
   const visual = {
-    personaje: `${p.personaje}.`,
+    personaje: experto
+      ? `${profesion} con seguridad y autoridad: sonrisa confiada, mirada fija al frente y cuerpo inclinado hacia adelante, tras encontrar la herramienta remota que resuelve el equipo de su cliente.`
+      : `${p.personaje}.`,
     edadGenero,
     manos,
     fondo: `${p.fondo}, con sensación de urgencia.`,
@@ -225,8 +237,12 @@ export function generarEscenario(opts: { marca?: string; modelo?: string; error:
     alternativas,
   };
   const desarrollo = {
-    broll: [`Primer plano de la pantalla con ${err.mensaje}.`, `${equipoCapital} con ${err.luces}.`, `Corte rápido a ${p.broll}.`],
-    explicacion: [...err.porque.map((s) => `${mayuscula(s)}.`), `Por eso ${p.negocio} está detenido: ${p.perdida} no pueden esperar.`],
+    broll: experto
+      ? [`Primer plano de la pantalla con ${err.mensaje} en el equipo del cliente.`, `${equipoCapital} con ${err.luces}.`, "Corte al técnico, seguro y sonriente, instalando el software remoto desde su PC."]
+      : [`Primer plano de la pantalla con ${err.mensaje}.`, `${equipoCapital} con ${err.luces}.`, `Corte rápido a ${p.broll}.`],
+    explicacion: experto
+      ? [...err.porque.map((s) => `${mayuscula(s)}.`), "Tu cliente espera su equipo y tú eres quien lo resuelve: con la herramienta remota lo dejas funcionando sin abrir nada."]
+      : [...err.porque.map((s) => `${mayuscula(s)}.`), `Por eso ${p.negocio} está detenido: ${p.perdida} no pueden esperar.`],
   };
   const extra = err.previo ? " Antes de empezar te indicamos la limpieza previa que este error exige, para que el reset quede definitivo." : "";
   const cta = `La solución es por software. No tienes que desarmar nada ni llevar ${eq.el} ${eq.tipo} al técnico: conectas ${tuEquipo} por cable USB a tu PC con Windows y nosotros hacemos la instalación remota ahora mismo, en vivo y en minutos, para que sigas produciendo hoy.${extra}`;
