@@ -7,8 +7,8 @@ import "server-only";
 export class ErrorCorreo extends Error {}
 
 const backend = () => {
-  const url = process.env.GESTOR_CORREO_URL?.trim();
-  const token = process.env.GESTOR_CORREO_TOKEN?.trim();
+  const url = process.env.GESTOR_CORREO_URL?.trim().replace(/^["']|["']$/g, "");
+  const token = process.env.GESTOR_CORREO_TOKEN?.trim().replace(/^["']|["']$/g, "");
   return url && token ? { url, token } : null;
 };
 
@@ -25,7 +25,11 @@ async function porBackend(b: { url: string; token: string }, o: { para: string; 
     const c = (e as { cause?: { code?: string; message?: string } })?.cause;
     return String(c?.code ?? c?.message ?? (e as Error)?.message ?? "error").slice(0, 80);
   });
-  if (typeof r === "string") throw new ErrorCorreo(`No se pudo conectar con el servidor de correo (${r}).`);
+  if (typeof r === "string") {
+    // sin mostrar el valor (podría ser un secreto mal pegado): solo su forma
+    const forma = r === "ERR_INVALID_URL" ? ` La dirección guardada ${/^https:\/\//.test(b.url) ? "empieza bien" : "NO empieza por https://"} y mide ${b.url.length} caracteres (debe medir ${"https://nucleo.resetalmohadillas.com/api/public/gestor-correo/".length}).` : "";
+    throw new ErrorCorreo(`No se pudo conectar con el servidor de correo (${r}).${forma}`);
+  }
   if (!r.ok) {
     const d = await r.json().catch(() => ({}));
     throw new ErrorCorreo(r.status === 401 ? "El servidor de correo rechazó el token (GESTOR_CORREO_TOKEN)." : r.status === 503 ? "El servidor de correo está apagado (falta GESTOR_CORREO_TOKEN allá)." : `No se pudo enviar el correo (${d?.message ?? "HTTP " + r.status}).`);
