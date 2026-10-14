@@ -54,7 +54,7 @@ async function llamar<T>(ruta: string, cuerpo: unknown): Promise<T> {
 }
 
 // Los menús desplegables nativos llevan fondo y letra propios para que las opciones se vean en modo oscuro y claro
-const campo = "w-full rounded-md border bg-background px-3 py-2 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring [color-scheme:light_dark] [&>option]:bg-background [&>option]:text-foreground";
+const campo = "w-full rounded-md border bg-background px-3 py-2 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring [color-scheme:dark] [&>option]:bg-background [&>option]:text-foreground";
 
 export default function TexTubePage() {
   const [pestana, setPestana] = useState<"video" | "plantillas">("video");
@@ -251,7 +251,7 @@ function Generar({ editadas }: { editadas: TextosPlantillas }) {
                   </select>
                 ) : (
                   <>
-                    <Input id="error" list="errores" value={error} maxLength={30} placeholder="Almohadillas, E-11, 5B00, 0014BD…" autoComplete="off" onChange={(e) => { setError(e.target.value); setPrevia(null); }} />
+                    <Input id="error" list="errores" className="[color-scheme:dark]" value={error} maxLength={30} placeholder="Almohadillas, E-11, 5B00, 0014BD…" autoComplete="off" onChange={(e) => { setError(e.target.value); setPrevia(null); }} />
                     <datalist id="errores">{ERRORES_COMUNES.map((o) => <option key={o} value={o} />)}</datalist>
                   </>
                 )}
