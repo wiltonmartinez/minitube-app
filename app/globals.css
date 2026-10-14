@@ -121,6 +121,10 @@
   * {
     @apply border-border outline-ring/50;
   }
+  /* La app es siempre oscura: así los menús y sugerencias nativos del navegador (select, datalist) también salen oscuros y legibles */
+  html.dark {
+    color-scheme: dark;
+  }
   body {
     @apply bg-background text-foreground;
   }
