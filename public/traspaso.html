@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Traspaso de datos · Gestor TUBE</title>
+<style>
+  :root { color-scheme: dark; --fondo: oklch(0.145 0 0); --tarjeta: oklch(0.205 0 0); --borde: oklch(1 0 0 / 14%); --texto: oklch(0.985 0 0); --suave: oklch(0.708 0 0); --ok: oklch(0.72 0.17 150); --mal: oklch(0.704 0.191 22); --azul: oklch(0.62 0.19 260); }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--fondo); color: var(--texto); font: 15px/1.5 "Geist Variable", system-ui, sans-serif; }
+  main { max-width: 52rem; margin: 0 auto; padding: 1.5rem 1rem 4rem; }
+  h1 { font-size: 1.75rem; margin: 0 0 .25rem; }
+  p, li { color: var(--suave); }
+  .tarjeta { background: var(--tarjeta); border: 1px solid var(--borde); border-radius: .75rem; padding: 1rem 1.25rem; margin: 1rem 0; }
+  h2 { font-size: 1.1rem; margin: 0 0 .5rem; }
+  button, .boton { cursor: pointer; border: 1px solid var(--borde); background: oklch(0.922 0 0); color: oklch(0.205 0 0); border-radius: .5rem; padding: .55rem 1rem; font: inherit; font-weight: 600; }
+  button.suave { background: transparent; color: var(--texto); }
+  button:disabled { opacity: .5; cursor: default; }
+  input[type=file] { color: var(--suave); margin: .5rem 0; max-width: 100%; }
+  pre { white-space: pre-wrap; background: oklch(0.12 0 0); border: 1px solid var(--borde); border-radius: .5rem; padding: .75rem; max-height: 22rem; overflow: auto; color: var(--texto); font-size: 13px; }
+  .ok { color: var(--ok); } .mal { color: var(--mal); }
+  label { display: flex; gap: .5rem; align-items: center; color: var(--texto); margin: .4rem 0; }
+</style>
+</head>
+<body>
+<main>
+  <h1>🔁 Traspaso de datos</h1>
+  <p>Gestor TUBE guarda en <b>tu navegador</b> los menús y plantillas de TexTUBE, las listas de PrompTUBE y lo de CapaTUBE (marcos, badges, ajustes y proyectos del almacén interno). Eso está atado a la dirección web: en una dirección nueva empiezas vacío. Esta página lo copia a un archivo y lo vuelve a cargar en la otra dirección.</p>
+
+  <div class="tarjeta">
+    <h2>Dirección en la que estás ahora</h2>
+    <p><b id="origen"></b></p>
+  </div>
+
+  <div class="tarjeta">
+    <h2>1 · Exportar (hazlo en la dirección <u>de origen</u>)</h2>
+    <p>Guarda un archivo con todo lo que este navegador tiene guardado para esta dirección. No contiene contraseñas de tu cuenta.</p>
+    <button id="exportar">📤 Exportar mis datos</button>
+    <div id="salida-exportar"></div>
+  </div>
+
+  <div class="tarjeta">
+    <h2>2 · Importar (hazlo en la dirección <u>nueva</u>)</h2>
+    <input type="file" id="archivo" accept=".json,application/json"><br>
+    <label><input type="checkbox" id="reemplazar"> Borrar primero lo que ya hay aquí (si no, se mezcla y lo importado gana)</label>
+    <button id="ver" class="suave" disabled>👁️ Ver qué contiene</button>
+    <button id="importar" disabled>📥 Importar</button>
+    <div id="salida-importar"></div>
+  </div>
+
+  <div class="tarjeta">
+    <h2>Qué no se puede traspasar</h2>
+    <ul>
+      <li>Las <b>carpetas del disco</b> que elegiste en CapaTUBE (Base y Entrada): el navegador no deja copiarlas. Tendrás que elegirlas otra vez con «Examinar».</li>
+      <li>Los archivos que ya estén en tu disco no se tocan.</li>
+    </ul>
+  </div>
+</main>
+
+<script>
+"use strict";
+const $ = (id) => document.getElementById(id);
+$("origen").textContent = location.origin;
+const log = (el, html) => { $(el).innerHTML = html; };
+
+/* ───────── serialización de valores (IndexedDB guarda objetos, blobs y fechas) ───────── */
+const aB64 = (buf) => { const u = new Uint8Array(buf); let s = ""; for (let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000)); return btoa(s); };
+const deB64 = (b) => { const s = atob(b), u = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) u[i] = s.charCodeAt(i); return u; };
+let omitidos = 0;
+async function aJSON(v) {
+  if (v === null || typeof v === "boolean" || typeof v === "number" || typeof v === "string") return v;
+  if (v === undefined) return { $t: "undef" };
+  if (v instanceof Date) return { $t: "date", v: v.toISOString() };
+  if (v instanceof Blob) return { $t: "blob", tipo: v.type, nombre: v instanceof File ? v.name : null, ultima: v instanceof File ? v.lastModified : null, b64: aB64(await v.arrayBuffer()) };
+  if (v instanceof ArrayBuffer) return { $t: "ab", b64: aB64(v) };
+  if (ArrayBuffer.isView(v)) return { $t: "ta", clase: v.constructor.name, b64: aB64(v.buffer.slice(v.byteOffset, v.byteOffset + v.byteLength)) };
+  if (Array.isArray(v)) return Promise.all(v.map(aJSON));
+  if (v instanceof Map) return { $t: "map", e: await Promise.all([...v].map(async ([k, x]) => [await aJSON(k), await aJSON(x)])) };
+  if (v instanceof Set) return { $t: "set", e: await Promise.all([...v].map(aJSON)) };
+  if (typeof v === "function") { omitidos++; return { $t: "omitido" }; }
+  if (typeof v === "object") {
+    if (typeof FileSystemHandle !== "undefined" && v instanceof FileSystemHandle) { omitidos++; return { $t: "omitido", que: v.kind === "directory" ? "carpeta" : "archivo" }; }
+    const o = {};
+    for (const k of Object.keys(v)) o[k] = await aJSON(v[k]);
+    return { $t: "obj", o };
+  }
+  omitidos++; return { $t: "omitido" };
+}
+function deJSON(v) {
+  if (v === null || typeof v !== "object") return v;
+  if (Array.isArray(v)) return v.map(deJSON);
+  switch (v.$t) {
+    case "undef": return undefined;
+    case "date": return new Date(v.v);
+    case "blob": { const b = deB64(v.b64); return v.nombre != null ? new File([b], v.nombre, { type: v.tipo, lastModified: v.ultima || Date.now() }) : new Blob([b], { type: v.tipo }); }
+    case "ab": return deB64(v.b64).buffer;
+    case "ta": { const u = deB64(v.b64); const C = globalThis[v.clase] || Uint8Array; return new C(u.buffer, 0, Math.floor(u.length / (C.BYTES_PER_ELEMENT || 1))); }
+    case "map": return new Map(v.e.map(([k, x]) => [deJSON(k), deJSON(x)]));
+    case "set": return new Set(v.e.map(deJSON));
+    case "omitido": return undefined;
+    case "obj": { const o = {}; for (const k of Object.keys(v.o)) o[k] = deJSON(v.o[k]); return o; }
+    default: return v;
+  }
+}
+
+/* ───────── IndexedDB ───────── */
+const abrir = (nombre, version, upgrade) => new Promise((ok, mal) => { const r = version ? indexedDB.open(nombre, version) : indexedDB.open(nombre); if (upgrade) r.onupgradeneeded = () => upgrade(r.result, r.transaction); r.onsuccess = () => ok(r.result); r.onerror = () => mal(r.error); r.onblocked = () => mal(new Error("Cierra las otras pestañas de Gestor TUBE y vuelve a intentarlo.")); });
+const pedir = (r) => new Promise((ok, mal) => { r.onsuccess = () => ok(r.result); r.onerror = () => mal(r.error); });
+
+async function volcarBD(nombre) {
+  const db = await abrir(nombre);
+  const salida = { version: db.version, tiendas: {} };
+  for (const t of db.objectStoreNames) {
+    const tx = db.transaction(t, "readonly"), s = tx.objectStore(t);
+    const esquema = { keyPath: s.keyPath, autoIncrement: s.autoIncrement, indices: [...s.indexNames].map((n) => { const i = s.index(n); return { n, keyPath: i.keyPath, unique: i.unique, multiEntry: i.multiEntry }; }) };
+    const filas = [];
+    await new Promise((ok, mal) => {
+      const c = s.openCursor();
+      c.onsuccess = async () => { const cur = c.result; if (!cur) return ok(); filas.push([cur.key, cur.value]); cur.continue(); };
+      c.onerror = () => mal(c.error);
+    });
+    const rows = [];
+    for (const [k, v] of filas) rows.push({ k: await aJSON(k), v: await aJSON(v) });
+    salida.tiendas[t] = { esquema, filas: rows };
+  }
+  db.close();
+  return salida;
+}
+
+async function exportar() {
+  omitidos = 0;
+  const datos = { formato: "gestor-tube-traspaso", version: 1, origen: location.origin, fecha: new Date().toISOString(), localStorage: {}, indexedDB: {} };
+  for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); datos.localStorage[k] = localStorage.getItem(k); }
+  const lista = indexedDB.databases ? await indexedDB.databases() : [];
+  for (const d of lista) { if (!d.name) continue; try { datos.indexedDB[d.name] = await volcarBD(d.name); } catch (e) { datos.indexedDB[d.name] = { error: String(e.message || e) }; } }
+  return { datos, omitidos };
+}
+
+function resumen(d) {
+  const ls = Object.keys(d.localStorage || {});
+  const l = [`<b>Origen:</b> ${d.origen} · <b>Fecha:</b> ${new Date(d.fecha).toLocaleString()}`, `<b>Preferencias y menús (localStorage):</b> ${ls.length} elementos`];
+  for (const [n, b] of Object.entries(d.indexedDB || {})) {
+    if (b.error) { l.push(`<span class="mal">Base «${n}»: no se pudo leer (${b.error})</span>`); continue; }
+    l.push(`<b>Base «${n}»:</b> ` + Object.entries(b.tiendas).map(([t, x]) => `${t} (${x.filas.length})`).join(", "));
+  }
+  return l.join("<br>");
+}
+
+$("exportar").onclick = async () => {
+  $("exportar").disabled = true; log("salida-exportar", "⏳ Leyendo los datos de este navegador…");
+  try {
+    const { datos, omitidos: o } = await exportar();
+    const blob = new Blob([JSON.stringify(datos)], { type: "application/json" });
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `gestor-tube-datos-${new Date().toISOString().slice(0, 10)}.json`; document.body.appendChild(a); a.click(); a.remove();
+    log("salida-exportar", `<p class="ok">✅ Archivo descargado (${(blob.size / 1024).toFixed(0)} KB). Guárdalo; lo cargarás en la dirección nueva.</p><p>${resumen(datos)}</p>` + (o ? `<p class="mal">⚠️ ${o} elemento(s) no se pudieron copiar (carpetas del disco): elígelas otra vez en CapaTUBE con «Examinar».</p>` : ""));
+  } catch (e) { log("salida-exportar", `<p class="mal">❌ ${e.message || e}</p>`); }
+  $("exportar").disabled = false;
+};
+
+/* ───────── importar ───────── */
+let cargado = null;
+$("archivo").onchange = async () => {
+  cargado = null; $("ver").disabled = $("importar").disabled = true; log("salida-importar", "");
+  const f = $("archivo").files[0]; if (!f) return;
+  try {
+    const d = JSON.parse(await f.text());
+    if (d.formato !== "gestor-tube-traspaso") throw new Error("Este archivo no es de Gestor TUBE.");
+    cargado = d; $("ver").disabled = $("importar").disabled = false;
+    log("salida-importar", `<p>${resumen(d)}</p>`);
+  } catch (e) { log("salida-importar", `<p class="mal">❌ ${e.message || e}</p>`); }
+};
+$("ver").onclick = () => log("salida-importar", `<p>${resumen(cargado)}</p>`);
+
+async function abrirParaImportar(nombre, tiendas, versionOriginal) {
+  const crear = (d) => {
+    for (const [t, x] of Object.entries(tiendas)) {
+      if (d.objectStoreNames.contains(t)) continue;
+      const s = d.createObjectStore(t, { keyPath: x.esquema.keyPath ?? undefined, autoIncrement: !!x.esquema.autoIncrement });
+      for (const i of x.esquema.indices || []) s.createIndex(i.n, i.keyPath, { unique: i.unique, multiEntry: i.multiEntry });
+    }
+  };
+  const existentes = indexedDB.databases ? await indexedDB.databases() : [];
+  const existe = existentes.some((d) => d.name === nombre);
+  // si la base no existe se crea con su versión original (las apps la abren con esa versión: otra mayor la rompería)
+  if (!existe) return abrir(nombre, versionOriginal || 1, crear);
+  const db = await abrir(nombre);
+  if (!Object.keys(tiendas).some((t) => !db.objectStoreNames.contains(t))) return db;
+  const v = db.version + 1; db.close();
+  return abrir(nombre, v, crear);
+}
+
+$("importar").onclick = async () => {
+  if (!cargado) return;
+  if (!confirm("¿Importar estos datos en esta dirección? " + ($("reemplazar").checked ? "Se BORRA primero lo que hay aquí." : "Se mezclan con lo que hay aquí (lo importado gana).")) ) return;
+  $("importar").disabled = true; const informe = [];
+  try {
+    if ($("reemplazar").checked) { localStorage.clear(); }
+    let n = 0; for (const [k, v] of Object.entries(cargado.localStorage || {})) { localStorage.setItem(k, v); n++; }
+    informe.push(`✅ ${n} preferencias y menús`);
+    for (const [nombre, b] of Object.entries(cargado.indexedDB || {})) {
+      if (b.error) { informe.push(`<span class="mal">⚠️ «${nombre}» venía con error y se saltó</span>`); continue; }
+      const db = await abrirParaImportar(nombre, b.tiendas, b.version);
+      let filas = 0;
+      for (const [t, x] of Object.entries(b.tiendas)) {
+        if (!db.objectStoreNames.contains(t)) continue;
+        const tx = db.transaction(t, "readwrite"), s = tx.objectStore(t);
+        if ($("reemplazar").checked) await pedir(s.clear());
+        for (const r of x.filas) {
+          const valor = deJSON(r.v);
+          if (valor === undefined) continue; // algo que no se pudo copiar (carpeta del disco)
+          if (s.keyPath !== null) s.put(valor); else s.put(valor, deJSON(r.k));
+          filas++;
+        }
+        await new Promise((ok, mal) => { tx.oncomplete = ok; tx.onerror = () => mal(tx.error); tx.onabort = () => mal(tx.error); });
+      }
+      db.close();
+      informe.push(`✅ Base «${nombre}»: ${filas} registros`);
+    }
+    log("salida-importar", `<p class="ok">${informe.join("<br>")}</p><p><b>Listo.</b> Recarga TexTUBE, PrompTUBE y CapaTUBE (Ctrl+F5) para verlo. Recuerda elegir de nuevo las carpetas de CapaTUBE con «Examinar».</p>`);
+  } catch (e) { log("salida-importar", `<p class="mal">❌ ${e.message || e}</p><p>${informe.join("<br>")}</p>`); }
+  $("importar").disabled = false;
+};
+</script>
+</body>
+</html>
