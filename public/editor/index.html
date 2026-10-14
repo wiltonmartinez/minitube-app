@@ -14,8 +14,10 @@
 <div class="app">
   <main>
     <section class="pagina visible" id="p-capas">
-      <h1>🧩 CapaTUBE</h1>
-      <p class="lema">CapaTUBE es el módulo de ensamblaje gráfico definitivo para estructurar miniaturas de YouTube, permitiendo al usuario componer la imagen final superponiendo capas PNG transparentes —como textos, badges 3D y marcas de agua— sobre los fondos generados previamente por IA que permanecen bloqueados al fondo. Mediante un sistema ágil e intuitivo, los fondos generados se cargan de forma organizada para su selección manual, mientras que los elementos frontales pueden ajustarse con precisión milimétrica arrastrándolos con el ratón o moviéndolos píxel a píxel con las flechas del teclado. Como resultado del proceso, la herramienta combina estas capas y guarda automáticamente múltiples variaciones de la miniatura, entregando el material perfecto para optimizar el CTR del canal a través de la función de pruebas A/B de YouTube.</p>
+      <header class="encabezado">
+        <div class="enc-fila"><h1>🧩 CapaTUBE</h1><button type="button" class="btn-desc" id="cp-desc-alternar" aria-expanded="true" title="Ocultar la descripción para tener más espacio">▲ Ocultar descripción</button></div>
+        <p class="lema">CapaTUBE es el módulo de ensamblaje gráfico definitivo para estructurar miniaturas de YouTube, permitiendo al usuario componer la imagen final superponiendo capas PNG transparentes —como textos, badges 3D y marcas de agua— sobre los fondos generados previamente por IA que permanecen bloqueados al fondo. Mediante un sistema ágil e intuitivo, los fondos generados se cargan de forma organizada para su selección manual, mientras que los elementos frontales pueden ajustarse con precisión milimétrica arrastrándolos con el ratón o moviéndolos píxel a píxel con las flechas del teclado. Como resultado del proceso, la herramienta combina estas capas y guarda automáticamente múltiples variaciones de la miniatura, entregando el material perfecto para optimizar el CTR del canal a través de la función de pruebas A/B de YouTube.</p>
+      </header>
       <div class="cp-pasos" id="cp-pasos">
         <button type="button" data-cp-ir="fondo"><b>1</b> Elige el fondo <small>pestaña «Fondo»</small></button>
         <button type="button" data-cp-ir="capas"><b>2</b> Edita texto y badge <small>haz clic en la capa</small></button>
@@ -113,6 +115,17 @@
 <script src="almacen.js"></script>
 <script src="base.js"></script>
 <script src="editor.js"></script>
-<script>cpIniciar();</script>
+<script>
+  /* «Ocultar descripción»: la misma preferencia que usan TexTUBE y PrompTUBE (se guarda en el navegador) */
+  (function () {
+    const LLAVE = "gt_ocultar_descripcion", lema = document.querySelector(".encabezado .lema"), boton = document.getElementById("cp-desc-alternar");
+    const leer = () => { try { return localStorage.getItem(LLAVE) === "1"; } catch (e) { return false; } };
+    const pintar = () => { const o = leer(); lema.hidden = o; boton.textContent = o ? "▼ Mostrar descripción" : "▲ Ocultar descripción"; boton.setAttribute("aria-expanded", String(!o)); boton.title = o ? "Mostrar la descripción del módulo" : "Ocultar la descripción para tener más espacio"; };
+    boton.onclick = () => { try { localStorage.setItem(LLAVE, leer() ? "0" : "1"); } catch (e) { /* sin almacenamiento */ } pintar(); };
+    window.addEventListener("storage", pintar);
+    pintar();
+  })();
+  cpIniciar();
+</script>
 </body>
 </html>

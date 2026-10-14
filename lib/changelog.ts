@@ -9,6 +9,15 @@ export type Cambio = {
 
 export const CHANGELOG: Cambio[] = [
   {
+    version: "4.26.0",
+    fecha: "2026-10-14",
+    titulo: "Ocultar la descripción de los módulos",
+    cambios: [
+      "Un botón «▲ Ocultar descripción» junto al título de TexTUBE, PrompTUBE y CapaTUBE esconde el texto de arriba para ganar espacio (en CapaTUBE recupera casi 300 px y deja a la vista la miniatura y las pestañas). «▼ Mostrar descripción» lo vuelve a poner.",
+      "Se recuerda en el navegador y vale para los tres módulos a la vez.",
+    ],
+  },
+  {
     version: "4.25.0",
     fecha: "2026-10-14",
     titulo: "Las 6 plantillas originales usan la variable {accion}",

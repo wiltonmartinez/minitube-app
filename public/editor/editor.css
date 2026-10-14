@@ -184,3 +184,10 @@ details.cp-sec { background:oklch(1 0 0 / 3%); border-color:var(--borde); border
 .seg.cp-pestanas button.activo { background:var(--tarjeta); color:var(--texto); border-color:var(--borde); box-shadow:none; }
 .seg.cp-pestanas button.activo::before { content:""; position:absolute; left:12px; right:12px; top:0; height:2px; border-radius:2px; background:oklch(1 0 0 / 70%); }
 .seg.cp-pestanas button.activo::after { content:""; position:absolute; left:0; right:0; bottom:-1px; height:1px; background:var(--tarjeta); }
+
+/* encabezado con la descripción plegable (igual que en TexTUBE y PrompTUBE) */
+.encabezado { margin:0 0 24px; }
+.enc-fila { display:flex; flex-wrap:wrap; align-items:center; gap:4px 16px; }
+.encabezado .lema { margin:8px 0 0; } .encabezado .lema[hidden] { display:none; }
+.btn-desc { border:1px solid var(--borde); background:oklch(1 0 0 / 4.5%); color:var(--suave); border-radius:var(--radio); padding:4px 10px; font-size:12px; font-weight:500; cursor:pointer; transition:background-color .15s, color .15s; }
+.btn-desc:hover { background:oklch(1 0 0 / 8%); color:var(--texto); }
