@@ -1,4 +1,5 @@
 import "server-only";
+import { createHash } from "node:crypto";
 // Conexión con la API de YouTube (solo en el servidor): lee un video y cambia su título, descripción y etiquetas.
 // Credenciales en variables de entorno: YT_CLIENT_ID, YT_CLIENT_SECRET y YT_REFRESH_TOKEN (nunca llegan al navegador).
 import { COSTO_CUOTA, LIMITE_DESCRIPCION, LIMITE_ETIQUETAS, LIMITE_TITULO, largo, largoEtiquetas } from "./plantillas";
@@ -16,6 +17,12 @@ export type Snippet = { title?: string; description?: string; tags?: string[]; c
 
 /** Lee una variable quitando espacios, saltos de línea y comillas que se cuelan al pegarla en Vercel. */
 const credencial = (nombre: "YT_CLIENT_ID" | "YT_CLIENT_SECRET" | "YT_REFRESH_TOKEN") => (process.env[nombre] ?? "").trim().replace(/^["']|["']$/g, "").trim();
+
+/** Huella corta (6 letras del SHA-256) y largo de cada credencial: sirve para comparar con la copia local sin mostrar el valor. */
+export const huellasCredenciales = () =>
+  ([["id", "YT_CLIENT_ID"], ["secreto", "YT_CLIENT_SECRET"], ["permiso", "YT_REFRESH_TOKEN"]] as const)
+    .map(([etiqueta, n]) => `${etiqueta}=${createHash("sha256").update(credencial(n)).digest("hex").slice(0, 6)}/${credencial(n).length}`)
+    .join(" ");
 
 export const youtubeConfigurado = () => !!(credencial("YT_CLIENT_ID") && credencial("YT_CLIENT_SECRET") && credencial("YT_REFRESH_TOKEN"));
 
@@ -36,7 +43,7 @@ async function tokenDeAcceso(): Promise<string> {
     cache: "no-store",
   });
   const d = await r.json().catch(() => ({}));
-  if (!r.ok || !d.access_token) throw new ErrorYouTube(`La autorización de YouTube venció o fue revocada: hay que volver a autorizarla.${typeof d.error === "string" ? ` (Google dice: ${d.error.slice(0, 40)})` : ""}`, 401);
+  if (!r.ok || !d.access_token) throw new ErrorYouTube(`La autorización de YouTube venció o fue revocada: hay que volver a autorizarla.${typeof d.error === "string" ? ` (Google dice: ${d.error.slice(0, 40)}) [${huellasCredenciales()}]` : ""}`, 401);
   cache = { token: d.access_token, hasta: Date.now() + (Number(d.expires_in) || 3000) * 1000 };
   return cache.token;
 }
