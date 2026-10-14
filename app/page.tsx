@@ -31,6 +31,7 @@ import {
 import { EDADES_PANEL, EMOCION_AUTO, EMOCIONES_EDAD, EMOCIONES_POR_TONO, GRUPOS_EDAD, edadInterna, edadTexto, emocionEfectiva, tonoDeEdad } from "@/lib/edades";
 import { ENFOQUES, ENFOQUE_AUTO, ENFOQUE_LIBRE, OPCIONES_ENFOQUE, edadesDeEnfoque, enfoqueDe, enfoqueEfectivo, etiquetaEnfoque, normalizarEnfoque, profesionEnEnfoque } from "@/lib/enfoques";
 import { toast } from "sonner";
+import { EnviarAlEditor } from "@/components/enviar-al-editor";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -1011,6 +1012,7 @@ export default function Home() {
           </CardContent>
         </Card>
 
+        <div className="space-y-6">
         <Card>
           <CardHeader>
             <CardTitle>Prompt generado</CardTitle>
@@ -1054,6 +1056,8 @@ export default function Home() {
             </div>
           </CardContent>
         </Card>
+        <EnviarAlEditor enfoque={enfoqueActivo ?? null} profesion={form.profesion} />
+        </div>
       </div>
     </main>
   );

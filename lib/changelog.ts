@@ -9,6 +9,16 @@ export type Cambio = {
 
 export const CHANGELOG: Cambio[] = [
   {
+    version: "4.15.0",
+    fecha: "2026-10-13",
+    titulo: "App unificada: Editor de capas dentro de PromptTUBE",
+    cambios: [
+      "Nueva barra superior con PromptTUBE y Editor de capas. El editor (capas PNG, texto 3D con acabados, badges, marcos, deshacer, candado de variaciones y carpeta de imágenes por enfoque) ya vive en esta misma app y no depende de Python.",
+      "Guarda proyectos y miniaturas en una carpeta real de tu PC (Chrome o Edge: botón Examinar) o, sin carpeta, dentro del navegador. La estructura de archivos es la de siempre: L3210/L3210-01.png, .json y capas.",
+      "Nuevo paso «Imagen generada → Editor de capas» en PromptTUBE: pega con Ctrl+V la imagen que te dio Gemini o ChatGPT; se guarda en la carpeta de su enfoque y queda como fondo (Capa #1) del editor.",
+    ],
+  },
+  {
     version: "4.14.0",
     fecha: "2026-10-13",
     titulo: "«🎲 Aleatorio» por defecto en todos los menús",

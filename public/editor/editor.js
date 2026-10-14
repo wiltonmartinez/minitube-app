@@ -703,14 +703,32 @@ function cpCapasQueTapan() {
   return lista;
 }
 async function cpImagenComoFondo(carpeta, archivo) {
+  try { await cpPonerComoFondo(await GT.imagenBlob(carpeta, archivo), archivo); } catch (e) { aviso(e.message, true); }
+}
+/** Pone una imagen como fondo (Capa #1) y avisa si otra capa completa la tapa. */
+async function cpPonerComoFondo(blob, archivo) {
   try {
-    const blob = await GT.imagenBlob(carpeta, archivo); let f = cpFondo();
+    let f = cpFondo();
     if (!f) { f = cpCrear("imagen", "Capa #1 · PromptTUBE (imagen generada)", { fijo: true }); CP.capas.push(f); }
     await cpPonerImagen(new File([blob], archivo, { type: blob.type }), f.id);
     const tapan = cpCapasQueTapan();
     if (tapan.length && confirm("El fondo ya cambió, pero " + (tapan.length > 1 ? "estas capas lo tapan" : "esta capa lo tapa") + " (son imágenes completas que están encima):\n\n" + tapan.map((c) => "• " + c.nombre).join("\n") + "\n\n¿Ocultar" + (tapan.length > 1 ? "las" : "la") + " para que se vea la imagen elegida?")) { tapan.forEach((c) => { c.visible = false; }); cpLista(); cpDibujar(); }
     aviso("«" + archivo + "» puesta como fondo (Capa #1)." + (tapan.length ? " Ojo: hay capas encima que la tapan." : ""));
   } catch (e) { aviso(e.message, true); }
+}
+/** Imagen que mandó PromptTUBE: se guarda en la carpeta de su enfoque y se pone como fondo. */
+async function cpRecibirEnvio() {
+  let e = null;
+  try { e = await GT.tomarEnvio(); } catch { return; }
+  if (!e) return;
+  const carpeta = e.enfoque >= 1 && e.enfoque <= 4 ? GT.ENFOQUES_CARPETAS[e.enfoque - 1] : "";
+  let guardada = e.nombre, aviso2 = "";
+  try { guardada = await GT.guardarImagenEntrada(carpeta, e.nombre, e.blob); }
+  catch (er) { aviso2 = " (no se pudo guardar en la carpeta de entrada: " + er.message + ")"; }
+  if (e.proyecto && !$("cp-proyecto").value.trim()) $("cp-proyecto").value = e.proyecto;
+  await cpPonerComoFondo(e.blob, guardada);
+  if (aviso2) aviso("Imagen de PromptTUBE puesta como fondo" + aviso2, true);
+  cpImagenesCargar();
 }
 async function cpImagenesAplicar(ruta) { try { await api("/api/imagenes/base", { ruta }); await cpImagenesCargar(); aviso("Carpeta de entrada cambiada."); } catch (e) { aviso(e.message, true); } }
 async function cpBaseAplicar(ruta) {
@@ -1027,7 +1045,7 @@ function cpIniciar(cargar = true) {
     e.preventDefault(); cpPonerImagen(it.getAsFile(), cpFondo() ? cpFondo().id : "nueva").catch((er) => aviso(er.message, true));
   });
   cpLista(); cpAjustes(); cpDibujar(); cpHistorialReiniciar();
-  if (cargar) cpCargarConfig().then(() => cpHistorialReiniciar());
+  if (cargar) cpCargarConfig().then(() => { cpHistorialReiniciar(); return cpRecibirEnvio(); });
   cpCargarBiblioteca().then(() => { cpAjustes(); cpMenuBadges(); });
   cpListaConfigs(); cpBaseCargar();
 }

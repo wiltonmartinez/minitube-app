@@ -274,5 +274,13 @@
     falla("Esta función todavía no está en la app unificada (" + p + ").");
   }
 
-  window.GT = { api, imagenBlob, guardarImagenEntrada, soportaCarpetas, nombreArchivo, ENFOQUES_CARPETAS };
+  /** Imagen que mandó PromptTUBE (la deja en «ajustes/envio»): se recoge una sola vez. */
+  async function tomarEnvio() {
+    const e = await ajusteLeer("envio");
+    if (!e || !(e.blob instanceof Blob)) return null;
+    await ajusteBorrar("envio");
+    return e;
+  }
+
+  window.GT = { api, imagenBlob, guardarImagenEntrada, tomarEnvio, soportaCarpetas, nombreArchivo, ENFOQUES_CARPETAS };
 })();
