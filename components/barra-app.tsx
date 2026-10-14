@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
-/** Barra superior de Gestor TUBE: PromptTUBE, Editor de capas y TexTUBE, más «Cerrar sesión». No se muestra en la pantalla de acceso. */
+/** Barra superior de Gestor TUBE: 01) TexTUBE, 02) PromptTUBE y 03) Editor de Capas, más «Cerrar sesión». No se muestra en la pantalla de acceso. */
 export function BarraApp() {
   const ruta = usePathname();
   const router = useRouter();
@@ -13,14 +13,14 @@ export function BarraApp() {
   return (
     <nav className="sticky top-0 z-40 flex items-center gap-1 border-b bg-background/95 px-4 py-2 backdrop-blur" aria-label="Secciones de la app">
       <span className="mr-3 text-sm font-bold tracking-tight">▶ Gestor TUBE</span>
+      <Link href="/textube" className={enlace(ruta === "/textube")}>
+        01) ✍️ TexTUBE
+      </Link>
       <Link href="/" className={enlace(ruta === "/")}>
-        🎨 PromptTUBE
+        02) 🎨 PromptTUBE
       </Link>
       <Link href="/editor" className={enlace(ruta === "/editor")}>
-        🧩 Editor de capas
-      </Link>
-      <Link href="/textube" className={enlace(ruta === "/textube")}>
-        ✍️ TexTUBE
+        03) 🧩 Editor de Capas
       </Link>
       <button
         type="button"
