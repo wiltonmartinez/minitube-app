@@ -42,8 +42,8 @@ export async function POST(req: Request) {
     const enlace = `${urlPublica(req)}/api/acceso/entrar?t=${encodeURIComponent(await crearEnlaceAcceso(correo))}`;
     if (!correoConfigurado()) {
       // solo en tu PC (desarrollo): sin servicio de correo se muestra el enlace en pantalla; en internet nunca
-      if (process.env.NODE_ENV === "development") return NextResponse.json({ ok: true, mensaje: MENSAJE, enlaceDev: enlace, aviso: "Modo desarrollo: no hay servicio de correo configurado (RESEND_API_KEY), así que el enlace se muestra aquí." });
-      throw new ErrorCorreo("El envío de correos no está configurado (falta RESEND_API_KEY).");
+      if (process.env.NODE_ENV === "development") return NextResponse.json({ ok: true, mensaje: MENSAJE, enlaceDev: enlace, aviso: "Modo desarrollo: no hay servicio de correo configurado (GESTOR_CORREO_URL o RESEND_API_KEY), así que el enlace se muestra aquí." });
+      throw new ErrorCorreo("El envío de correos no está configurado (falta GESTOR_CORREO_URL y GESTOR_CORREO_TOKEN, o RESEND_API_KEY).");
     }
     const minutos = DURACION_ENLACE_S / 60;
     await enviarCorreo({
