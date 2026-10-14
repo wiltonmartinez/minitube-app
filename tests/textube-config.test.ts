@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { configVacia, normalizarConfig } from "@/lib/textube/config";
-import { opcionesDe, configurar, datosManual, elegirPlantilla, erroresDe, errorDefectoDe, fijosDe, generarTextos, listaPlantillas, nombreDe, numerosPlantilla, textoOriginal } from "@/lib/textube/plantillas";
+import { claveDeNombre, claveValida, configVacia, normalizarConfig } from "@/lib/textube/config";
+import { opcionesDe, configurar, datosManual, elegirPlantilla, erroresDe, errorDefectoDe, fijosDe, generarTextos, listaPlantillas, nombreDe, numerosPlantilla, textoOriginal, valoresDeVariables, vistaPlantilla } from "@/lib/textube/plantillas";
 
 afterEach(() => configurar(configVacia()));
 
@@ -102,5 +102,65 @@ describe("TexTUBE · menús editables (CRUD)", () => {
     expect(sucio.propias.map((p) => p.n)).toEqual([7]); // no puede pisar una original ni repetirse
     expect(sucio.errores).toEqual(["A", "B"]);
     expect(sucio.marcas).toHaveLength(3); // una marca con caracteres no permitidos no entra
+  });
+});
+
+describe("TexTUBE · variables propias (CRUD)", () => {
+  const texto = "---TITULOS---\n{accion} {modelo} {error}\n{accion_l} de {modelo}\n---ETIQUETAS---\n{accion_l} {modelo_l}, #{accion_h}\n---DESCRIPCION---\nServicio: {accion} · {accion_h} · {accion_l} · {tipo}\n";
+  const datos = { marca: "Epson", modelo: "L4150", modelo_texto: "L4150", error: "Almohadillas" };
+
+  it("viene con la variable «Acción» (Reset, Diagnóstico, Activación) y no cambia nada si ninguna plantilla la usa", async () => {
+    const { VARIABLES_BASE } = await import("@/lib/textube/config");
+    expect(configVacia().variables).toEqual(VARIABLES_BASE);
+    expect(configVacia().variables[0]).toMatchObject({ clave: "accion", nombre: "Acción", valores: ["Reset", "Diagnóstico", "Activación"], defecto: "Reset" });
+    const t = generarTextos(datos, { plantilla: 1, tituloN: 1, videoId: "abcDEF12345" })!;
+    expect(t.titulo).toContain("Reset Epson L4150"); // la plantilla original no usa {accion}
+  });
+
+  it("el marcador se reemplaza por el valor elegido (tal cual, en minúsculas y para hashtag)", () => {
+    const g = (variables?: Record<string, string>) => generarTextos(datos, { plantilla: 1, tituloN: 1, editadas: { 1: texto }, variables })!;
+    expect(g().titulo).toBe("Reset L4150 Almohadillas"); // sin elegir: el valor marcado de entrada
+    const d = g({ accion: "Diagnóstico" });
+    expect(d.titulo).toBe("Diagnóstico L4150 Almohadillas");
+    expect(d.titulos[1]).toBe("diagnóstico de L4150");
+    expect(d.etiquetas).toEqual(["diagnóstico l4150", "#Diagnostico"]); // {accion_h}: sin tilde
+    expect(d.descripcion).toContain("Servicio: Diagnóstico · Diagnostico · diagnóstico · {tipo}");
+    expect(g({ accion: "Activación" }).etiquetas[1]).toBe("#Activacion");
+    expect(g({ accion: "No existe" }).titulo).toBe("Reset L4150 Almohadillas"); // un valor que no está en la lista se ignora
+  });
+
+  it("crear, cambiar y eliminar variables y valores", () => {
+    const c = configVacia();
+    c.variables.push({ clave: "tipo", nombre: "Tipo de servicio", valores: ["Remoto", "En sitio", "Express rápido"], defecto: "En sitio" });
+    configurar(normalizarConfig(c));
+    const t = generarTextos(datos, { plantilla: 1, tituloN: 1, editadas: { 1: texto.replace("{tipo}", "{tipo}|{tipo_l}|{tipo_h}") }, variables: { tipo: "Express rápido" } })!;
+    expect(t.descripcion).toContain("Express rápido|express rápido|ExpressRapido");
+    // quitar un valor: si era el elegido, vuelve al marcado de entrada
+    c.variables[1].valores = ["Remoto", "En sitio"];
+    configurar(normalizarConfig(c));
+    expect(valoresDeVariables({ tipo: "Express rápido" }).tipo).toBe("En sitio");
+    // eliminar la variable: el marcador queda sin reemplazar (y la vista previa lo avisa)
+    c.variables = c.variables.filter((v) => v.clave !== "tipo");
+    configurar(normalizarConfig(c));
+    expect(vistaPlantilla(texto, "L4150", 1).avisos.join(" ")).toContain("{tipo}");
+  });
+
+  it("la vista previa conoce los marcadores de las variables y avisa solo de los desconocidos", () => {
+    const av = vistaPlantilla(texto, "L4150", 1).avisos.join(" ");
+    expect(av).toContain("{tipo}");
+    expect(av).not.toContain("{accion");
+  });
+
+  it("nombres de variables válidos: sin tildes ni espacios, sin repetir ni pisar los de TexTUBE", () => {
+    expect(claveDeNombre("Tipo de servicio")).toBe("tipodeservicio");
+    expect(claveDeNombre("Acción")).toBe("accion");
+    expect(claveDeNombre("123 Año")).toBe("ano");
+    expect(claveValida("accion")).toBe(true);
+    for (const mala of ["modelo", "error", "idvideo", "error_texto", "", "9x", "con espacio", "Mayus"]) expect(claveValida(mala), mala).toBe(false);
+    const sucio = normalizarConfig({ variables: [{ clave: "modelo", valores: ["a"] }, { clave: "ok", nombre: "Ok", valores: ["a", "a", " b ", ""], defecto: "zzz" }, { clave: "ok", valores: ["x"] }, { clave: "MAYUS", valores: ["q"] }] });
+    expect(sucio.variables.map((v) => v.clave)).toEqual(["ok", "mayus"]);
+    expect(sucio.variables[0]).toMatchObject({ valores: ["a", "b"], defecto: "a" }); // sin repetidos ni vacíos; el valor marcado siempre es uno de la lista
+    expect(normalizarConfig({}).variables).toEqual(configVacia().variables); // sin dato: la original
+    expect(normalizarConfig({ variables: [] }).variables).toEqual([]); // vaciarlas a propósito se respeta
   });
 });

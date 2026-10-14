@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ERRORES_BASE, MARCAS_BASE, configVacia, normalizarConfig, type Config, type OpcionError } from "@/lib/textube/config";
+import { ERRORES_BASE, MARCAS_BASE, MAX_VALORES, MAX_VARIABLES, VARIABLES_BASE, claveDeNombre, claveValida, configVacia, normalizarConfig, type Config, type OpcionError } from "@/lib/textube/config";
 import { errorDefectoDe, esPropia, listaPlantillas, nombreDe, opcionesDe } from "@/lib/textube/plantillas";
 
 const campo = "h-8 w-full min-w-0 rounded-lg border border-input bg-input/30 px-2.5 py-1 text-sm text-foreground outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 [color-scheme:dark] [&>option]:bg-background [&>option]:text-foreground";
@@ -17,10 +17,88 @@ type Props = { cfg: Config; onEditar: (fn: (c: Config) => Config) => void; onRee
 export function MenusTextube({ cfg, onEditar, onReemplazar, plantillas }: Props) {
   return (
     <div className="space-y-6">
+      <Variables cfg={cfg} onEditar={onEditar} />
       <Marcas cfg={cfg} onEditar={onEditar} />
       <ErroresSugeridos cfg={cfg} onEditar={onEditar} />
       <OpcionesPorPlantilla cfg={cfg} onEditar={onEditar} />
       <Copia cfg={cfg} plantillas={plantillas} onReemplazar={onReemplazar} />
+    </div>
+  );
+}
+
+/* ───────── variables propias ───────── */
+function Variables({ cfg, onEditar }: Pick<Props, "cfg" | "onEditar">) {
+  const [nombre, setNombre] = useState("");
+  const [valores, setValores] = useState("");
+  const clave = claveDeNombre(nombre);
+  const cambiar = (k: string, fn: (v: Config["variables"][number]) => Config["variables"][number]) => onEditar((c) => ({ ...c, variables: c.variables.map((v) => (v.clave === k ? fn(v) : v)) }));
+  function crear() {
+    const lista = [...new Set(valores.split(",").map((x) => x.trim()).filter(Boolean))];
+    if (!nombre.trim()) return toast.error("Escribe el nombre de la variable.");
+    if (!claveValida(clave)) return toast.error(`El nombre «${nombre.trim()}» da el marcador «{${clave}}», que no es válido o ya lo usa TexTUBE. Prueba con otro nombre (letras y números, empezando por una letra).`);
+    if (cfg.variables.some((v) => v.clave === clave)) return toast.error(`Ya existe una variable con el marcador {${clave}}.`);
+    if (cfg.variables.length >= MAX_VARIABLES) return toast.error(`Máximo ${MAX_VARIABLES} variables.`);
+    if (!lista.length) return toast.error("Escribe al menos un valor (separados por coma).");
+    onEditar((c) => ({ ...c, variables: [...c.variables, { clave, nombre: nombre.trim(), valores: lista.slice(0, MAX_VALORES), defecto: lista[0] }] }));
+    setNombre("");
+    setValores("");
+    toast.success(`Variable «${nombre.trim()}» creada: úsala en las plantillas con {${clave}}.`);
+  }
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Variables de las plantillas</CardTitle>
+        <CardDescription>Crea tus propias variables (por ejemplo «Acción» con Reset, Diagnóstico, Activación). En el generador eliges su valor con un menú, y se escribe en la plantilla donde pongas su marcador: <code>{"{accion}"}</code> tal cual, <code>{"{accion_l}"}</code> en minúsculas y <code>{"{accion_h}"}</code> sin espacios ni tildes (para hashtags).</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {cfg.variables.map((v) => (
+          <div key={v.clave} className="space-y-2 rounded-lg border p-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <Input className="w-56" defaultValue={v.nombre} maxLength={40} aria-label={`Nombre de la variable ${v.clave}`} onBlur={(e) => { const n = e.target.value.trim(); if (n && n !== v.nombre) cambiar(v.clave, (x) => ({ ...x, nombre: n })); else e.target.value = v.nombre; }} />
+              <button type="button" title="Copiar el marcador" className="rounded-full border px-2.5 py-0.5 font-mono text-xs hover:bg-accent" onClick={() => navigator.clipboard?.writeText(`{${v.clave}}`).then(() => toast.success(`Copiado {${v.clave}}`))}>{"{" + v.clave + "}"}</button>
+              <span className="text-xs text-muted-foreground">también {"{" + v.clave + "_l}"} y {"{" + v.clave + "_h}"}</span>
+              <Button variant="outline" size="sm" className="ml-auto text-destructive" onClick={() => confirm(`¿Eliminar la variable «${v.nombre}»? Las plantillas que usen {${v.clave}} dejarán el marcador sin reemplazar.`) && onEditar((c) => ({ ...c, variables: c.variables.filter((x) => x.clave !== v.clave) }))}>🗑 Eliminar variable</Button>
+            </div>
+            <div className="space-y-1.5">
+              <div className="hidden grid-cols-[1fr_auto_auto] gap-2 text-xs text-muted-foreground sm:grid"><span>Valores del menú</span><span>Marcado</span><span /></div>
+              {v.valores.map((x, i) => (
+                <div key={x} className="grid grid-cols-[1fr_auto_auto] items-center gap-2">
+                  <Input defaultValue={x} maxLength={60} aria-label="Valor" onBlur={(e) => { const n = e.target.value.trim(); if (n && n !== x && !v.valores.some((y, j) => j !== i && y.toLowerCase() === n.toLowerCase())) cambiar(v.clave, (w) => ({ ...w, valores: w.valores.map((y, j) => (j === i ? n : y)), defecto: w.defecto === x ? n : w.defecto })); else e.target.value = x; }} />
+                  <input type="radio" name={`def-${v.clave}`} checked={v.defecto === x} onChange={() => cambiar(v.clave, (w) => ({ ...w, defecto: x }))} title="Valor marcado de entrada" aria-label="Marcado de entrada" />
+                  <Button variant="outline" size="sm" className="text-destructive" title="Quitar este valor" disabled={v.valores.length <= 1} onClick={() => cambiar(v.clave, (w) => { const val = w.valores.filter((_, j) => j !== i); return { ...w, valores: val, defecto: w.defecto === x ? val[0] : w.defecto }; })}>🗑</Button>
+                </div>
+              ))}
+              <NuevoValor onAgregar={(n) => {
+                if (v.valores.some((y) => y.toLowerCase() === n.toLowerCase())) return toast.error("Ese valor ya existe.");
+                if (v.valores.length >= MAX_VALORES) return toast.error(`Máximo ${MAX_VALORES} valores.`);
+                cambiar(v.clave, (w) => ({ ...w, valores: [...w.valores, n] }));
+              }} />
+            </div>
+          </div>
+        ))}
+        {!cfg.variables.length && <p className="text-sm text-muted-foreground">No hay variables. Crea la primera abajo.</p>}
+        <div className="space-y-2 border-t pt-3">
+          <div className="text-sm font-medium">Nueva variable</div>
+          <div className="flex flex-wrap items-end gap-2">
+            <div className="space-y-1"><Label htmlFor="v-nombre">Nombre</Label><Input id="v-nombre" className="w-48" value={nombre} maxLength={40} placeholder="Tipo de servicio" onChange={(e) => setNombre(e.target.value)} /></div>
+            <div className="min-w-64 flex-1 space-y-1"><Label htmlFor="v-valores">Valores (separados por coma)</Label><Input id="v-valores" value={valores} placeholder="Reset, Diagnóstico, Activación" onChange={(e) => setValores(e.target.value)} onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), crear())} /></div>
+            <Button onClick={crear} disabled={!nombre.trim() || !valores.trim()}>➕ Crear variable</Button>
+            <Button variant="outline" onClick={() => confirm("¿Volver a la variable original (Acción) y quitar las demás?") && onEditar((c) => ({ ...c, variables: VARIABLES_BASE.map((x) => ({ ...x, valores: [...x.valores] })) }))}>↺ Originales</Button>
+          </div>
+          {nombre.trim() && <p className="text-xs text-muted-foreground">Marcador en las plantillas: <code>{"{" + (clave || "…") + "}"}</code>{clave && !claveValida(clave) ? " — no válido o ya usado por TexTUBE, cambia el nombre" : ""}</p>}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function NuevoValor({ onAgregar }: { onAgregar: (v: string) => void }) {
+  const [v, setV] = useState("");
+  const ok = () => { const n = v.trim(); if (n) { onAgregar(n); setV(""); } };
+  return (
+    <div className="flex gap-2">
+      <Input className="max-w-xs" value={v} maxLength={60} placeholder="Valor nuevo" aria-label="Valor nuevo" onChange={(e) => setV(e.target.value)} onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), ok())} />
+      <Button variant="outline" size="sm" onClick={ok} disabled={!v.trim()}>➕ Agregar valor</Button>
     </div>
   );
 }

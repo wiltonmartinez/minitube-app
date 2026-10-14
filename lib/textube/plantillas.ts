@@ -233,7 +233,19 @@ export function parsearPlantilla(texto: string, numero: number | string = "?"): 
 }
 
 /** {error} y {idvideo} completan el enlace de WhatsApp; {modelo} MAYÚSCULAS con guion · {modelo_l} minúsculas · {modelo_h} sin guion (hashtags). */
-export function rellenar(texto: string, modelo: string, error = "", video = "", errorTexto = ""): string {
+/** Valor de cada variable: el elegido (si está en su lista) o el que viene marcado. */
+export function valoresDeVariables(elegidos?: Record<string, string>): Record<string, string> {
+  const r: Record<string, string> = {};
+  for (const v of cfg.variables) r[v.clave] = elegidos?.[v.clave] !== undefined && v.valores.includes(elegidos[v.clave]) ? elegidos[v.clave] : v.defecto;
+  return r;
+}
+/** «Diagnóstico de red» → «DiagnosticoDeRed» (para hashtags). */
+const paraHashtag = (t: string) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Za-z0-9]+(.)?/g, (_m, c: string | undefined) => (c ? c.toUpperCase() : ""));
+
+export function rellenar(texto: string, modelo: string, error = "", video = "", errorTexto = "", variables: Record<string, string> = valoresDeVariables()): string {
+  for (const [clave, valor] of Object.entries(variables)) {
+    texto = texto.split(`{${clave}_h}`).join(paraHashtag(valor)).split(`{${clave}_l}`).join(valor.toLowerCase()).split(`{${clave}}`).join(valor);
+  }
   return texto
     .split("{modelo_l}").join(modelo.toLowerCase())
     .split("{modelo_h}").join(modelo.replace(/-/g, ""))
@@ -277,8 +289,8 @@ export function vistaPlantilla(texto: string, modeloEntrada: string, numero: num
   if (largo(desc) > LIMITE_DESCRIPCION) avisos.push(`La descripción tiene ${largo(desc)} caracteres (máximo ${LIMITE_DESCRIPCION}).`);
   if (!p.descripcion.includes("{modelo") && !p.titulos.join("").includes("{modelo")) avisos.push("La plantilla no usa {modelo}: todos los videos llevarían el mismo texto.");
   if (recortadas) avisos.push(`Con este modelo se quitarían ${recortadas} etiqueta(s) del final por el límite de YouTube.`);
-  const conocidos = new Set(["{modelo}", "{modelo_l}", "{modelo_h}", "{error}", "{idvideo}", "{error_texto}", "{error_h}"]);
-  const sobrantes = [...new Set((desc + p.titulos.join("") + p.etiquetas).match(/\{[a-z_]+\}/g) ?? [])].filter((m) => !conocidos.has(m)).sort();
+  const conocidos = new Set(["{modelo}", "{modelo_l}", "{modelo_h}", "{error}", "{idvideo}", "{error_texto}", "{error_h}", ...cfg.variables.flatMap((v) => [`{${v.clave}}`, `{${v.clave}_l}`, `{${v.clave}_h}`])]);
+  const sobrantes = [...new Set((desc + p.titulos.join("") + p.etiquetas).match(/\{[a-z][a-z0-9_]*\}/g) ?? [])].filter((m) => !conocidos.has(m)).sort();
   if (sobrantes.length) avisos.push(`Marcadores desconocidos (no se reemplazarán): ${sobrantes.join(", ")}.`);
   return { titulos: p.titulos.map(r), etiquetas, etiquetas_largo: largoEtiquetas(etiquetas), descripcion: desc, descripcion_largo: largo(desc), avisos };
 }
@@ -318,7 +330,7 @@ export function validarTextos(t: Pick<Textos, "titulo" | "descripcion" | "etique
   if (t.titulo.includes("<") || t.titulo.includes(">")) throw new ErrorTextos("YouTube no admite los signos < ni > en el título.");
 }
 
-export type OpcionesGenerar = { tituloN?: number | null; semilla?: string; plantilla?: number | null; videoId?: string | null; editadas?: TextosPlantillas };
+export type OpcionesGenerar = { tituloN?: number | null; semilla?: string; plantilla?: number | null; videoId?: string | null; editadas?: TextosPlantillas; variables?: Record<string, string> };
 
 /** Textos listos para YouTube, o null si el video no encaja en ninguna plantilla. */
 export function generarTextos(datos: DatosPlantilla, o: OpcionesGenerar = {}): Textos | null {
@@ -338,7 +350,8 @@ export function generarTextos(datos: DatosPlantilla, o: OpcionesGenerar = {}): T
   } else {
     i = [...(o.semilla || modelo)].reduce((a, c) => a + (c.codePointAt(0) ?? 0), 0) % p.titulos.length;
   }
-  const r = (t: string) => rellenar(t, modelo, errorEnlace, video, errorTexto);
+  const vars = valoresDeVariables(o.variables);
+  const r = (t: string) => rellenar(t, modelo, errorEnlace, video, errorTexto, vars);
   const { etiquetas, recortadas } = etiquetasDe(r(p.etiquetas));
   const textos: Textos = {
     plantilla: numero,

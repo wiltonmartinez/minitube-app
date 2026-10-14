@@ -5,6 +5,19 @@ export type OpcionError = { nombre: string; enlace: string };
 export type MarcaCfg = { valor: string; nombre: string; propia?: boolean; oculta?: boolean };
 export type PlantillaPropia = { n: number; nombre: string; cuando: string; modelo: string; marca: string; error: string; opciones: OpcionError[]; opcionDefecto: string };
 
+/** Variable propia que se puede usar en las plantillas con su marcador: «{accion}» (valor tal cual), «{accion_l}» (minúsculas) y «{accion_h}» (sin espacios ni tildes, para hashtags). */
+export type VariableCfg = { clave: string; nombre: string; valores: string[]; defecto: string };
+
+/** Marcadores que ya usan las plantillas: una variable no puede llamarse igual. */
+export const CLAVES_RESERVADAS = ["modelo", "modelo_l", "modelo_h", "error", "error_texto", "error_h", "idvideo"];
+export const MAX_VARIABLES = 20;
+export const MAX_VALORES = 40;
+export const claveValida = (c: string) => /^[a-z][a-z0-9]{0,19}$/.test(c) && !CLAVES_RESERVADAS.some((r) => r === c || r.startsWith(c + "_"));
+
+/** A partir de un nombre («Acción», «Tipo de servicio») saca el marcador: «accion», «tiposervicio»… (minúsculas, sin tildes ni espacios). */
+export const claveDeNombre = (nombre: string) =>
+  nombre.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "").replace(/^[0-9]+/, "").slice(0, 20);
+
 export type Config = {
   version: 1;
   marcas: MarcaCfg[];
@@ -15,6 +28,7 @@ export type Config = {
   /** Nombre y «se usa con» cambiados en las plantillas originales */
   nombres: Partial<Record<number, { nombre?: string; cuando?: string }>>;
   propias: PlantillaPropia[];
+  variables: VariableCfg[];
 };
 
 export const MARCAS_BASE: MarcaCfg[] = [
@@ -26,7 +40,10 @@ export const ERRORES_BASE = ["Almohadillas", "E-11", "5B00", "1700", "P07", "E08
 export const PRIMERA_PROPIA = 7;
 export const MAX_PROPIAS = 30;
 
-export const configVacia = (): Config => ({ version: 1, marcas: MARCAS_BASE.map((m) => ({ ...m })), errores: [...ERRORES_BASE], opcionesError: {}, opcionDefecto: {}, nombres: {}, propias: [] });
+/** La variable con la que arranca la app: «Acción» → {accion}. Si ninguna plantilla la usa, no cambia nada. */
+export const VARIABLES_BASE: VariableCfg[] = [{ clave: "accion", nombre: "Acción", valores: ["Reset", "Diagnóstico", "Activación"], defecto: "Reset" }];
+
+export const configVacia = (): Config => ({ version: 1, marcas: MARCAS_BASE.map((m) => ({ ...m })), errores: [...ERRORES_BASE], opcionesError: {}, opcionDefecto: {}, nombres: {}, propias: [], variables: VARIABLES_BASE.map((v) => ({ ...v, valores: [...v.valores] })) });
 
 const texto = (v: unknown, max: number) => (typeof v === "string" ? v.replace(/[\u0000-\u001f]/g, " ").trim().slice(0, max) : "");
 const listaOpciones = (v: unknown): OpcionError[] =>
@@ -73,5 +90,19 @@ export function normalizarConfig(x: unknown): Config {
       propias.push({ n, nombre: texto(p.nombre, 60) || `Plantilla ${n}`, cuando: texto(p.cuando, 160) || "Plantilla propia (se elige a mano)", modelo: texto(p.modelo, 12) || "L4150", marca: texto(p.marca, 30), error: texto(p.error, 30), opciones, opcionDefecto: opciones.some((x) => x.nombre === opcionDef) ? opcionDef : "" });
     }
   }
-  return { version: 1, marcas, errores, opcionesError, opcionDefecto, nombres, propias };
+  // variables propias: marcador válido y distinto, hasta 40 valores sin repetir; el valor por defecto siempre es uno de la lista
+  let variables: VariableCfg[];
+  if (Array.isArray(o.variables)) {
+    const vistas = new Set<string>();
+    variables = [];
+    for (const v of o.variables.slice(0, MAX_VARIABLES)) {
+      const clave = texto(v?.clave, 20).toLowerCase();
+      if (!claveValida(clave) || vistas.has(clave)) continue;
+      vistas.add(clave);
+      const valores = [...new Set((Array.isArray(v.valores) ? v.valores : []).map((x) => texto(x, 60)).filter(Boolean))].slice(0, MAX_VALORES);
+      const defecto = texto(v.defecto, 60);
+      variables.push({ clave, nombre: texto(v.nombre, 40) || clave, valores, defecto: valores.includes(defecto) ? defecto : (valores[0] ?? "") });
+    }
+  } else variables = base.variables;
+  return { version: 1, marcas, errores, opcionesError, opcionDefecto, nombres, propias, variables };
 }

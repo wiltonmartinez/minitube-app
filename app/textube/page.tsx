@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,7 +15,7 @@ import { PRIMERA_PROPIA, MAX_PROPIAS, type Config } from "@/lib/textube/config";
 import { useConfigTextube } from "@/lib/textube/use-config";
 import {
   COSTO_CUOTA, ErrorTextos, LIMITE_DESCRIPCION, LIMITE_ETIQUETAS, cuandoDe, errorDefectoDe, esPropia, opcionesDe, fijosDe, modeloEjemploDe, nombreDe, numerosPlantilla, textoOriginal,
-  datosManual, generarTextos, largo, listaPlantillas, plantillaElegida, validarPlantilla, vistaPlantilla, type Textos, type TextosPlantillas,
+  datosManual, generarTextos, largo, valoresDeVariables, listaPlantillas, plantillaElegida, validarPlantilla, vistaPlantilla, type Textos, type TextosPlantillas,
 } from "@/lib/textube/plantillas";
 
 const CLAVE_PLANTILLAS = "textube:plantillas";
@@ -101,6 +101,9 @@ function Generar({ editadas, cfg }: { editadas: TextosPlantillas; cfg: Config })
   const [ocupado, setOcupado] = useState(false);
   const [respaldo, setRespaldo] = useState<Snip | null>(null);
   const [sinPermiso, setSinPermiso] = useState(false);
+  const [vars, setVars] = useState<Record<string, string>>({});
+  const variables = cfg.variables.filter((v) => v.valores.length);
+  const valores = valoresDeVariables(vars);
 
   const n = plantillaElegida(plantilla);
   const fijos = fijosDe(n);
@@ -141,7 +144,7 @@ function Generar({ editadas, cfg }: { editadas: TextosPlantillas; cfg: Config })
       setPrevia({ textos: null, datos: null, tituloActual, motivo: "En el título no se reconoce ningún modelo de impresora." });
       return;
     }
-    const t = generarTextos(datos, { tituloN: tn ?? null, semilla: idVideo || datos.modelo, plantilla: n, videoId: idVideo || null, editadas });
+    const t = generarTextos(datos, { tituloN: tn ?? null, semilla: idVideo || datos.modelo, plantilla: n, videoId: idVideo || null, editadas, variables: vars });
     if (!t) {
       setPrevia({ textos: null, datos, tituloActual, motivo: `${datos.marca} ${datos.modelo} · ${datos.error || "sin error"} no encaja en ninguna plantilla: elige una a mano si quieres usarla igual.` });
       return;
@@ -179,7 +182,7 @@ function Generar({ editadas, cfg }: { editadas: TextosPlantillas; cfg: Config })
     setPlantilla("auto");
     await new Promise((ok) => setTimeout(ok, 0));
     if (!datos) return setPrevia({ textos: null, datos: null, tituloActual: titulo, motivo: "En el título no se reconoce ningún modelo de impresora." });
-    const t = generarTextos(datos, { semilla: id, videoId: id, editadas });
+    const t = generarTextos(datos, { semilla: id, videoId: id, editadas, variables: vars });
     if (!t) return setPrevia({ textos: null, datos, tituloActual: titulo, motivo: `${datos.marca} ${datos.modelo} · ${datos.error} no encaja en ninguna plantilla: elige una a mano si quieres usarla igual.` });
     setTituloN(t.titulo_n);
     setPrevia({ textos: t, datos, tituloActual: titulo });
@@ -188,7 +191,7 @@ function Generar({ editadas, cfg }: { editadas: TextosPlantillas; cfg: Config })
   const alAplicar = () => accion(async () => {
     if (!idVideo) throw new Error("Para aplicar escribe la URL o el ID del video (arriba).");
     if (!previa?.textos || !previa.datos) throw new Error("Primero genera los textos.");
-    const t = generarTextos(previa.datos, { tituloN, semilla: idVideo, plantilla: n ?? previa.textos.plantilla, videoId: idVideo, editadas })!;
+    const t = generarTextos(previa.datos, { tituloN, semilla: idVideo, plantilla: n ?? previa.textos.plantilla, videoId: idVideo, editadas, variables: vars })!;
     if (!confirm(`¿Cambiar este video con la plantilla ${t.plantilla}? Se guarda un respaldo del título, la descripción y las etiquetas actuales para poder deshacer.`)) return;
     const r = await llamar<{ original: Snip; cuota: number }>("/api/youtube/aplicar", {
       video: idVideo,
@@ -262,6 +265,21 @@ function Generar({ editadas, cfg }: { editadas: TextosPlantillas; cfg: Config })
             )}
           </div>
           {fijos && <p className="text-sm text-muted-foreground">Por defecto: {fijos.marca}{fijos.error ? ` · ${fijos.error}` : ""}. {fijos.error ? "Solo escribe el modelo." : "Escribe el modelo y elige el error."}</p>}
+          {variables.length > 0 && (
+            <div className="space-y-2 rounded-lg border p-3">
+              <div className="text-sm font-medium">Variables de la plantilla <span className="font-normal text-muted-foreground">(se escriben donde la plantilla tenga su marcador, por ejemplo <code>{"{" + variables[0].clave + "}"}</code>)</span></div>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {variables.map((v) => (
+                  <div key={v.clave} className="space-y-1.5">
+                    <Label htmlFor={`var-${v.clave}`}>{v.nombre}</Label>
+                    <select id={`var-${v.clave}`} className={campo} value={valores[v.clave]} onChange={(e) => { setVars({ ...vars, [v.clave]: e.target.value }); setPrevia(null); }}>
+                      {v.valores.map((x) => <option key={x}>{x}</option>)}
+                    </select>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
           <div className="space-y-1.5">
             <Label htmlFor="video">Video (opcional para generar; obligatorio para aplicar)</Label>
             <Input id="video" value={video} placeholder="https://youtu.be/…" onChange={(e) => { setVideo(e.target.value); setPrevia(null); }} />
@@ -353,6 +371,14 @@ function Plantillas({ editadas, onCambio, cfg, onEditarCfg }: { editadas: Textos
   const [texto, setTexto] = useState(textoOriginal(1) ?? "");
   const [modelo, setModelo] = useState(modeloEjemploDe(1));
   const p = PLANTILLAS.find((x) => x.n === actualN)!;
+  const areaTexto = useRef<HTMLTextAreaElement>(null);
+  /** Escribe el marcador donde está el cursor (o reemplaza lo seleccionado). */
+  function insertar(m: string) {
+    const t = areaTexto.current;
+    const ini = t?.selectionStart ?? texto.length, fin = t?.selectionEnd ?? texto.length;
+    setTexto(texto.slice(0, ini) + m + texto.slice(fin));
+    requestAnimationFrame(() => { t?.focus(); t?.setSelectionRange(ini + m.length, ini + m.length); });
+  }
   const propia = esPropia(actualN);
   const modificada = !propia && editadas[actualN] !== undefined;
 
@@ -447,7 +473,13 @@ function Plantillas({ editadas, onCambio, cfg, onEditarCfg }: { editadas: Textos
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-muted-foreground">Secciones: <code>---TITULOS---</code> (uno por línea), <code>---ETIQUETAS---</code> (separadas por comas) y <code>---DESCRIPCION---</code>. Marcadores: <code>{"{modelo}"}</code> (XP-2200) · <code>{"{modelo_l}"}</code> (xp-2200) · <code>{"{modelo_h}"}</code> (XP2200) · <code>{"{error}"}</code> · <code>{"{error_texto}"}</code> · <code>{"{idvideo}"}</code>.</p>
-          <Textarea rows={18} spellCheck={false} className="font-mono text-xs" value={texto} onChange={(e) => setTexto(e.target.value)} />
+          <div className="flex flex-wrap items-center gap-1.5" aria-label="Insertar un marcador en el texto">
+            <span className="text-xs text-muted-foreground">Insertar:</span>
+            {[["{modelo}", "Modelo"], ["{modelo_h}", "Modelo sin guion"], ["{error}", "Error (enlace)"], ["{error_texto}", "Error"], ["{idvideo}", "ID del video"], ...cfg.variables.flatMap((v) => [[`{${v.clave}}`, v.nombre], [`{${v.clave}_h}`, `${v.nombre} #`]])].map(([m, nombre]) => (
+              <button key={m} type="button" title={m} className="rounded-full border px-2.5 py-0.5 text-xs hover:bg-accent" onClick={() => insertar(m)}>{nombre} <code className="text-muted-foreground">{m}</code></button>
+            ))}
+          </div>
+          <Textarea ref={areaTexto} rows={18} spellCheck={false} className="font-mono text-xs" value={texto} onChange={(e) => setTexto(e.target.value)} />
           <div className="flex flex-wrap items-end gap-3">
             <div className="space-y-1.5"><Label htmlFor="pl-modelo">Probar con el modelo</Label><Input id="pl-modelo" value={modelo} onChange={(e) => setModelo(e.target.value)} className="w-40" /></div>
             <Button onClick={guardar}>💾 Guardar plantilla</Button>

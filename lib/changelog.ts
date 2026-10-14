@@ -9,6 +9,16 @@ export type Cambio = {
 
 export const CHANGELOG: Cambio[] = [
   {
+    version: "4.24.0",
+    fecha: "2026-10-14",
+    titulo: "TexTUBE: variables propias para las plantillas (con CRUD)",
+    cambios: [
+      "Nueva sección «Variables de las plantillas» en ⚙️ Menús: crear variables con su lista de valores (por ejemplo «Acción»: Reset, Diagnóstico, Activación), cambiar su nombre y sus valores, agregar y quitar valores, marcar el de entrada y eliminar la variable. Viene creada «Acción», lista para usar.",
+      "En las plantillas se escriben con su marcador: {accion} (el valor tal cual), {accion_l} (en minúsculas) y {accion_h} (sin espacios ni tildes, para hashtags). En «Generar y aplicar» aparece un menú por variable para elegir el valor; la vista previa de la plantilla usa el valor marcado.",
+      "En el editor de plantillas, botones «Insertar» ponen cualquier marcador (incluidos los de tus variables) donde está el cursor. Si una plantilla usa un marcador que no existe, la vista previa lo avisa. Con las plantillas originales todo sale igual que antes.",
+    ],
+  },
+  {
     version: "4.23.0",
     fecha: "2026-10-14",
     titulo: "Usuarios: crear cuentas y permitir o denegar cada módulo",
