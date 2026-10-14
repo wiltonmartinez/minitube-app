@@ -9,6 +9,16 @@ export type Cambio = {
 
 export const CHANGELOG: Cambio[] = [
   {
+    version: "4.20.0",
+    fecha: "2026-10-14",
+    titulo: "Panel «Cuenta de usuario»",
+    cambios: [
+      "Nueva sección 👤 Cuenta: editar nombre, apellido, correo y teléfono, y cambiar la contraseña. Cambiar el correo o la contraseña exige escribir la contraseña actual.",
+      "La contraseña se guarda solo como huella (PBKDF2 con sal), nunca en claro. Al cambiarla se cierran las demás sesiones abiertas y se frenan los intentos repetidos.",
+      "La cuenta se guarda en un archivo en tu PC (carpeta .data, ignorada por git) o, en internet, en Upstash Redis (KV_REST_API_URL y KV_REST_API_TOKEN). Sin dónde guardar, el panel avisa y la cuenta se lee de GESTOR_EMAIL y GESTOR_CLAVE.",
+    ],
+  },
+  {
     version: "4.19.0",
     fecha: "2026-10-14",
     titulo: "Entrar con correo y recuperar el acceso por correo",

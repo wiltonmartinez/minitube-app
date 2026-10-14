@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { COOKIE_SESION, DURACION_SESION_S, crearSesion, verificarEnlaceAcceso } from "@/lib/acceso";
+import { correoAutorizado } from "@/lib/acceso-cuenta";
 
 // Enlaces ya usados en esta instancia del servidor (mejor esfuerzo: cada enlace sirve una vez mientras la instancia siga viva).
 const usados = new Set<string>();
@@ -8,7 +9,7 @@ const usados = new Set<string>();
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const token = url.searchParams.get("t");
-  const correo = await verificarEnlaceAcceso(token);
+  const correo = await verificarEnlaceAcceso(token, Date.now(), correoAutorizado);
   const invalido = () => NextResponse.redirect(new URL("/acceso?enlace=invalido", url.origin));
   if (!correo || !token || usados.has(token)) return invalido();
   usados.add(token);

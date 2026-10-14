@@ -1,15 +1,16 @@
 import { NextResponse } from "next/server";
-import { COOKIE_SESION, DURACION_SESION_S, accesoConfigurado, claveCorrecta, correoPermitido, correosPermitidos, crearSesion } from "@/lib/acceso";
+import { COOKIE_SESION, DURACION_SESION_S, accesoConfigurado, crearSesion } from "@/lib/acceso";
+import { claveValida, correoAutorizado, correosAutorizados } from "@/lib/acceso-cuenta";
 
 // Frena los intentos repetidos de adivinar la contraseña (por dirección, en memoria).
 const intentos = new Map<string, { n: number; hasta: number }>();
 
 /** ¿El correo escrito es uno de los autorizados? Si no hay correos configurados, solo se pide la contraseña. */
-const informaCorreo = () => correosPermitidos().length > 0;
+const informaCorreo = async () => (await correosAutorizados()).length > 0;
 
 export async function GET() {
   // la pantalla de acceso pregunta si debe pedir el correo
-  return NextResponse.json({ pideCorreo: informaCorreo(), configurado: accesoConfigurado() });
+  return NextResponse.json({ pideCorreo: await informaCorreo(), configurado: accesoConfigurado() });
 }
 
 export async function POST(req: Request) {
@@ -27,11 +28,12 @@ export async function POST(req: Request) {
     /* cuerpo vacío */
   }
   // el mismo mensaje para correo o contraseña malos: no se revela cuál de los dos falló
-  const correoOk = !informaCorreo() || correoPermitido(correo);
-  const claveOk = await claveCorrecta(clave);
+  const pide = await informaCorreo();
+  const correoOk = !pide || (await correoAutorizado(correo));
+  const claveOk = await claveValida(clave);
   if (!(correoOk && claveOk)) {
     intentos.set(quien, { n: (e && e.hasta > Date.now() ? e.n : 0) + 1, hasta: Date.now() + 60_000 });
-    return NextResponse.json({ error: informaCorreo() ? "Correo o contraseña incorrectos." : "Contraseña incorrecta." }, { status: 401 });
+    return NextResponse.json({ error: pide ? "Correo o contraseña incorrectos." : "Contraseña incorrecta." }, { status: 401 });
   }
   intentos.delete(quien);
   const r = NextResponse.json({ ok: true });

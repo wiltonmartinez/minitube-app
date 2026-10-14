@@ -6,6 +6,8 @@ export const COOKIE_SESION = "gt_sesion";
 export const DURACION_SESION_S = 60 * 60 * 24 * 30;
 
 const clave = () => process.env.GESTOR_CLAVE?.trim() || "";
+/** Con qué se firman las sesiones y los enlaces: GESTOR_SECRETO o, si falta, GESTOR_CLAVE (no cambia cuando eliges otra contraseña desde la app). */
+const secreto = () => process.env.GESTOR_SECRETO?.trim() || clave();
 
 /** En desarrollo local sin contraseña configurada no se pide (para poder probar); en producción siempre hace falta. */
 export const accesoLibre = () => !clave() && process.env.NODE_ENV === "development";
@@ -15,7 +17,7 @@ const enc = new TextEncoder();
 const hex = (b: ArrayBuffer) => [...new Uint8Array(b)].map((x) => x.toString(16).padStart(2, "0")).join("");
 
 async function hmac(texto: string): Promise<string> {
-  const k = await crypto.subtle.importKey("raw", enc.encode((process.env.GESTOR_SECRETO?.trim() || clave() || "sin-clave") + "|gestor-tube"), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const k = await crypto.subtle.importKey("raw", enc.encode((secreto() || "sin-clave") + "|gestor-tube"), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
   return hex(await crypto.subtle.sign("HMAC", k, enc.encode(texto)));
 }
 
@@ -38,11 +40,13 @@ export async function crearSesion(ahora = Date.now()): Promise<string> {
   return `${caduca}.${await hmac("sesion|" + caduca)}`;
 }
 
-export async function sesionValida(valor: string | undefined | null, ahora = Date.now()): Promise<boolean> {
+export async function sesionValida(valor: string | undefined | null, ahora = Date.now(), desdeMs = 0): Promise<boolean> {
   if (accesoLibre()) return true;
-  if (!valor || !clave()) return false;
+  if (!valor || !secreto()) return false;
   const [caduca, firma] = valor.split(".");
   if (!/^\d{9,12}$/.test(caduca ?? "") || !firma || Number(caduca) < Math.floor(ahora / 1000)) return false;
+  // la sesión se abrió (caduca − 30 días); si fue antes de «desdeMs» (por ejemplo, antes de cambiar la contraseña), ya no vale
+  if ((Number(caduca) - DURACION_SESION_S) * 1000 < desdeMs) return false;
   return igualesConstante(firma, await hmac("sesion|" + caduca));
 }
 
@@ -69,8 +73,8 @@ export async function crearEnlaceAcceso(correo: string, ahora = Date.now()): Pro
 }
 
 /** El correo del enlace si es válido (firma buena, no vencido y correo todavía autorizado); si no, null. */
-export async function verificarEnlaceAcceso(token: string | null | undefined, ahora = Date.now()): Promise<string | null> {
-  if (!token || !clave()) return null;
+export async function verificarEnlaceAcceso(token: string | null | undefined, ahora = Date.now(), permitido: (c: string) => boolean | Promise<boolean> = correoPermitido): Promise<string | null> {
+  if (!token || !secreto()) return null;
   const [caduca, b64, firma] = token.split(".");
   if (!/^\d{9,12}$/.test(caduca ?? "") || !b64 || !firma || Number(caduca) < Math.floor(ahora / 1000)) return null;
   let correo: string;
@@ -80,5 +84,5 @@ export async function verificarEnlaceAcceso(token: string | null | undefined, ah
     return null;
   }
   if (!igualesConstante(firma, await hmac(`enlace|${caduca}|${correo}`))) return null;
-  return correoPermitido(correo) ? correo : null;
+  return (await permitido(correo)) ? correo : null;
 }

@@ -22,9 +22,12 @@ export function BarraApp() {
       <Link href="/editor" className={enlace(ruta === "/editor")}>
         03) 🧩 Editor de Capas
       </Link>
+      <Link href="/cuenta" className={`ml-auto ${enlace(ruta === "/cuenta")}`}>
+        👤 Cuenta
+      </Link>
       <button
         type="button"
-        className="ml-auto rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+        className=" rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
         onClick={async () => {
           await fetch("/api/acceso", { method: "DELETE" });
           router.push("/acceso");
