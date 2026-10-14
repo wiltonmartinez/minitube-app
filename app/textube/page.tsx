@@ -43,12 +43,13 @@ const guardarLS = (k: string, v: unknown) => {
 
 async function llamar<T>(ruta: string, cuerpo: unknown): Promise<T> {
   const r = await fetch(ruta, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(cuerpo) });
-  if (r.status === 401) {
+  const d = await r.json().catch(() => ({}));
+  // 401 con este mensaje = la sesión venció (un 401 de YouTube trae otro mensaje y se muestra tal cual)
+  if (r.status === 401 && d.error === "Necesitas iniciar sesión.") {
     // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- recarga completa para que el servidor revise la sesión
     window.location.href = "/acceso?volver=/textube";
     throw new Error("Necesitas iniciar sesión.");
   }
-  const d = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(d.error || "Error.");
   return d as T;
 }
