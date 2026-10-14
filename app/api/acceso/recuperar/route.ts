@@ -49,8 +49,8 @@ export async function POST(req: Request) {
     await enviarCorreo({
       para: correo,
       asunto: "Tu enlace para entrar a Gestor TUBE",
-      texto: `Pediste entrar a Gestor TUBE sin contraseña.\n\nAbre este enlace (vale ${minutos} minutos):\n${enlace}\n\nSi no fuiste tú, ignora este mensaje: nadie puede entrar sin el enlace.\nSi olvidaste tu contraseña, cámbiala en Vercel (Settings → Environment Variables → GESTOR_CLAVE).`,
-      html: `<p>Pediste entrar a <b>Gestor TUBE</b> sin contraseña.</p><p><a href="${enlace}" style="display:inline-block;padding:10px 18px;background:#2563eb;color:#fff;border-radius:8px;text-decoration:none;font-weight:600">Entrar a Gestor TUBE</a></p><p style="color:#555">El enlace vale ${minutos} minutos. Si el botón no abre, copia esta dirección:<br>${enlace}</p><p style="color:#555">Si no fuiste tú, ignora este mensaje: nadie puede entrar sin el enlace.<br>Si olvidaste tu contraseña, cámbiala en Vercel (Settings → Environment Variables → <code>GESTOR_CLAVE</code>).</p>`,
+      texto: `Pediste entrar a Gestor TUBE sin contraseña.\n\nAbre este enlace (vale ${minutos} minutos):\n${enlace}\n\nSi no fuiste tú, ignora este mensaje: nadie puede entrar sin el enlace.\nAl entrar te llevamos a «Cuenta»: ahí puedes poner una contraseña nueva sin escribir la anterior (el permiso vale 15 minutos).`,
+      html: `<p>Pediste entrar a <b>Gestor TUBE</b> sin contraseña.</p><p><a href="${enlace}" style="display:inline-block;padding:10px 18px;background:#2563eb;color:#fff;border-radius:8px;text-decoration:none;font-weight:600">Entrar a Gestor TUBE</a></p><p style="color:#555">El enlace vale ${minutos} minutos. Si el botón no abre, copia esta dirección:<br>${enlace}</p><p style="color:#555">Si no fuiste tú, ignora este mensaje: nadie puede entrar sin el enlace.<br>Al entrar te llevamos a «Cuenta»: ahí puedes poner una contraseña nueva sin escribir la anterior (el permiso vale 15 minutos).</p>`,
     });
     return NextResponse.json({ ok: true, mensaje: MENSAJE });
   } catch (e) {

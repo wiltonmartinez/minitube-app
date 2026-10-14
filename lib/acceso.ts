@@ -61,6 +61,27 @@ export async function sesionValida(valor: string | undefined | null, ahora = Dat
   return !!s && s.emitidaMs >= desdeMs;
 }
 
+// ───────────────────────── permiso de recuperación ─────────────────────────
+// Quien entra con el enlace del correo puede poner una contraseña nueva sin escribir la actual (la olvidó). El permiso es una cookie firmada de 15 minutos.
+export const COOKIE_RECUPERACION = "gt_recuperacion";
+export const DURACION_RECUPERACION_S = 15 * 60;
+
+export async function crearPermisoRecuperacion(uid: string, ahora = Date.now()): Promise<string> {
+  if (!ID_VALIDO.test(uid)) throw new Error("Identificador de usuario no válido.");
+  const caduca = Math.floor(ahora / 1000) + DURACION_RECUPERACION_S;
+  return `${caduca}.${uid}.${await hmac(`recuperacion|${caduca}|${uid}`)}`;
+}
+
+/** ¿Este permiso es de este usuario, tiene buena firma y no ha vencido? */
+export async function permisoRecuperacionValido(valor: string | undefined | null, uid: string, ahora = Date.now()): Promise<boolean> {
+  if (!valor || !secreto()) return false;
+  const [caduca, id, firma] = valor.split(".");
+  if (!/^\d{9,12}$/.test(caduca ?? "") || id !== uid || !firma || Number(caduca) < Math.floor(ahora / 1000)) return false;
+  return igualesConstante(firma, await hmac(`recuperacion|${caduca}|${uid}`));
+}
+
+export const cookieRecuperacionDe = (req: Request): string | undefined => req.headers.get("cookie")?.split(/;\s*/).find((c) => c.startsWith(COOKIE_RECUPERACION + "="))?.slice(COOKIE_RECUPERACION.length + 1);
+
 /** Lee la cookie de sesión de una petición. */
 export const cookieDe = (req: Request): string | undefined => req.headers.get("cookie")?.split(/;\s*/).find((c) => c.startsWith(COOKIE_SESION + "="))?.slice(COOKIE_SESION.length + 1);
 export const exigirSesion = async (req: Request) => sesionValida(cookieDe(req));

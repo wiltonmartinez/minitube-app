@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { cookieRecuperacionDe, permisoRecuperacionValido } from "@/lib/acceso";
 import { usuarioDeSolicitud } from "@/lib/acceso-cuenta";
 import { ErrorCuenta, almacenamiento, validarPerfil } from "@/lib/cuenta";
 import { bloqueado, falloRegistrado, olvidarFallos, quienEs } from "@/lib/frenos";
@@ -17,6 +18,7 @@ export async function GET(req: Request) {
     rol: u.rol,
     modulos: modulosDe(u),
     claveDeLaApp: !!u.clave,
+    sinActual: await permisoRecuperacionValido(cookieRecuperacionDe(req), u.id),
     almacenamiento: modo,
     puedeGuardar: modo !== "ninguno",
     actualizado: u.actualizado,

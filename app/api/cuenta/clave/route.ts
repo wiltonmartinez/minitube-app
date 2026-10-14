@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { COOKIE_SESION, DURACION_SESION_S, crearSesion } from "@/lib/acceso";
+import { COOKIE_RECUPERACION, COOKIE_SESION, DURACION_SESION_S, cookieRecuperacionDe, crearSesion, permisoRecuperacionValido } from "@/lib/acceso";
 import { usuarioDeSolicitud } from "@/lib/acceso-cuenta";
 import { ErrorCuenta, problemaClaveNueva } from "@/lib/cuenta";
 import { bloqueado, falloRegistrado, olvidarFallos, quienEs } from "@/lib/frenos";
@@ -15,7 +15,9 @@ export async function POST(req: Request) {
     const d = (await req.json().catch(() => ({}))) as Record<string, unknown>;
     const actual = String(d.actual ?? "");
     const nueva = String(d.nueva ?? "");
-    if (!(await claveDeUsuario(u, actual))) {
+    // entró con el enlace del correo hace menos de 15 minutos: no necesita la actual (la olvidó)
+    const porEnlace = actual === "" && (await permisoRecuperacionValido(cookieRecuperacionDe(req), u.id));
+    if (!porEnlace && !(await claveDeUsuario(u, actual))) {
       falloRegistrado(quien);
       throw new ErrorCuenta("La contraseña actual no es correcta.");
     }
@@ -27,6 +29,7 @@ export async function POST(req: Request) {
     await actualizarUsuario(u.id, (x) => ({ ...x, clave, sesionesDesde: ahora }));
     const r = NextResponse.json({ ok: true, mensaje: "Contraseña cambiada. Las demás sesiones abiertas se cerraron." });
     r.cookies.set(COOKIE_SESION, await crearSesion(ahora + 1000, u.id), { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/", maxAge: DURACION_SESION_S });
+    r.cookies.set(COOKIE_RECUPERACION, "", { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/", maxAge: 0 });
     return r;
   } catch (e) {
     return NextResponse.json({ error: e instanceof Error ? e.message : "No se pudo cambiar la contraseña." }, { status: e instanceof ErrorCuenta ? 400 : 500 });

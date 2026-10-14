@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { MODULOS } from "@/lib/modulos";
 
 type Perfil = { nombre: string; apellido: string; correo: string; telefono: string };
-type Estado = { perfil: Perfil; rol: "admin" | "usuario"; modulos: string[]; claveDeLaApp: boolean; almacenamiento: "redis" | "archivo" | "ninguno"; puedeGuardar: boolean; actualizado: string | null };
+type Estado = { perfil: Perfil; rol: "admin" | "usuario"; modulos: string[]; claveDeLaApp: boolean; sinActual: boolean; almacenamiento: "redis" | "archivo" | "ninguno"; puedeGuardar: boolean; actualizado: string | null };
 
 async function pedir<T>(ruta: string, metodo: "GET" | "PUT" | "POST", cuerpo?: unknown): Promise<T> {
   const r = await fetch(ruta, { method: metodo, headers: { "Content-Type": "application/json" }, body: cuerpo === undefined ? undefined : JSON.stringify(cuerpo) });
@@ -85,7 +85,8 @@ export default function CuentaPage() {
     if (nueva !== repetir) return setErrorClave("La contraseña nueva y su repetición no coinciden.");
     setCambiando(true);
     try {
-      const r = await pedir<{ mensaje: string }>("/api/cuenta/clave", "POST", { actual, nueva });
+      const r = await pedir<{ mensaje: string }>("/api/cuenta/clave", "POST", { actual: estado?.sinActual ? "" : actual, nueva });
+      setEstado((s) => (s ? { ...s, sinActual: false } : s));
       toast.success(r.mensaje);
       setActual("");
       setNueva("");
@@ -154,7 +155,11 @@ export default function CuentaPage() {
         </CardHeader>
         <CardContent>
           <form onSubmit={cambiarClave} className="space-y-3">
-            <div className="space-y-1.5"><Label htmlFor="actual">Contraseña actual</Label><Input id="actual" type="password" autoComplete="current-password" value={actual} onChange={(e) => setActual(e.target.value)} disabled={bloqueada} /></div>
+            {estado?.sinActual ? (
+              <p className="rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-sm">✅ Entraste con el enlace del correo: no necesitas la contraseña actual. Escribe la nueva (el permiso vale 15 minutos).</p>
+            ) : (
+              <div className="space-y-1.5"><Label htmlFor="actual">Contraseña actual</Label><Input id="actual" type="password" autoComplete="current-password" value={actual} onChange={(e) => setActual(e.target.value)} disabled={bloqueada} /></div>
+            )}
             <div className="space-y-1.5">
               <Label htmlFor="nueva">Contraseña nueva</Label>
               <Input id="nueva" type="password" autoComplete="new-password" value={nueva} onChange={(e) => setNueva(e.target.value)} disabled={bloqueada} />
@@ -167,7 +172,7 @@ export default function CuentaPage() {
             </div>
             <div className="space-y-1.5"><Label htmlFor="repetir">Repite la contraseña nueva</Label><Input id="repetir" type="password" autoComplete="new-password" value={repetir} onChange={(e) => setRepetir(e.target.value)} disabled={bloqueada} /></div>
             {errorClave && <p className="text-sm text-destructive">{errorClave}</p>}
-            <Button type="submit" disabled={bloqueada || cambiando || !actual || !nueva || !repetir}>🔑 Cambiar contraseña</Button>
+            <Button type="submit" disabled={bloqueada || cambiando || (!actual && !estado?.sinActual) || !nueva || !repetir}>🔑 Cambiar contraseña</Button>
             {estado && !estado.claveDeLaApp && !bloqueada && <p className="text-xs text-muted-foreground">Ahora entras con la contraseña de la configuración del servidor; al cambiarla aquí, la nueva pasa a ser la que vale.</p>}
           </form>
         </CardContent>

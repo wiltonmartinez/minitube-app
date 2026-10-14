@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { claveCorrecta, cookieDe, crearSesion, sesionValida } from "@/lib/acceso";
+import { claveCorrecta, cookieDe, crearPermisoRecuperacion, crearSesion, permisoRecuperacionValido, sesionValida } from "@/lib/acceso";
 
 const previo = { clave: process.env.GESTOR_CLAVE, secreto: process.env.GESTOR_SECRETO };
 beforeEach(() => {
@@ -94,5 +94,19 @@ describe("correo autorizado y enlace de acceso", () => {
     process.env.GESTOR_EMAIL = "dueno@ejemplo.com";
     process.env.GESTOR_CLAVE = "distinta";
     expect(await verificarEnlaceAcceso(t, ahora)).toBeNull();
+  });
+});
+
+describe("permiso de recuperación (entrar con el enlace del correo)", () => {
+  it("vale 15 minutos, solo para su usuario y no se puede falsificar", async () => {
+    const ahora = Date.now();
+    const c = await crearPermisoRecuperacion("abc123", ahora);
+    expect(await permisoRecuperacionValido(c, "abc123", ahora + 60_000)).toBe(true);
+    expect(await permisoRecuperacionValido(c, "otro", ahora + 60_000)).toBe(false); // de otro usuario
+    expect(await permisoRecuperacionValido(c, "abc123", ahora + 16 * 60_000)).toBe(false); // vencido
+    const [caduca, uid] = c.split(".");
+    expect(await permisoRecuperacionValido(`${caduca}.${uid}.${"0".repeat(64)}`, "abc123", ahora)).toBe(false);
+    expect(await permisoRecuperacionValido(await crearSesion(ahora, "abc123"), "abc123", ahora)).toBe(false); // una sesión no sirve de permiso
+    expect(await permisoRecuperacionValido(undefined, "abc123")).toBe(false);
   });
 });
