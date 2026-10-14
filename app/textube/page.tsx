@@ -69,7 +69,7 @@ export default function TexTubePage() {
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">✍️ TexTUBE</h1>
-          <p className="mt-1 text-muted-foreground">Títulos, descripción y etiquetas con tus plantillas. Antes de cambiar nada se guarda un respaldo para poder deshacer.</p>
+          <p className="mt-1 max-w-3xl text-muted-foreground">TexTUBE es un módulo de gestión que te permite editar el título, la descripción y las etiquetas de tus videos de YouTube de forma manual y centralizada. En lugar de navegar por la página de YouTube Studio, utiliza la API oficial para inyectar y guardar tus cambios video por video directamente desde la aplicación.</p>
         </div>
       </header>
       <div className="flex gap-2">
