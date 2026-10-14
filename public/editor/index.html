@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Editor de capas</title>
+<link rel="stylesheet" href="editor.css">
+<style>
+  .app { display:block; } main { margin:0 auto; max-width:1500px; }
+  .pagina { display:none; } .pagina.visible { display:block; }
+</style>
+</head>
+<body>
+<div class="app">
+  <main>
+    <section class="pagina visible" id="p-capas">
+      <h1>Editor de capas</h1>
+      <p class="lema">Arma la miniatura final con capas PNG transparentes: la imagen de PromptTUBE, el texto, el badge 3D y la marca de agua. Mueve cada capa con el ratón y guarda el PNG FINAL.</p>
+      <div class="rejilla cp-grid" style="grid-template-columns:minmax(0,2fr) minmax(280px,1fr);align-items:start">
+        <div class="cp-fijo">
+          <div class="tarjeta" style="padding:12px">
+            <div class="botones" style="margin:0 0 8px;gap:8px">
+              <button class="btn" id="cp-undo" title="Deshacer (Ctrl+Z)" disabled>↶ Deshacer</button>
+              <button class="btn" id="cp-redo" title="Rehacer (Ctrl+Y o Ctrl+Mayús+Z)" disabled>↷ Rehacer</button>
+              <span class="suave" id="cp-hist-info" style="font-size:12px"></span>
+            </div>
+            <div id="cp-lienzo-caja" style="position:relative;line-height:0;border-radius:10px;overflow:hidden;background:repeating-conic-gradient(#d9dde5 0% 25%, #fff 0% 50%) 0 0/24px 24px">
+              <canvas id="cp-lienzo" width="1920" height="1080" style="width:100%;height:auto;cursor:move;touch-action:none"></canvas>
+            </div>
+            <label class="campo" for="cp-proyecto" style="margin-top:10px">Nombre del proyecto (es el nombre del archivo)</label>
+            <input type="text" id="cp-proyecto" maxlength="80" placeholder="Ej: reset-epson-l3210-almohadillas" style="margin-bottom:4px">
+            <label class="check" style="margin-top:8px"><input type="checkbox" id="cp-guias" checked> Guías e imán (centro del lienzo y hueco del marco)</label>
+            <p class="nota">Arrastra la capa elegida para moverla. Pega una imagen con Ctrl+V para ponerla como Capa #1 (la generada por PromptTUBE).</p>
+            <div class="botones">
+              <button class="btn primario" id="cp-disquete" title="Guarda los cambios SOBRE el proyecto que tienes abierto (reemplaza su archivo, sin crear variaciones). Atajo: Ctrl+S">💾 Guardar</button>
+              <button class="btn primario" id="cp-guardar-todo" title="Cada vez que guardas se crea una versión nueva (L3210-01, L3210-02…) en la misma carpeta del proyecto; nunca se reemplaza ni se borra una anterior">📦 Guardar todo (carpeta del proyecto)</button>
+              <button class="btn" id="cp-abrir-carpeta">📂 Abrir carpeta</button>
+              <button class="btn" id="cp-candado" title="Con el candado cerrado no se crean variaciones: al guardar se reemplaza el archivo del proyecto">🔓 Variaciones permitidas</button>
+            </div>
+            <p class="nota" id="cp-version-info" style="margin:6px 0 0"></p>
+            <div class="botones" style="margin-top:8px">
+              <button class="btn verde" id="cp-guardar">💾 Guardar miniatura FINAL (PNG)</button>
+              <button class="btn" id="cp-descargar">⬇ Descargar PNG</button>
+            </div>
+            <div class="botones" style="margin-top:8px">
+              <button class="btn" id="cp-config">⚙ Guardar configuración</button>
+              <button class="btn" id="cp-reset">↺ Restablecer capas</button>
+            </div>
+            <p class="nota" id="cp-resultado"></p>
+            <p class="nota" id="cp-config-estado"></p>
+          </div>
+        </div>
+        <div>
+          <div class="tarjeta">
+            <h2>Capas</h2>
+            <p class="nota" id="cp-orden-nota" style="margin:0 0 10px">Como en Photoshop: la capa de arriba va encima de las demás y la de abajo es el fondo. La imagen de PromptTUBE (🔒) siempre se queda al fondo.</p>
+            <div id="cp-lista"></div>
+            <div class="botones"><button class="btn" id="cp-agregar">➕ Agregar capa PNG</button><button class="btn" id="cp-agregar-texto">🔤 Agregar texto 3D</button><button class="btn" id="cp-agregar-badge">🏷 Agregar badge 3D</button><select id="cp-badges-menu" style="width:auto;max-width:100%" title="Inserta como capa nueva uno de tus badges guardados"></select><button class="btn" id="cp-agregar-marco">🖼 Agregar marco</button><button class="btn" id="cp-subir-marco">📤 Subir marco (Canva)</button></div>
+            <input type="file" id="cp-archivo" accept="image/png,image/jpeg,image/webp" style="display:none">
+            <input type="file" id="cp-marco-archivo" accept="image/png,image/webp" style="display:none">
+          </div>
+          <div class="tarjeta">
+            <h2>📥 Entrada: imágenes para el fondo (por enfoque)</h2>
+            <p class="nota" style="margin-top:0">Esta es la carpeta de <b>ENTRADA</b>: las imágenes que ya generaste con PromptTUBE y que quieres usar de <b>fondo</b> (Capa #1). Tiene <b>una subcarpeta por enfoque</b> (Enfoque 1 a 4): pon cada imagen en la de su enfoque y aquí la eliges con un clic. Es distinta de la <b>Carpeta base</b>, que es la de <b>salida</b> (donde se guardan tus miniaturas terminadas).</p>
+            <input type="text" id="cp-img-ruta" placeholder="Ej: D:\Imagenes" spellcheck="false">
+            <div class="botones" style="margin-top:8px"><button class="btn" id="cp-img-examinar">📂 Examinar…</button><button class="btn verde" id="cp-img-aplicar">✔ Aplicar</button><button class="btn" id="cp-img-defecto">↺ Por defecto</button><button class="btn" id="cp-img-abrir">📂 Abrir carpeta</button><button class="btn" id="cp-img-actualizar">⟳ Actualizar</button></div>
+            <div class="botones" style="margin-top:8px;align-items:center"><select id="cp-img-enfoque" style="width:auto;max-width:100%" title="Enfoque al que pertenecen las imágenes que agregues"></select><button class="btn" id="cp-img-agregar">📤 Agregar imágenes a este enfoque</button><input type="file" id="cp-img-archivos" accept="image/png,image/jpeg,image/webp" multiple style="display:none"></div>
+            <p class="nota" id="cp-img-info" style="word-break:break-all"></p>
+            <div id="cp-img-lista"></div>
+          </div>
+          <div class="tarjeta">
+            <h2>📤 Salida: carpeta base</h2>
+            <p class="nota" style="margin-top:0">Cada proyecto tiene <b>una sola carpeta</b> con su nombre (por ejemplo <b>L3210</b>) y <b>cada vez que guardas se crea una versión nueva dentro de esa misma carpeta</b>, sin reemplazar nada: <b>L3210-01.png</b>, <b>L3210-02.png</b>, <b>L3210-03.png</b>… Junto a cada miniatura se guardan <b>L3210-01.json</b> (para volver a abrirla), <b>L3210-01_datos.json</b> (todas las variables: textos, colores, efectos y posiciones) y, en la subcarpeta <b>capas</b>, un PNG transparente por capa.</p>
+            <input type="text" id="cp-base" placeholder="Ej: D:\Miniaturas" spellcheck="false">
+            <div class="botones" style="margin-top:8px"><button class="btn" id="cp-base-examinar">📂 Examinar…</button><button class="btn verde" id="cp-base-aplicar">✔ Aplicar</button><button class="btn" id="cp-base-defecto">↺ Por defecto</button></div>
+            <p class="nota" id="cp-base-info" style="word-break:break-all"></p>
+            <h3 style="font-size:14px;margin:12px 0 4px">Proyectos en la carpeta base</h3>
+            <div class="botones" style="margin-top:0"><button class="btn" id="cp-proy-guardar">💾 Solo el archivo del proyecto</button><button class="btn" id="cp-base-abrir">📂 Abrir carpeta base</button></div>
+            <p class="nota" style="margin-top:4px">El nombre de la subcarpeta es el del proyecto (el campo de debajo de la miniatura).</p>
+            <div id="cp-proy-lista" style="margin-top:8px"></div>
+          </div>
+          <div class="tarjeta">
+            <h2>Configuraciones guardadas</h2>
+            <p class="nota" style="margin-top:0">Guarda el montaje completo con un nombre (capas, textos, marcos, imágenes y nombre del proyecto), vuelve a cargarlo o duplícalo para hacer una variante.</p>
+            <div style="display:flex;gap:8px"><input type="text" id="cp-cfg-nombre" maxlength="60" placeholder="Ej: Epson L3210 · Almohadillas"><button class="btn verde" id="cp-cfg-guardar" style="white-space:nowrap">💾 Guardar como</button></div>
+            <div id="cp-cfg-lista" style="margin-top:10px"></div>
+          </div>
+          <div class="tarjeta" id="cp-ajustes"></div>
+        </div>
+      </div>
+    </section>
+
+
+  </main>
+</div>
+<div class="toast" id="toast"></div>
+<script src="almacen.js"></script>
+<script src="base.js"></script>
+<script src="editor.js"></script>
+<script>cpIniciar();</script>
+</body>
+</html>
