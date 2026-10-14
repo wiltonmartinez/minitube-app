@@ -739,8 +739,8 @@ export default function Home() {
         <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
           Generador de prompts para miniaturas de YouTube
         </h1>
-        <p className="mt-2 text-muted-foreground">
-          Servicio de reset remoto asistido de impresoras: prompts fotográficos hiperrealistas y coherentes.
+        <p className="mx-auto mt-2 max-w-3xl text-muted-foreground">
+          PrompTUBE es un generador de prompts fotográficos hiperrealistas diseñado para crear miniaturas de YouTube altamente atractivas para cualquier tipo de canal o temática. Su objetivo es estructurar descripciones detalladas y precisas que el usuario copia y pega en modelos generativos, como Gemini o ChatGPT, para obtener imágenes cinematográficas en formato panorámico 16:9.
         </p>
         <p className="mt-2 text-xs text-muted-foreground">
           <Link href="/cambios" className="underline-offset-2 hover:underline">
