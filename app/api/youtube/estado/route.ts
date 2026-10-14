@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import { exigirSesion } from "@/lib/acceso";
+import { exigirModulo } from "@/lib/acceso-cuenta";
 import { youtubeConfigurado } from "@/lib/textube/youtube";
 
 export async function GET(req: Request) {
-  if (!(await exigirSesion(req))) return NextResponse.json({ error: "Necesitas iniciar sesión." }, { status: 401 });
+  if (!(await exigirModulo(req, "textube"))) return NextResponse.json({ error: "No tienes acceso a TexTUBE." }, { status: 403 });
   return NextResponse.json({ configurado: youtubeConfigurado() });
 }

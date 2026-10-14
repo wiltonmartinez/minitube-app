@@ -9,6 +9,17 @@ export type Cambio = {
 
 export const CHANGELOG: Cambio[] = [
   {
+    version: "4.23.0",
+    fecha: "2026-10-14",
+    titulo: "Usuarios: crear cuentas y permitir o denegar cada módulo",
+    cambios: [
+      "Nueva sección 👥 Usuarios (solo administradores): crear, editar, desactivar y eliminar usuarios, y marcar a cuáles módulos puede entrar cada uno (TexTUBE, PrompTUBE, CapaTUBE). Los administradores entran a todo.",
+      "Cada usuario entra con su correo y su contraseña, y la barra solo le muestra sus módulos. Si pide uno que no tiene, ve «Sin acceso» o pasa a su primer módulo permitido; las funciones internas de cada módulo también se bloquean.",
+      "Quitar un módulo, desactivar, restablecer la contraseña o eliminar a un usuario le cierra la sesión (en unos segundos). Un administrador no puede quitarse el rol, desactivarse ni eliminarse a sí mismo, y siempre queda al menos un administrador.",
+      "Lo que ya funcionaba sigue igual: el propietario de siempre (GESTOR_EMAIL y GESTOR_CLAVE) pasa a ser el primer administrador sin migrar nada a mano. Solo el administrador puede renovar el permiso de YouTube.",
+    ],
+  },
+  {
     version: "4.22.0",
     fecha: "2026-10-14",
     titulo: "Los tres módulos con el mismo formato y pestañas de navegador",

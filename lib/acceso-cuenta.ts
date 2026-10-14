@@ -1,27 +1,28 @@
 import "server-only";
-// Une el acceso por variables de entorno (GESTOR_EMAIL, GESTOR_CLAVE) con la cuenta guardada desde la app:
-// lo que se guarda en la cuenta manda; si no hay cuenta (o no hay dónde guardarla), valen las variables.
-import { claveCorrecta, correoPermitido, correosPermitidos } from "./acceso";
-import { claveCoincide, leerCuenta } from "./cuenta";
+// Une la sesión (cookie firmada) con el usuario guardado: quién es, si sigue activo y a qué módulos puede entrar.
+import { accesoLibre, cookieDe, leerSesion } from "./acceso";
+import { puedeAcceder, type Modulo } from "./modulos";
+import { ID_PROPIETARIO, leerUsuarios, usuarioPorId, type Usuario } from "./usuarios";
 
-/** Correos que pueden entrar: el de la cuenta guardada o, si no hay, los de GESTOR_EMAIL. */
-export async function correosAutorizados(): Promise<string[]> {
-  const c = await leerCuenta();
-  return c?.correo ? [c.correo.toLowerCase()] : correosPermitidos();
-}
-export const correoAutorizado = async (correo: string) => (await correosAutorizados()).includes(String(correo ?? "").trim().toLowerCase());
-
-/** ¿Es correcta la contraseña? La elegida en la app o, si nunca se cambió, GESTOR_CLAVE. */
-export async function claveValida(intento: string): Promise<boolean> {
-  const c = await leerCuenta();
-  return c?.clave ? claveCoincide(intento, c.clave) : claveCorrecta(intento);
+/** El usuario de una cookie de sesión, o null si la sesión no vale (firma, fecha, usuario borrado o desactivado, contraseña cambiada después). */
+export async function usuarioDeCookie(valor: string | undefined | null): Promise<Usuario | null> {
+  if (accesoLibre()) return (await usuarioPorId(ID_PROPIETARIO)) ?? (await leerUsuarios())[0] ?? null; // desarrollo sin contraseña: entra el propietario
+  const s = await leerSesion(valor);
+  if (!s) return null;
+  const u = await usuarioPorId(s.uid);
+  return u && u.activo && s.emitidaMs >= u.sesionesDesde ? u : null;
 }
 
-export { correoPermitido };
+export const usuarioDeSolicitud = (req: Request) => usuarioDeCookie(cookieDe(req));
 
-/** ¿La petición trae una sesión válida (y abierta después del último cambio de contraseña)? */
-export async function sesionActiva(req: Request): Promise<boolean> {
-  const { cookieDe, sesionValida } = await import("./acceso");
-  const { sesionesDesde } = await import("./cuenta");
-  return sesionValida(cookieDe(req), Date.now(), await sesionesDesde());
+/** El usuario de la petición si puede entrar a ese módulo (los administradores, a todos); si no, null. */
+export async function exigirModulo(req: Request, modulo: Modulo): Promise<Usuario | null> {
+  const u = await usuarioDeSolicitud(req);
+  return u && puedeAcceder(u, modulo) ? u : null;
+}
+
+/** El usuario de la petición si es administrador activo; si no, null. */
+export async function exigirAdmin(req: Request): Promise<Usuario | null> {
+  const u = await usuarioDeSolicitud(req);
+  return u && u.activo && u.rol === "admin" ? u : null;
 }

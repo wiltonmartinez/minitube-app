@@ -21,7 +21,6 @@ export type Cuenta = {
 };
 
 export type Almacenamiento = "redis" | "archivo" | "ninguno";
-const LLAVE = "gestor-tube:cuenta";
 const ITERACIONES = 210_000;
 
 const urlRedis = () => (process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL || "").replace(/\/$/, "");
@@ -34,10 +33,17 @@ export function almacenamiento(): Almacenamiento {
   return "ninguno";
 }
 
-let cache: { valor: Cuenta | null; hasta: number } | null = null;
-const olvidarCache = () => {
-  cache = null;
+/** Lo que se guarda: cada cosa con su llave en la base de datos y su archivo en disco. */
+export type Llave = "cuenta" | "usuarios";
+const DONDE: Record<Llave, { redis: string; archivo: string }> = {
+  cuenta: { redis: "gestor-tube:cuenta", archivo: "cuenta.json" },
+  usuarios: { redis: "gestor-tube:usuarios", archivo: "usuarios.json" },
 };
+
+const cache = new Map<Llave, { valor: unknown; hasta: number }>();
+const olvidarCache = (k?: Llave) => (k ? cache.delete(k) : cache.clear());
+/** Fuerza a leer de nuevo lo guardado (por ejemplo, cuando no se encuentra un usuario que otra parte de la app pudo crear hace un momento). */
+export const olvidarGuardado = (k: Llave) => void olvidarCache(k);
 
 async function redis(comando: (string | number)[]): Promise<unknown> {
   const r = await fetch(urlRedis(), { method: "POST", headers: { Authorization: `Bearer ${tokenRedis()}`, "Content-Type": "application/json" }, body: JSON.stringify(comando), cache: "no-store" });
@@ -46,40 +52,45 @@ async function redis(comando: (string | number)[]): Promise<unknown> {
   return d.result;
 }
 
-/** La cuenta guardada (o null si todavía no se guardó nada). Se recuerda 5 segundos para no consultar en cada página. */
-export async function leerCuenta(): Promise<Cuenta | null> {
-  if (cache && cache.hasta > Date.now()) return cache.valor;
-  let valor: Cuenta | null = null;
+/** Lee lo guardado con esa llave (o null si no hay nada). Se recuerda 5 segundos para no consultar en cada página. */
+export async function leerGuardado<T>(k: Llave): Promise<T | null> {
+  const c = cache.get(k);
+  if (c && c.hasta > Date.now()) return c.valor as T | null;
+  let valor: unknown = null;
   try {
     const modo = almacenamiento();
     if (modo === "redis") {
-      const t = await redis(["GET", LLAVE]);
-      valor = typeof t === "string" ? (JSON.parse(t) as Cuenta) : null;
+      const t = await redis(["GET", DONDE[k].redis]);
+      valor = typeof t === "string" ? JSON.parse(t) : null;
     } else if (modo === "archivo") {
-      valor = JSON.parse(await fs.readFile(path.join(carpetaDatos(), "cuenta.json"), "utf-8")) as Cuenta;
+      valor = JSON.parse(await fs.readFile(path.join(carpetaDatos(), DONDE[k].archivo), "utf-8"));
     }
   } catch {
     valor = null; // sin archivo todavía o sin conexión: se usan las variables de entorno
   }
-  cache = { valor, hasta: Date.now() + 5_000 };
-  return valor;
+  cache.set(k, { valor, hasta: Date.now() + 5_000 });
+  return valor as T | null;
 }
 
 export class ErrorCuenta extends Error {}
 
-export async function guardarCuenta(c: Cuenta): Promise<void> {
+export async function escribirGuardado(k: Llave, valor: unknown): Promise<void> {
   const modo = almacenamiento();
-  if (modo === "ninguno") throw new ErrorCuenta("No hay dónde guardar la cuenta: en internet falta conectar una base de datos (Upstash Redis, gratis). En tu PC se guarda sola.");
-  const texto = JSON.stringify(c);
-  if (modo === "redis") await redis(["SET", LLAVE, texto]);
+  if (modo === "ninguno") throw new ErrorCuenta("No hay dónde guardar los cambios: en internet falta conectar una base de datos (Upstash Redis, gratis). En tu PC se guarda sola.");
+  const texto = JSON.stringify(valor);
+  if (modo === "redis") await redis(["SET", DONDE[k].redis, texto]);
   else {
     await fs.mkdir(carpetaDatos(), { recursive: true });
-    await fs.writeFile(path.join(carpetaDatos(), "cuenta.json"), texto, { encoding: "utf-8", mode: 0o600 });
+    await fs.writeFile(path.join(carpetaDatos(), DONDE[k].archivo), texto, { encoding: "utf-8", mode: 0o600 });
   }
-  olvidarCache();
+  olvidarCache(k);
 }
 
-/** Fecha desde la que valen las sesiones (0 si nunca se cambió la contraseña). */
+/** La cuenta única de la versión anterior (antes de que hubiera varios usuarios). */
+export const leerCuenta = () => leerGuardado<Cuenta>("cuenta");
+export const guardarCuenta = (c: Cuenta) => escribirGuardado("cuenta", c);
+
+/** Fecha desde la que valen las sesiones de la cuenta única (0 si nunca se cambió la contraseña). */
 export const sesionesDesde = async () => (await leerCuenta())?.sesionesDesde ?? 0;
 
 // ───────────────────────── contraseña ─────────────────────────

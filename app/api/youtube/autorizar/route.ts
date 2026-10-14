@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
-import { exigirSesion } from "@/lib/acceso";
+import { exigirAdmin } from "@/lib/acceso-cuenta";
 
 /**
  * Renovar el permiso de YouTube (solo desde tu PC, en local): manda a Google a pedirte permiso.
  * Al volver, /api/youtube/callback guarda el permiso nuevo en .env.local.
  */
 export async function GET(req: Request) {
-  if (!(await exigirSesion(req))) return NextResponse.json({ error: "Necesitas iniciar sesión." }, { status: 401 });
+  if (!(await exigirAdmin(req))) return NextResponse.json({ error: "Solo un administrador puede renovar el permiso de YouTube." }, { status: 403 });
   if (process.env.NODE_ENV !== "development") return NextResponse.json({ error: "El permiso de YouTube se renueva desde tu PC (en local) y luego se copia a Vercel." }, { status: 400 });
   const id = process.env.YT_CLIENT_ID;
   if (!id) return NextResponse.json({ error: "Falta YT_CLIENT_ID en .env.local." }, { status: 503 });

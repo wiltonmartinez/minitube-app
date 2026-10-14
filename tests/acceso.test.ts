@@ -30,9 +30,11 @@ describe("acceso con contraseña", () => {
     expect(await sesionValida(c, ahora + 1000)).toBe(true);
     expect(await sesionValida(c, ahora + 29 * 86_400_000)).toBe(true);
     expect(await sesionValida(c, ahora + 31 * 86_400_000)).toBe(false);
-    const [caduca, firma] = c.split(".");
-    expect(await sesionValida(`${Number(caduca) + 999999}.${firma}`, ahora)).toBe(false); // fecha cambiada
-    expect(await sesionValida(`${caduca}.${"0".repeat(firma.length)}`, ahora)).toBe(false); // firma inventada
+    const [caduca, uid, firma] = c.split(".");
+    expect(uid).toBe("propietario");
+    expect(await sesionValida(`${Number(caduca) + 999999}.${uid}.${firma}`, ahora)).toBe(false); // fecha cambiada
+    expect(await sesionValida(`${caduca}.otrousuario.${firma}`, ahora)).toBe(false); // cambiar de usuario a mano
+    expect(await sesionValida(`${caduca}.${uid}.${"0".repeat(firma.length)}`, ahora)).toBe(false); // firma inventada
     expect(await sesionValida("basura", ahora)).toBe(false);
     expect(await sesionValida(undefined, ahora)).toBe(false);
   });

@@ -11,7 +11,7 @@ const secreto = () => process.env.GESTOR_SECRETO?.trim() || clave();
 
 /** En desarrollo local sin contraseña configurada no se pide (para poder probar); en producción siempre hace falta. */
 export const accesoLibre = () => !clave() && process.env.NODE_ENV === "development";
-export const accesoConfigurado = () => !!clave();
+export const accesoConfigurado = () => !!secreto();
 
 const enc = new TextEncoder();
 const hex = (b: ArrayBuffer) => [...new Uint8Array(b)].map((x) => x.toString(16).padStart(2, "0")).join("");
@@ -35,19 +35,30 @@ export async function claveCorrecta(intento: string): Promise<boolean> {
 }
 
 /** Valor de la cookie de sesión: «caduca.firma». */
-export async function crearSesion(ahora = Date.now()): Promise<string> {
+export const ID_SESION_PROPIETARIO = "propietario";
+const ID_VALIDO = /^[a-z0-9]{1,40}$/;
+
+/** Cookie de sesión de un usuario: «caduca.usuario.firma» (la firma cubre el usuario, así que no se puede cambiar a mano). */
+export async function crearSesion(ahora = Date.now(), uid = ID_SESION_PROPIETARIO): Promise<string> {
+  if (!ID_VALIDO.test(uid)) throw new Error("Identificador de usuario no válido.");
   const caduca = Math.floor(ahora / 1000) + DURACION_SESION_S;
-  return `${caduca}.${await hmac("sesion|" + caduca)}`;
+  return `${caduca}.${uid}.${await hmac(`sesion|${caduca}|${uid}`)}`;
 }
 
+/** Usuario y momento de apertura de una sesión con firma buena y sin vencer; null si no sirve. No mira si el usuario sigue existiendo. */
+export async function leerSesion(valor: string | undefined | null, ahora = Date.now()): Promise<{ uid: string; emitidaMs: number } | null> {
+  if (!valor || !secreto()) return null;
+  const [caduca, uid, firma] = valor.split(".");
+  if (!/^\d{9,12}$/.test(caduca ?? "") || !uid || !ID_VALIDO.test(uid) || !firma || Number(caduca) < Math.floor(ahora / 1000)) return null;
+  if (!igualesConstante(firma, await hmac(`sesion|${caduca}|${uid}`))) return null;
+  return { uid, emitidaMs: (Number(caduca) - DURACION_SESION_S) * 1000 }; // se abrió 30 días antes de caducar
+}
+
+/** ¿Sesión válida? Con «desdeMs» (por ejemplo, la fecha del último cambio de contraseña) las abiertas antes ya no valen. */
 export async function sesionValida(valor: string | undefined | null, ahora = Date.now(), desdeMs = 0): Promise<boolean> {
   if (accesoLibre()) return true;
-  if (!valor || !secreto()) return false;
-  const [caduca, firma] = valor.split(".");
-  if (!/^\d{9,12}$/.test(caduca ?? "") || !firma || Number(caduca) < Math.floor(ahora / 1000)) return false;
-  // la sesión se abrió (caduca − 30 días); si fue antes de «desdeMs» (por ejemplo, antes de cambiar la contraseña), ya no vale
-  if ((Number(caduca) - DURACION_SESION_S) * 1000 < desdeMs) return false;
-  return igualesConstante(firma, await hmac("sesion|" + caduca));
+  const s = await leerSesion(valor, ahora);
+  return !!s && s.emitidaMs >= desdeMs;
 }
 
 /** Lee la cookie de sesión de una petición. */

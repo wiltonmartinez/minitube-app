@@ -6,9 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { MODULOS } from "@/lib/modulos";
 
 type Perfil = { nombre: string; apellido: string; correo: string; telefono: string };
-type Estado = { perfil: Perfil; claveDeLaApp: boolean; almacenamiento: "redis" | "archivo" | "ninguno"; puedeGuardar: boolean; actualizado: string | null };
+type Estado = { perfil: Perfil; rol: "admin" | "usuario"; modulos: string[]; claveDeLaApp: boolean; almacenamiento: "redis" | "archivo" | "ninguno"; puedeGuardar: boolean; actualizado: string | null };
 
 async function pedir<T>(ruta: string, metodo: "GET" | "PUT" | "POST", cuerpo?: unknown): Promise<T> {
   const r = await fetch(ruta, { method: metodo, headers: { "Content-Type": "application/json" }, body: cuerpo === undefined ? undefined : JSON.stringify(cuerpo) });
@@ -103,6 +104,12 @@ export default function CuentaPage() {
       <header>
         <h1 className="text-3xl font-bold tracking-tight">👤 Cuenta de usuario</h1>
         <p className="mt-1 text-muted-foreground">Tus datos y tu contraseña de Gestor TUBE.</p>
+        {estado && (
+          <p className="mt-2 flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground">
+            Tu acceso: <span className="rounded-full bg-muted px-2 py-0.5 text-xs">{estado.rol === "admin" ? "Administrador" : "Usuario"}</span>
+            {MODULOS.filter((m) => estado.modulos.includes(m.id)).map((m) => <span key={m.id} className="rounded-full border px-2 py-0.5 text-xs">{m.icono} {m.nombre}</span>)}
+          </p>
+        )}
       </header>
 
       {bloqueada && (

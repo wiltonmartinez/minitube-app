@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { accesoConfigurado, crearEnlaceAcceso, DURACION_ENLACE_S } from "@/lib/acceso";
-import { correoAutorizado, correosAutorizados } from "@/lib/acceso-cuenta";
+import { pideCorreo, usuarioPorCorreo } from "@/lib/usuarios";
 import { ErrorCorreo, correoConfigurado, enviarCorreo } from "@/lib/correo";
 
 // Máximo de pedidos por dirección y por correo (en memoria): evita que alguien llene tu bandeja.
@@ -26,7 +26,7 @@ function urlPublica(req: Request): string {
 const MENSAJE = "Si ese correo está autorizado, te enviamos un enlace para entrar. Revisa tu bandeja (y la carpeta de spam). Vale 15 minutos.";
 
 export async function POST(req: Request) {
-  if (!accesoConfigurado() || !(await correosAutorizados()).length) return NextResponse.json({ error: "La recuperación por correo no está configurada (falta GESTOR_EMAIL)." }, { status: 503 });
+  if (!accesoConfigurado() || !(await pideCorreo())) return NextResponse.json({ error: "La recuperación por correo no está configurada (falta GESTOR_EMAIL)." }, { status: 503 });
   const quien = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "local";
   let correo = "";
   try {
@@ -36,7 +36,7 @@ export async function POST(req: Request) {
   }
   if (!permitido("ip:" + quien, 5)) return NextResponse.json({ error: "Demasiados pedidos. Espera un rato e inténtalo de nuevo." }, { status: 429 });
   // misma respuesta si el correo no está autorizado: no se revela quién puede entrar
-  if (!(await correoAutorizado(correo))) return NextResponse.json({ ok: true, mensaje: MENSAJE });
+  if (!(await usuarioPorCorreo(correo))) return NextResponse.json({ ok: true, mensaje: MENSAJE });
   if (!permitido("correo:" + correo, 3)) return NextResponse.json({ error: "Ya pediste varios enlaces. Espera un rato e inténtalo de nuevo." }, { status: 429 });
   try {
     const enlace = `${urlPublica(req)}/api/acceso/entrar?t=${encodeURIComponent(await crearEnlaceAcceso(correo))}`;

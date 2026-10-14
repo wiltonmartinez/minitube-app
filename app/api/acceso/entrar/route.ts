@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { COOKIE_SESION, DURACION_SESION_S, crearSesion, verificarEnlaceAcceso } from "@/lib/acceso";
-import { correoAutorizado } from "@/lib/acceso-cuenta";
+import { usuarioPorCorreo } from "@/lib/usuarios";
 
 // Enlaces ya usados en esta instancia del servidor (mejor esfuerzo: cada enlace sirve una vez mientras la instancia siga viva).
 const usados = new Set<string>();
@@ -9,11 +9,12 @@ const usados = new Set<string>();
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const token = url.searchParams.get("t");
-  const correo = await verificarEnlaceAcceso(token, Date.now(), correoAutorizado);
+  const correo = await verificarEnlaceAcceso(token, Date.now(), async (c) => !!(await usuarioPorCorreo(c)));
+  const usuario = correo ? await usuarioPorCorreo(correo) : null;
   const invalido = () => NextResponse.redirect(new URL("/acceso?enlace=invalido", url.origin));
-  if (!correo || !token || usados.has(token)) return invalido();
+  if (!usuario || !token || usados.has(token)) return invalido();
   usados.add(token);
   const r = NextResponse.redirect(new URL("/?entro=enlace", url.origin));
-  r.cookies.set(COOKIE_SESION, await crearSesion(), { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/", maxAge: DURACION_SESION_S });
+  r.cookies.set(COOKIE_SESION, await crearSesion(Date.now(), usuario.id), { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/", maxAge: DURACION_SESION_S });
   return r;
 }

@@ -1,7 +1,7 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { NextResponse } from "next/server";
-import { exigirSesion } from "@/lib/acceso";
+import { exigirAdmin } from "@/lib/acceso-cuenta";
 import { olvidarTokenDeAcceso } from "@/lib/textube/youtube";
 
 /** Vuelta de Google al renovar el permiso: cambia el código por el permiso permanente y lo guarda en .env.local (solo en local). */
@@ -12,7 +12,7 @@ export async function GET(req: Request) {
     r.cookies.set("gt_oauth_state", "", { path: "/", maxAge: 0 });
     return r;
   };
-  if (!(await exigirSesion(req))) return NextResponse.json({ error: "Necesitas iniciar sesión." }, { status: 401 });
+  if (!(await exigirAdmin(req))) return NextResponse.json({ error: "Solo un administrador puede renovar el permiso de YouTube." }, { status: 403 });
   if (process.env.NODE_ENV !== "development") return volver("El permiso se renueva desde tu PC (en local).");
   const guardado = req.headers.get("cookie")?.split(/;\s*/).find((c) => c.startsWith("gt_oauth_state="))?.slice(15);
   if (url.searchParams.get("error")) return volver("No diste el permiso en Google, así que no se cambió nada.");
