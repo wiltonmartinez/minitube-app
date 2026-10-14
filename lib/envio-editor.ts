@@ -1,7 +1,7 @@
 "use client";
 
-// Puente entre PromptTUBE (React) y el Editor de capas (página estática del mismo sitio).
-// La imagen viaja por IndexedDB (mismo origen, sin límite de 5 MB): PromptTUBE la deja en «ajustes/envio»
+// Puente entre PrompTUBE (React) y CapaTUBE (página estática del mismo sitio).
+// La imagen viaja por IndexedDB (mismo origen, sin límite de 5 MB): PrompTUBE la deja en «ajustes/envio»
 // y el editor la recoge al abrirse (la guarda en la carpeta de su enfoque y la pone como fondo).
 
 export type EnvioEditor = { blob: Blob; nombre: string; /** 1 a 4, o null si no hay enfoque */ enfoque: number | null; proyecto: string };
@@ -21,7 +21,7 @@ function abrir(): Promise<IDBDatabase> {
   });
 }
 
-/** Deja la imagen lista para que el Editor de capas la recoja al abrirse. */
+/** Deja la imagen lista para que CapaTUBE la recoja al abrirse. */
 export async function enviarAlEditor(envio: EnvioEditor): Promise<void> {
   const db = await abrir();
   await new Promise<void>((ok, mal) => {

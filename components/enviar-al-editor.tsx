@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { enviarAlEditor, nombreImagenEnvio } from "@/lib/envio-editor";
 
 /**
- * Paso final de PromptTUBE: la imagen que generaste en Gemini o ChatGPT (pegada o elegida) se manda al Editor de capas,
+ * Paso final de PrompTUBE: la imagen que generaste en Gemini o ChatGPT (pegada o elegida) se manda a CapaTUBE,
  * donde queda guardada en la carpeta de su enfoque y puesta como fondo (Capa #1).
  */
 export function EnviarAlEditor({ enfoque, profesion }: { enfoque: number | null; profesion: string }) {
@@ -55,7 +55,7 @@ export function EnviarAlEditor({ enfoque, profesion }: { enfoque: number | null;
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Imagen generada → Editor de capas</CardTitle>
+        <CardTitle>Imagen generada → CapaTUBE</CardTitle>
         <CardDescription>
           Cuando Gemini o ChatGPT te dé la imagen, pégala aquí con Ctrl+V (o elige el archivo). Se guarda en la carpeta del{" "}
           {enfoque ? `Enfoque ${enfoque}` : "enfoque"} y queda como fondo del editor.
@@ -78,7 +78,7 @@ export function EnviarAlEditor({ enfoque, profesion }: { enfoque: number | null;
         <div className="flex flex-col gap-2 sm:flex-row">
           <Button className="flex-1" onClick={enviar} disabled={!imagen || enviando}>
             <Layers className="size-4" />
-            Enviar al Editor de capas
+            Enviar a CapaTUBE
           </Button>
           {imagen && (
             <Button variant="outline" onClick={() => entrada.current?.click()}>

@@ -9,6 +9,14 @@ export type Cambio = {
 
 export const CHANGELOG: Cambio[] = [
   {
+    version: "4.21.0",
+    fecha: "2026-10-14",
+    titulo: "Nuevos nombres: PrompTUBE y CapaTUBE",
+    cambios: [
+      "El módulo «PromptTUBE» ahora se llama PrompTUBE y el «Editor de capas» ahora se llama CapaTUBE (barra superior, títulos de página y textos de ayuda). Las direcciones no cambian: / para PrompTUBE y /editor para CapaTUBE. Las versiones anteriores de este historial conservan los nombres de su época.",
+    ],
+  },
+  {
     version: "4.20.0",
     fecha: "2026-10-14",
     titulo: "Panel «Cuenta de usuario»",

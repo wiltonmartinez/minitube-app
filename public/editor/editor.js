@@ -1,4 +1,4 @@
-/* ── editor de capas: cada capa es un PNG transparente; al final se guarda el PNG FINAL ── */
+/* ── CapaTUBE: cada capa es un PNG transparente; al final se guarda el PNG FINAL ── */
 const CP = { W: 1920, H: 1080, capas: [], sel: null, listo: false, arrastre: null, subiendoA: null, siguiente: 1, bib: [], badges: [], dis: { ocultos: [], nombres: {}, presets: [] }, guias: true, bloqueo: false, version: null, versionDe: "", vers: {}, hist: null, histI: 0, restaurando: false };
 /** Escala en X y en Y (los marcos pueden tener ancho y alto distintos; las demás capas usan la misma). */
 const cpEsc = (c) => [c.escalaX ?? c.escala, c.escalaY ?? c.escala];
@@ -678,14 +678,14 @@ async function cpBaseCargar() {
   } catch (e) { $("cp-base-info").textContent = "No se pudo leer la carpeta base: " + e.message; }
   cpProyectosLista();
 }
-/* ── imágenes de PromptTUBE organizadas por enfoque ── */
+/* ── imágenes de PrompTUBE organizadas por enfoque ── */
 async function cpImagenesCargar() {
   const caja = $("cp-img-lista"); if (!caja) return;
   try {
     const d = await api("/api/imagenes"); $("cp-img-ruta").value = d.es_por_defecto ? "" : d.ruta; $("cp-img-ruta").placeholder = "Por defecto: " + d.por_defecto; $("cp-img-defecto").disabled = d.es_por_defecto;
     $("cp-img-info").innerHTML = `Carpeta de entrada: <b>${esc(d.ruta)}</b>`;
     const total = d.grupos.reduce((a, g) => a + g.imagenes.length, 0);
-    caja.innerHTML = (total ? "" : '<p class="suave" style="margin:0 0 8px">Todavía no hay imágenes de entrada: pon las de PromptTUBE en la subcarpeta de su enfoque y pulsa «Actualizar».</p>') + d.grupos.map((g) => `<details ${g.imagenes.length ? "open" : ""} style="margin-top:8px"><summary style="cursor:pointer;font-weight:600">${esc(g.carpeta || "Sin enfoque (sueltas)")} <span class="suave">· ${g.imagenes.length}</span></summary>
+    caja.innerHTML = (total ? "" : '<p class="suave" style="margin:0 0 8px">Todavía no hay imágenes de entrada: pon las de PrompTUBE en la subcarpeta de su enfoque y pulsa «Actualizar».</p>') + d.grupos.map((g) => `<details ${g.imagenes.length ? "open" : ""} style="margin-top:8px"><summary style="cursor:pointer;font-weight:600">${esc(g.carpeta || "Sin enfoque (sueltas)")} <span class="suave">· ${g.imagenes.length}</span></summary>
       <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;margin-top:8px">${g.imagenes.map((x) => `<button type="button" class="btn" style="padding:4px;flex-direction:column;align-items:stretch;gap:3px;height:auto" data-img="${esc(g.carpeta)}|${esc(x.archivo)}" title="${esc(x.archivo)} · ${esc(x.fecha)}"><img data-miniatura="${esc(g.carpeta)}|${esc(x.archivo)}" alt="" style="width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:6px;background:#0002"><span style="font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(x.archivo)}</span></button>`).join("") || '<span class="suave" style="font-size:12px;grid-column:1/-1">Sin imágenes.</span>'}</div></details>`).join("");
     caja.querySelectorAll("img[data-miniatura]").forEach(async (im) => { try { const [c, a] = im.dataset.miniatura.split("|"); im.src = URL.createObjectURL(await GT.imagenBlob(c, a)); } catch { /* sin vista previa */ } });
     caja.querySelectorAll("[data-img]").forEach((b) => (b.onclick = () => { const [c, a] = b.dataset.img.split("|"); cpImagenComoFondo(c, a); }));
@@ -709,14 +709,14 @@ async function cpImagenComoFondo(carpeta, archivo) {
 async function cpPonerComoFondo(blob, archivo) {
   try {
     let f = cpFondo();
-    if (!f) { f = cpCrear("imagen", "Capa #1 · PromptTUBE (imagen generada)", { fijo: true }); CP.capas.push(f); }
+    if (!f) { f = cpCrear("imagen", "Capa #1 · PrompTUBE (imagen generada)", { fijo: true }); CP.capas.push(f); }
     await cpPonerImagen(new File([blob], archivo, { type: blob.type }), f.id);
     const tapan = cpCapasQueTapan();
     if (tapan.length && confirm("El fondo ya cambió, pero " + (tapan.length > 1 ? "estas capas lo tapan" : "esta capa lo tapa") + " (son imágenes completas que están encima):\n\n" + tapan.map((c) => "• " + c.nombre).join("\n") + "\n\n¿Ocultar" + (tapan.length > 1 ? "las" : "la") + " para que se vea la imagen elegida?")) { tapan.forEach((c) => { c.visible = false; }); cpLista(); cpDibujar(); }
     aviso("«" + archivo + "» puesta como fondo (Capa #1)." + (tapan.length ? " Ojo: hay capas encima que la tapan." : ""));
   } catch (e) { aviso(e.message, true); }
 }
-/** Imagen que mandó PromptTUBE: se guarda en la carpeta de su enfoque y se pone como fondo. */
+/** Imagen que mandó PrompTUBE: se guarda en la carpeta de su enfoque y se pone como fondo. */
 async function cpRecibirEnvio() {
   let e = null;
   try { e = await GT.tomarEnvio(); } catch { return; }
@@ -727,7 +727,7 @@ async function cpRecibirEnvio() {
   catch (er) { aviso2 = " (no se pudo guardar en la carpeta de entrada: " + er.message + ")"; }
   if (e.proyecto && !$("cp-proyecto").value.trim()) $("cp-proyecto").value = e.proyecto;
   await cpPonerComoFondo(e.blob, guardada);
-  if (aviso2) aviso("Imagen de PromptTUBE puesta como fondo" + aviso2, true);
+  if (aviso2) aviso("Imagen de PrompTUBE puesta como fondo" + aviso2, true);
   cpImagenesCargar();
 }
 async function cpImagenesAplicar(ruta) { try { await api("/api/imagenes/base", { ruta }); await cpImagenesCargar(); aviso("Carpeta de entrada cambiada."); } catch (e) { aviso(e.message, true); } }
@@ -959,7 +959,7 @@ function cpIniciar(cargar = true) {
   if (CP.listo) return; CP.listo = true;
   cpCargarFuentes();
   const medio = (b) => ({ x: Math.round((CP.W - b.width) / 2), y: Math.round((CP.H - b.height) / 2) });
-  const fondo = cpCrear("imagen", "Capa #1 · PromptTUBE (imagen generada)", { fijo: true });
+  const fondo = cpCrear("imagen", "Capa #1 · PrompTUBE (imagen generada)", { fijo: true });
   const texto = cpCrear("texto", "Capa #2 · Texto", { ...TEXTO_BASE, tam: 150, x: 60, y: 50, lineas: [{ texto: "Reset", estilo: "amarillo", color: "#ffd21f", escala: 100 }, { texto: "Error Almohadillas", estilo: "rojo", color: "#ff2a2a", escala: 100 }, { texto: "EPSON L3210", estilo: "blanco", color: "#ffffff", escala: 100 }] });
   const libre = cpCrear("imagen", "Capa #3 · PNG libre (opcional)", { visible: false, vacia: true });
   const badge = cpCrear("badge", "Capa #4 · Badge 3D", { ...BADGE_BASE, tam: 58, texto: "🔒 Desbloqueo Inmediato" });
@@ -1176,9 +1176,9 @@ function cpBotonesHistorial() {
 function cpDeshacer() { cpHistorialCommit(); if (!CP.hist || CP.histI <= 0) return; CP.histI--; cpRestaurarInstantanea(CP.hist[CP.histI]); cpBotonesHistorial(); }
 function cpRehacerPaso() { cpHistorialCommit(); if (!CP.hist || CP.histI >= CP.hist.length - 1) return; CP.histI++; cpRestaurarInstantanea(CP.hist[CP.histI]); cpBotonesHistorial(); }
 
-/** La capa de PromptTUBE (fondo), si todavía está. */
+/** La capa de PrompTUBE (fondo), si todavía está. */
 const cpFondo = () => CP.capas.find((k) => k.fijo) || null;
-/** La capa de PromptTUBE siempre es la última de la lista (el fondo): ninguna otra capa puede quedar debajo de ella. */
+/** La capa de PrompTUBE siempre es la última de la lista (el fondo): ninguna otra capa puede quedar debajo de ella. */
 function cpFondoAbajo() {
   const i = CP.capas.findIndex((k) => k.fijo);
   if (i >= 0 && i < CP.capas.length - 1) CP.capas.push(CP.capas.splice(i, 1)[0]);
@@ -1215,8 +1215,8 @@ function cpLista() {
   $("cp-lista").innerHTML = CP.capas.map((c, i) => `<div class="check" style="margin:0 0 6px;justify-content:space-between;${c.id === CP.sel ? "border-color:var(--azul);background:var(--azul-fondo)" : ""}" data-sel="${c.id}">
     <span style="flex:1;cursor:pointer">${c.fijo ? "🔒 " : ""}${esc(c.nombre)}${c.vacia && !c.imagen ? ' <span class="suave">(vacía)</span>' : ""}</span>
     <button class="btn" style="padding:3px 8px" data-vis="${c.id}" title="Mostrar u ocultar">${c.visible ? "👁" : "🚫"}</button>
-    <button class="btn" style="padding:3px 8px" data-sube="${c.id}" ${i === 0 || c.fijo ? "disabled" : ""} title="${c.fijo ? "La capa de PromptTUBE siempre es el fondo" : "Subir en la lista"}">▲</button>
-    <button class="btn" style="padding:3px 8px" data-baja="${c.id}" ${i === CP.capas.length - 1 || CP.capas[i + 1]?.fijo || c.fijo ? "disabled" : ""} title="${c.fijo ? "La capa de PromptTUBE siempre es el fondo" : "Bajar en la lista"}">▼</button>
+    <button class="btn" style="padding:3px 8px" data-sube="${c.id}" ${i === 0 || c.fijo ? "disabled" : ""} title="${c.fijo ? "La capa de PrompTUBE siempre es el fondo" : "Subir en la lista"}">▲</button>
+    <button class="btn" style="padding:3px 8px" data-baja="${c.id}" ${i === CP.capas.length - 1 || CP.capas[i + 1]?.fijo || c.fijo ? "disabled" : ""} title="${c.fijo ? "La capa de PrompTUBE siempre es el fondo" : "Bajar en la lista"}">▼</button>
     <button class="btn contorno-rojo" style="padding:3px 8px" data-quitar="${c.id}" title="Quitar esta capa">🗑</button></div>`).join("") || '<p class="suave" style="margin:0 0 8px">No hay capas. Agrega una o pulsa «Restablecer capas».</p>';
   $("cp-lista").querySelectorAll("[data-quitar]").forEach((b) => (b.onclick = (e) => { e.stopPropagation(); cpQuitar(b.dataset.quitar); }));
   $("cp-lista").querySelectorAll("[data-sel]").forEach((d) => (d.onclick = () => { CP.sel = d.dataset.sel; cpLista(); cpAjustes(); }));
@@ -1413,7 +1413,7 @@ function cpExportar() {
 async function cpGuardar() {
   try {
     if (!CP.capas.length || !CP.capas.some((k) => k.visible && k.bmp)) throw new Error("No hay nada que guardar: agrega o muestra al menos una capa.");
-    if (cpFondo() && !cpFondo().imagen && !confirm("La Capa #1 (imagen de PromptTUBE) está vacía. ¿Guardar igualmente?")) return;
+    if (cpFondo() && !cpFondo().imagen && !confirm("La Capa #1 (imagen de PrompTUBE) está vacía. ¿Guardar igualmente?")) return;
     const nombre = cpNombreArchivo(), version = nombre && !CP.bloqueo ? await cpNuevaVersion(nombre) : null;
     const b = await cpExportar(), d = await api("/api/capas/final?nombre=" + encodeURIComponent(nombre) + (version ? "&version=" + version : ""), b, true);
     $("cp-resultado").textContent = "Guardada: " + d.archivo + (d.reemplazo ? " (reemplazó la anterior con ese nombre)" : ""); aviso(version ? "Miniatura FINAL guardada como " + cpEtiqueta(nombre, version) + "." : "Miniatura FINAL guardada.");

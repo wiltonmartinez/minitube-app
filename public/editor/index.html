@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Editor de capas</title>
+<title>CapaTUBE</title>
 <link rel="stylesheet" href="editor.css">
 <style>
   .app { display:block; } main { margin:0 auto; max-width:1500px; }
@@ -14,8 +14,8 @@
 <div class="app">
   <main>
     <section class="pagina visible" id="p-capas">
-      <h1>Editor de capas</h1>
-      <p class="lema">Arma la miniatura final con capas PNG transparentes: la imagen de PromptTUBE, el texto, el badge 3D y la marca de agua. Haz clic en una capa sobre la miniatura para elegirla y arrástrala para moverla; con las flechas del teclado la mueves de 1 en 1 (con Mayús, de 10 en 10).</p>
+      <h1>CapaTUBE</h1>
+      <p class="lema">Arma la miniatura final con capas PNG transparentes: la imagen de PrompTUBE, el texto, el badge 3D y la marca de agua. Haz clic en una capa sobre la miniatura para elegirla y arrástrala para moverla; con las flechas del teclado la mueves de 1 en 1 (con Mayús, de 10 en 10).</p>
       <div class="cp-pasos" id="cp-pasos">
         <button type="button" data-cp-ir="fondo"><b>1</b> Elige el fondo <small>pestaña «Fondo»</small></button>
         <button type="button" data-cp-ir="capas"><b>2</b> Edita texto y badge <small>haz clic en la capa</small></button>
@@ -35,7 +35,7 @@
             <label class="campo" for="cp-proyecto" style="margin-top:10px">Nombre del proyecto (es el nombre del archivo)</label>
             <input type="text" id="cp-proyecto" maxlength="80" placeholder="Ej: reset-epson-l3210-almohadillas" style="margin-bottom:4px">
             <label class="check" style="margin-top:8px"><input type="checkbox" id="cp-guias" checked> Guías e imán (centro del lienzo y hueco del marco)</label>
-            <p class="nota">Haz clic en una capa para elegirla y arrástrala para moverla (o usa las flechas). Pega una imagen con Ctrl+V para ponerla como Capa #1 (la generada por PromptTUBE).</p>
+            <p class="nota">Haz clic en una capa para elegirla y arrástrala para moverla (o usa las flechas). Pega una imagen con Ctrl+V para ponerla como Capa #1 (la generada por PrompTUBE).</p>
             <div class="botones">
               <button class="btn primario" id="cp-disquete" title="Guarda los cambios SOBRE el proyecto que tienes abierto (reemplaza su archivo, sin crear variaciones). Atajo: Ctrl+S">💾 Guardar</button>
               <button class="btn primario" id="cp-guardar-todo" title="Cada vez que guardas se crea una versión nueva (L3210-01, L3210-02…) en la misma carpeta del proyecto; nunca se reemplaza ni se borra una anterior">📦 Guardar todo (carpeta del proyecto)</button>
@@ -64,7 +64,7 @@
           <div data-cp-panel="capas">
           <div class="tarjeta">
             <h2>Capas</h2>
-            <p class="nota" id="cp-orden-nota" style="margin:0 0 10px">Como en Photoshop: la capa de arriba va encima de las demás y la de abajo es el fondo. La imagen de PromptTUBE (🔒) siempre se queda al fondo.</p>
+            <p class="nota" id="cp-orden-nota" style="margin:0 0 10px">Como en Photoshop: la capa de arriba va encima de las demás y la de abajo es el fondo. La imagen de PrompTUBE (🔒) siempre se queda al fondo.</p>
             <div id="cp-lista"></div>
             <div class="botones"><button class="btn" id="cp-agregar">➕ Agregar capa PNG</button><button class="btn" id="cp-agregar-texto">🔤 Agregar texto 3D</button><button class="btn" id="cp-agregar-badge">🏷 Agregar badge 3D</button><select id="cp-badges-menu" style="width:auto;max-width:100%" title="Inserta como capa nueva uno de tus badges guardados"></select><button class="btn" id="cp-agregar-marco">🖼 Agregar marco</button><button class="btn" id="cp-subir-marco">📤 Subir marco (Canva)</button></div>
             <input type="file" id="cp-archivo" accept="image/png,image/jpeg,image/webp" style="display:none">
@@ -75,7 +75,7 @@
           <div data-cp-panel="fondo" hidden>
           <div class="tarjeta">
             <h2>📥 Entrada: imágenes para el fondo (por enfoque)</h2>
-            <p class="nota" style="margin-top:0">Esta es la carpeta de <b>ENTRADA</b>: las imágenes que ya generaste con PromptTUBE y que quieres usar de <b>fondo</b> (Capa #1). Tiene <b>una subcarpeta por enfoque</b> (Enfoque 1 a 4): pon cada imagen en la de su enfoque y aquí la eliges con un clic. Es distinta de la <b>Carpeta base</b>, que es la de <b>salida</b> (donde se guardan tus miniaturas terminadas).</p>
+            <p class="nota" style="margin-top:0">Esta es la carpeta de <b>ENTRADA</b>: las imágenes que ya generaste con PrompTUBE y que quieres usar de <b>fondo</b> (Capa #1). Tiene <b>una subcarpeta por enfoque</b> (Enfoque 1 a 4): pon cada imagen en la de su enfoque y aquí la eliges con un clic. Es distinta de la <b>Carpeta base</b>, que es la de <b>salida</b> (donde se guardan tus miniaturas terminadas).</p>
             <input type="text" id="cp-img-ruta" placeholder="Ej: D:\Imagenes" spellcheck="false">
             <div class="botones" style="margin-top:8px"><button class="btn" id="cp-img-examinar">📂 Examinar…</button><button class="btn verde" id="cp-img-aplicar">✔ Aplicar</button><button class="btn" id="cp-img-defecto">↺ Por defecto</button><button class="btn" id="cp-img-abrir">📂 Abrir carpeta</button><button class="btn" id="cp-img-actualizar">⟳ Actualizar</button></div>
             <div class="botones" style="margin-top:8px;align-items:center"><select id="cp-img-enfoque" style="width:auto;max-width:100%" title="Enfoque al que pertenecen las imágenes que agregues"></select><button class="btn" id="cp-img-agregar">📤 Agregar imágenes a este enfoque</button><input type="file" id="cp-img-archivos" accept="image/png,image/jpeg,image/webp" multiple style="display:none"></div>

@@ -1,4 +1,4 @@
-/* Almacén del Editor de capas dentro de la app unificada: reemplaza al servidor de Python.
+/* Almacén de CapaTUBE dentro de la app unificada: reemplaza al servidor de Python.
    Misma «conversación» que el panel (api("/api/...")), pero todo ocurre en el navegador:
    - Con una carpeta elegida (Examinar) se guardan archivos reales con la API de carpetas del navegador (Chrome, Edge).
    - Sin carpeta elegida se guarda dentro del navegador (IndexedDB) y la miniatura FINAL también se descarga.
@@ -201,7 +201,7 @@
     falla("No encuentro ese proyecto.");
   }
 
-  /* ───────── imágenes de entrada (fondos de PromptTUBE) por enfoque ───────── */
+  /* ───────── imágenes de entrada (fondos de PrompTUBE) por enfoque ───────── */
   async function infoBase() {
     const e = await carpetaElegida("base");
     const nombre = e.h ? e.h.name : "Dentro del navegador";
@@ -228,7 +228,7 @@
     if (!f) falla("No encuentro esa imagen.");
     return f.slice(0, f.size, EXT_IMAGEN[(archivo.split(".").pop() || "").toLowerCase()] || "application/octet-stream");
   }
-  /** Sube una imagen a la carpeta de un enfoque (para tener las imágenes de PromptTUBE ordenadas desde la app). */
+  /** Sube una imagen a la carpeta de un enfoque (para tener las imágenes de PrompTUBE ordenadas desde la app). */
   async function guardarImagenEntrada(carpeta, archivo, blob) {
     const base = await raiz("entrada"), d = carpeta ? await base.sub(carpeta) : base;
     const limpio = nombreArchivo(archivo.replace(/\.[^.]+$/, "")) || "imagen", ext = (archivo.split(".").pop() || "png").toLowerCase();
@@ -274,7 +274,7 @@
     falla("Esta función todavía no está en la app unificada (" + p + ").");
   }
 
-  /** Imagen que mandó PromptTUBE (la deja en «ajustes/envio»): se recoge una sola vez. */
+  /** Imagen que mandó PrompTUBE (la deja en «ajustes/envio»): se recoge una sola vez. */
   async function tomarEnvio() {
     const e = await ajusteLeer("envio");
     if (!e || !(e.blob instanceof Blob)) return null;

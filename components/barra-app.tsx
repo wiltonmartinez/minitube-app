@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
-/** Barra superior de Gestor TUBE: 01) TexTUBE, 02) PromptTUBE y 03) Editor de Capas, más «Cerrar sesión». No se muestra en la pantalla de acceso. */
+/** Barra superior de Gestor TUBE: 01) TexTUBE, 02) PrompTUBE y 03) CapaTUBE, más «Cerrar sesión». No se muestra en la pantalla de acceso. */
 export function BarraApp() {
   const ruta = usePathname();
   const router = useRouter();
@@ -17,10 +17,10 @@ export function BarraApp() {
         01) ✍️ TexTUBE
       </Link>
       <Link href="/" className={enlace(ruta === "/")}>
-        02) 🎨 PromptTUBE
+        02) 🎨 PrompTUBE
       </Link>
       <Link href="/editor" className={enlace(ruta === "/editor")}>
-        03) 🧩 Editor de Capas
+        03) 🧩 CapaTUBE
       </Link>
       <Link href="/cuenta" className={`ml-auto ${enlace(ruta === "/cuenta")}`}>
         👤 Cuenta
