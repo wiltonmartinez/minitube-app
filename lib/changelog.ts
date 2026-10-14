@@ -9,6 +9,16 @@ export type Cambio = {
 
 export const CHANGELOG: Cambio[] = [
   {
+    version: "4.14.0",
+    fecha: "2026-10-13",
+    titulo: "«🎲 Aleatorio» por defecto en todos los menús",
+    cambios: [
+      "Género, Edad, Emoción, Etnia, Rostro, Gafas, Dispositivo, Profesión y Dirección de la mirada ahora tienen la opción «🎲 Aleatorio» y arrancan con ella, igual que los campos del rostro y el cabello. Cada cambio de menú vuelve a sortear los que están en Aleatorio.",
+      "El sorteo respeta el enfoque: la etnia, la edad y la emoción salen siempre dentro de lo que permite (Enfoque 3: autoridad de 36 a 55 años; Enfoque 4: emociones de éxito), y con un enfoque elegido la profesión sale de las suyas. Un dispositivo sorteado ya no lo cambia el enfoque.",
+      "Elegir un valor a mano lo fija; el candado 🔒 de un menú en Aleatorio fija el valor sorteado en ese momento.",
+    ],
+  },
+  {
     version: "4.13.0",
     fecha: "2026-10-10",
     titulo: "Enfoque 4 (cliente salvado), selector de enfoque al inicio y sin guion",

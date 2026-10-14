@@ -2,7 +2,7 @@
 
 import { Dices, Download, FileArchive, Trash2 } from "lucide-react";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { COMMIT, VERSION } from "@/lib/changelog";
 import { CatalogEditor } from "@/components/catalog-editor";
 import { nombresLote, type LoteItem } from "@/lib/lote";
@@ -11,6 +11,7 @@ import { useCatalogo } from "@/lib/use-catalogo";
 import { ListsEditor } from "@/components/lists-editor";
 import { useListas } from "@/lib/use-listas";
 import { aplicarTodoAlAzar, sorteoRespetandoBloqueos } from "@/lib/azar";
+import { SORTEO_NEUTRO, nuevosNumerosSorteo, resolverAleatorios } from "@/lib/aleatorios";
 import { ARQUETIPOS_ALTA, PLANO_ALTA, PROFESIONES_ALTA } from "@/lib/prioridad";
 import {
   ALEATORIO,
@@ -74,8 +75,6 @@ import {
   GENEROS,
   IDIOMAS,
   MARCOS,
-  MIRADA_DEFECTO,
-  MIRADA_DEFECTO_EXPERTO,
   MIRADA_OPCIONES,
   MIRADA_TEXTO,
   PALETAS_FIJAS,
@@ -133,22 +132,23 @@ type FormState = {
 
 const INITIAL: FormState = {
   plotter: false,
-  genero: GENEROS[0],
-  edad: EDADES_PANEL[0],
-  emocionPanel: EMOCION_AUTO,
-  dispositivo: DISPOSITIVO_NINGUNO,
+  // «🎲 Aleatorio» por defecto en todos los menús (se sortea solo y se puede fijar con el candado o eligiendo un valor)
+  genero: ALEATORIO as (typeof GENEROS)[number],
+  edad: ALEATORIO,
+  emocionPanel: ALEATORIO,
+  dispositivo: ALEATORIO,
   dispositivoManual: false,
   enfoqueSel: ENFOQUE_AUTO,
-  mirada: MIRADA_DEFECTO,
-  miradaExperto: MIRADA_DEFECTO_EXPERTO,
-  etnia: ETNIAS_PANEL[0],
-  gafas: GAFAS_OPCIONES[0],
+  mirada: ALEATORIO,
+  miradaExperto: ALEATORIO,
+  etnia: ALEATORIO as (typeof ETNIAS_PANEL)[number],
+  gafas: GAFAS_ALEATORIAS,
   accesorio: ACCESORIO_ALEATORIO,
   modoPersonaje: MODOS_PERSONAJE[1], // «Personalizar»: el arquetipo físico queda oculto
-  modoRostro: MODOS_ROSTRO[0],
+  modoRostro: ALEATORIO as ModoRostro,
   pers: SELECCION_INICIAL,
   arquetipo: ARQUETIPO_ALEATORIO,
-  profesion: "",
+  profesion: ALEATORIO as Profesion,
   marco: MARCOS[0].es,
   plano: PLANOS[0].es, // Plano Detalle por defecto
   idioma: IDIOMAS[0],
@@ -330,8 +330,38 @@ export default function Home() {
   }, [profesiones]);
   const profesionesEf = alta ? profesionesAlta : profesiones;
   const poolArq: readonly string[] = alta ? ARQUETIPOS_ALTA : ARQUETIPOS_LISTA;
+  // Resultado del último sorteo de las opciones "🎲 Aleatorio" (paleta, gafas y badge). Se vuelve a sortear
+  // en cada ciclo de autogeneración provocado por un selector o un botón (cualquier cambio de menú,
+  // «Generar al Azar», «Añadir al lote»), pero NO al teclear en los campos de texto (para no parpadear).
+  const [sorteo, setSorteo] = useState({
+    paleta: PALETAS_FIJAS[0],
+    gafas: GAFAS_ESTILOS[0],
+    badge: BADGES_REALES[0],
+    u: 0.5, // número del sorteo del accesorio (se interpreta según el perfil vigente)
+    up: 0.5, // sorteo de la personalización (rostro, cabello y cuerpo)
+    ua: 0.5, // sorteo del arquetipo físico
+    ...SORTEO_NEUTRO, // números de los menús en «Aleatorio» (género, edad, etnia, profesión…)
+  });
+  // Candados: una variable bloqueada no cambia con el azar (ni con «Generar al Azar», ni con el lote, ni con el re-sorteo)
+  const [locks, setLocks] = useState<Record<string, boolean>>({});
+  // Los menús en «🎲 Aleatorio» se convierten en un valor concreto (dentro de lo que permite el enfoque)
+  const formResuelto = useMemo(
+    () =>
+      resolverAleatorios(formBase, {
+        numeros: sorteo,
+        profesiones: profesionesEf,
+        generos: GENEROS,
+        etnias: ETNIAS_PANEL,
+        modosRostro: MODOS_ROSTRO,
+        dispositivos: [DISPOSITIVO_NINGUNO, ...DISPOSITIVOS],
+        miradas: MIRADA_OPCIONES,
+        sinEnfoque: alta,
+      }),
+    [formBase, sorteo, profesionesEf, alta],
+  );
+  const esAl = (k: keyof FormState) => (formBase[k] as unknown) === ALEATORIO;
   const form = useMemo(() => {
-    const f = catalogo[formBase.profesion] ? formBase : { ...formBase, profesion: profesiones[0] };
+    const f = catalogo[formResuelto.profesion] ? formResuelto : { ...formResuelto, profesion: profesiones[0] };
     if (!alta) {
       const base = { ...f, modoPersonaje: "Personalizar" as FormState["modoPersonaje"] };
       let enf = enfoqueEfectivo(f.enfoqueSel, f.profesion);
@@ -350,24 +380,11 @@ export default function Home() {
       profesion: profesionesAlta.includes(f.profesion) ? f.profesion : profesionesAlta[0],
       arquetipo: f.arquetipo === ARQUETIPO_ALEATORIO || ARQUETIPOS_ALTA.includes(f.arquetipo) ? f.arquetipo : ARQUETIPO_ALEATORIO,
     };
-  }, [formBase, catalogo, profesiones, alta, profesionesAlta]);
+  }, [formResuelto, catalogo, profesiones, alta, profesionesAlta]);
 
   // Resultados generados, acumulados para descargar como lote (.txt o ZIP)
   const [batch, setBatch] = useState<LoteItem[]>([]);
   const [batchCount, setBatchCount] = useState("10");
-  // Resultado del último sorteo de las opciones "🎲 Aleatorio" (paleta, gafas y badge). Se vuelve a sortear
-  // en cada ciclo de autogeneración provocado por un selector o un botón (cualquier cambio de menú,
-  // «Generar al Azar», «Añadir al lote»), pero NO al teclear en los campos de texto (para no parpadear).
-  const [sorteo, setSorteo] = useState({
-    paleta: PALETAS_FIJAS[0],
-    gafas: GAFAS_ESTILOS[0],
-    badge: BADGES_REALES[0],
-    u: 0.5, // número del sorteo del accesorio (se interpreta según el perfil vigente)
-    up: 0.5, // sorteo de la personalización (rostro, cabello y cuerpo)
-    ua: 0.5, // sorteo del arquetipo físico
-  });
-  // Candados: una variable bloqueada no cambia con el azar (ni con «Generar al Azar», ni con el lote, ni con el re-sorteo)
-  const [locks, setLocks] = useState<Record<string, boolean>>({});
   const sortear = () =>
     setSorteo((s) =>
       sorteoRespetandoBloqueos(
@@ -379,11 +396,18 @@ export default function Home() {
           u: Math.random(),
           up: Math.random(),
           ua: sorteoArquetipoDistinto(s.ua, poolArq.length), // nunca el mismo arquetipo dos veces seguidas
+          ...nuevosNumerosSorteo(),
         },
         locks,
-        { paleta: "paleta", gafas: "gafas", badge: "badge", u: "accesorio", ua: "arquetipo" },
+        { paleta: "paleta", gafas: "gafas", badge: "badge", u: "accesorio", ua: "arquetipo", rgenero: "genero", redad: "edad", remocion: "edad", retnia: "etnia", rrostro: "modoRostro", rprofesion: "profesion" },
       ),
     );
+
+  useEffect(() => {
+    const t = setTimeout(sortear, 0); // primer sorteo ya en el navegador (el HTML inicial es neutro)
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) => {
     setForm((f) => ({ ...f, [key]: value, ...(key === "profesion" ? { dispositivoManual: false } : {}) }));
@@ -494,6 +518,10 @@ export default function Home() {
     };
     const f = fijo[key];
     if (f && form[key as keyof FormState] === f[0]) setForm((x) => ({ ...x, [key]: f[1] }));
+    // Menús generales en «Aleatorio»: se fija el valor sorteado en ese momento
+    const generales: Record<string, (keyof FormState)[]> = { genero: ["genero"], edad: ["edad", "emocionPanel"], etnia: ["etnia"], modoRostro: ["modoRostro"], profesion: ["profesion"] };
+    const campos = generales[key]?.filter((k) => esAl(k));
+    if (campos?.length) setForm((x) => ({ ...x, ...Object.fromEntries(campos.map((k) => [k, form[k]])) }));
     // Campos del personaje («pers.forma», «pers.ojosColor»…): al bloquear «Aleatorio» se fija el valor sorteado
     if (key.startsWith("pers.")) {
       const c = key.slice(5) as CampoLista;
@@ -778,33 +806,33 @@ export default function Home() {
                     <SelectField
                       id="genero"
                       label="Género"
-                      value={form.genero}
-                      options={GENEROS}
+                      value={esAl("genero") ? ALEATORIO : form.genero}
+                      options={[ALEATORIO, ...GENEROS]}
                       onChange={(v) => set("genero", v as FormState["genero"])}
                       {...lockProps("genero")}
                     />
                     <SelectField
                       id="edad"
                       label="Edad"
-                      value={form.edad}
-                      options={enfoqueActivo ? (edadesDeEnfoque(enfoqueActivo) ?? EDADES_PANEL) : EDADES_PANEL}
-                      groups={GRUPOS_EDAD.filter((g) => !enfoqueActivo || g.opciones.some((o) => edadesDeEnfoque(enfoqueActivo)?.includes(o))).map((g) => ({ label: g.label, options: g.opciones }))}
+                      value={esAl("edad") ? ALEATORIO : form.edad}
+                      options={[ALEATORIO, ...(enfoqueActivo ? (edadesDeEnfoque(enfoqueActivo) ?? EDADES_PANEL) : EDADES_PANEL)]}
+                      groups={[{ label: "Al azar", options: [ALEATORIO] }, ...GRUPOS_EDAD.filter((g) => !enfoqueActivo || g.opciones.some((o) => edadesDeEnfoque(enfoqueActivo)?.includes(o))).map((g) => ({ label: g.label, options: g.opciones }))]}
                       onChange={(v) => set("edad", v)}
                       {...lockProps("edad")}
                     />
                     <SelectField
                       id="emocionPanel"
                       label={enfoqueActivo === 4 ? "Emoción (cliente salvado)" : tonoEdad === "autoridad" ? "Emoción (autoridad, 36 a 55 años)" : "Emoción (operario o cliente, 18 a 35 años)"}
-                      value={emocionEdadEf && !(enfoqueActivo !== 4 && form.emocionPanel === EMOCION_AUTO) ? emocionEdadEf : EMOCION_AUTO}
-                      options={enfoqueActivo === 4 ? EMOCIONES_POR_TONO.exito : [EMOCION_AUTO, ...(tonoEdad ? EMOCIONES_POR_TONO[tonoEdad] : [])]}
+                      value={esAl("emocionPanel") ? ALEATORIO : emocionEdadEf && !(enfoqueActivo !== 4 && form.emocionPanel === EMOCION_AUTO) ? emocionEdadEf : EMOCION_AUTO}
+                      options={[ALEATORIO, ...(enfoqueActivo === 4 ? EMOCIONES_POR_TONO.exito : [EMOCION_AUTO, ...(tonoEdad ? EMOCIONES_POR_TONO[tonoEdad] : [])])]}
                       onChange={(v) => set("emocionPanel", v)}
                       className="md:col-span-2"
                     />
                     <SelectField
                       id="etnia"
                       label="Etnia"
-                      value={form.etnia}
-                      options={infoEnfoque ? infoEnfoque.etnias : ETNIAS_PANEL}
+                      value={esAl("etnia") ? ALEATORIO : form.etnia}
+                      options={[ALEATORIO, ...(infoEnfoque ? infoEnfoque.etnias : ETNIAS_PANEL)]}
                       onChange={(v) => set("etnia", v as FormState["etnia"])}
                       className="md:col-span-2"
                       {...lockProps("etnia")}
@@ -812,8 +840,8 @@ export default function Home() {
                     <SelectField
                       id="modoRostro"
                       label="Rostro"
-                      value={form.modoRostro}
-                      options={MODOS_ROSTRO}
+                      value={esAl("modoRostro") ? ALEATORIO : form.modoRostro}
+                      options={[ALEATORIO, ...MODOS_ROSTRO]}
                       onChange={(v) => set("modoRostro", v as ModoRostro)}
                       className="md:col-span-2"
                       {...lockProps("modoRostro")}
@@ -856,7 +884,7 @@ export default function Home() {
                   id="gafas"
                   label="Gafas"
                   value={form.gafas}
-                  options={GAFAS_OPCIONES}
+                  options={[GAFAS_ALEATORIAS, ...GAFAS_OPCIONES.filter((g) => g !== GAFAS_ALEATORIAS)]}
                   onChange={(v) => set("gafas", v)}
                   className="md:col-span-2"
                   {...lockProps("gafas")}
@@ -873,8 +901,8 @@ export default function Home() {
                 <SelectField
                   id="dispositivo"
                   label="Dispositivo"
-                  value={form.dispositivo}
-                  options={[DISPOSITIVO_NINGUNO, ...DISPOSITIVOS]}
+                  value={esAl("dispositivo") ? ALEATORIO : form.dispositivo}
+                  options={[ALEATORIO, DISPOSITIVO_NINGUNO, ...DISPOSITIVOS]}
                   onChange={(v) => setForm((f) => ({ ...f, dispositivo: v, dispositivoManual: true }))}
                   className="md:col-span-2"
                 />
@@ -892,9 +920,9 @@ export default function Home() {
                 <SelectField
                   id="profesion"
                   label="Profesión"
-                  value={form.profesion}
-                  options={profesionesEf}
-                  groups={gruposProfesion}
+                  value={esAl("profesion") ? ALEATORIO : form.profesion}
+                  options={[ALEATORIO, ...profesionesEf]}
+                  groups={gruposProfesion ? [{ label: "Al azar", options: [ALEATORIO] }, ...gruposProfesion] : undefined}
                   onChange={(v) => set("profesion", v as Profesion)}
                   className="md:col-span-2"
                   {...lockProps("profesion")}
@@ -905,8 +933,8 @@ export default function Home() {
                 <SelectField
                   id="direccionMirada"
                   label="Dirección de la mirada"
-                  value={miradaEf}
-                  options={MIRADA_OPCIONES}
+                  value={esAl(enfoqueActivo === 3 ? "miradaExperto" : "mirada") ? ALEATORIO : miradaEf}
+                  options={[ALEATORIO, ...MIRADA_OPCIONES]}
                   onChange={(v) => set(enfoqueActivo === 3 ? "miradaExperto" : "mirada", v)}
                   className="md:col-span-2"
                 />
