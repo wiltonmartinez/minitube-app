@@ -8,18 +8,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { extraerDatos, extraerVideoId, type DatosVideo } from "@/lib/textube/datos-video";
-import { PLANTILLAS_DEFECTO } from "@/lib/textube/plantillas-defecto";
+import { MenusTextube } from "@/components/textube-menus";
+import { PRIMERA_PROPIA, MAX_PROPIAS, type Config } from "@/lib/textube/config";
+import { useConfigTextube } from "@/lib/textube/use-config";
 import {
-  COSTO_CUOTA, ErrorTextos, LIMITE_DESCRIPCION, LIMITE_ETIQUETAS, MODELO_EJEMPLO, PLANTILLA_ERROR_DEFECTO, PLANTILLA_ERRORES, PLANTILLA_FIJA,
+  COSTO_CUOTA, ErrorTextos, LIMITE_DESCRIPCION, LIMITE_ETIQUETAS, cuandoDe, errorDefectoDe, esPropia, opcionesDe, fijosDe, modeloEjemploDe, nombreDe, numerosPlantilla, textoOriginal,
   datosManual, generarTextos, largo, listaPlantillas, plantillaElegida, validarPlantilla, vistaPlantilla, type Textos, type TextosPlantillas,
 } from "@/lib/textube/plantillas";
 
 const CLAVE_PLANTILLAS = "textube:plantillas";
 const CLAVE_ANTERIORES = "textube:anteriores";
 const claveRespaldo = (id: string) => `textube:respaldo:${id}`;
-const PLANTILLAS = listaPlantillas();
-const MARCAS = [["Epson", "Epson"], ["Canon", "Canon"], ["Epson-SC", "Epson SureColor"]];
-const ERRORES_COMUNES = ["Almohadillas", "E-11", "5B00", "1700", "P07", "E08", "0014BD", "00000008"];
 
 type Snip = { title?: string; description?: string; tags?: string[]; [k: string]: unknown };
 type Previa = { textos: Textos | null; datos: DatosVideo | null; tituloActual?: string; motivo?: string };
@@ -57,8 +56,9 @@ async function llamar<T>(ruta: string, cuerpo: unknown): Promise<T> {
 const campo = "w-full rounded-md border bg-background px-3 py-2 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring [color-scheme:dark] [&>option]:bg-background [&>option]:text-foreground";
 
 export default function TexTubePage() {
-  const [pestana, setPestana] = useState<"video" | "plantillas">("video");
+  const [pestana, setPestana] = useState<"video" | "plantillas" | "menus">("video");
   const [editadas, setEditadas] = useState<TextosPlantillas>({});
+  const [cfg, editarCfg, ponerCfg] = useConfigTextube();
   useEffect(() => {
     const t = setTimeout(() => setEditadas(leerLS<TextosPlantillas>(CLAVE_PLANTILLAS, {})), 0);
     return () => clearTimeout(t);
@@ -73,19 +73,29 @@ export default function TexTubePage() {
         </div>
       </header>
       <div className="flex gap-2">
-        {([["video", "✨ Generar y aplicar"], ["plantillas", "📄 Plantillas"]] as const).map(([id, nombre]) => (
+        {([["video", "✨ Generar y aplicar"], ["plantillas", "📄 Plantillas"], ["menus", "⚙️ Menús"]] as const).map(([id, nombre]) => (
           <Button key={id} variant={pestana === id ? "default" : "outline"} onClick={() => setPestana(id)}>
             {nombre}
           </Button>
         ))}
       </div>
-      {pestana === "video" ? <Generar editadas={editadas} /> : <Plantillas editadas={editadas} onCambio={setEditadas} />}
+      {pestana === "video" ? <Generar editadas={editadas} cfg={cfg} /> : pestana === "plantillas" ? <Plantillas editadas={editadas} onCambio={setEditadas} cfg={cfg} onEditarCfg={editarCfg} /> : (
+        <MenusTextube cfg={cfg} onEditar={editarCfg} plantillas={editadas as Record<number, string>} onReemplazar={(c, pl) => {
+          ponerCfg(c);
+          const nuevas: TextosPlantillas = {};
+          for (const [k, v] of Object.entries(pl)) nuevas[Number(k)] = v;
+          guardarLS(CLAVE_PLANTILLAS, nuevas);
+          setEditadas(nuevas);
+        }} />
+      )}
     </main>
   );
 }
 
 /* ───────────────────────── 1 · generar y aplicar ───────────────────────── */
-function Generar({ editadas }: { editadas: TextosPlantillas }) {
+function Generar({ editadas, cfg }: { editadas: TextosPlantillas; cfg: Config }) {
+  const PLANTILLAS = listaPlantillas();
+  const marcas = cfg.marcas.filter((m) => !m.oculta);
   const [plantilla, setPlantilla] = useState("auto");
   const [marca, setMarca] = useState("");
   const [modelo, setModelo] = useState("");
@@ -100,15 +110,15 @@ function Generar({ editadas }: { editadas: TextosPlantillas }) {
   const [sinPermiso, setSinPermiso] = useState(false);
 
   const n = plantillaElegida(plantilla);
-  const fijos = n ? PLANTILLA_FIJA[n] : undefined;
-  const opcionesError = n ? Object.keys(PLANTILLA_ERRORES[n] ?? {}) : [];
+  const fijos = fijosDe(n);
+  const opcionesError = opcionesDe(n).map((o) => o.nombre);
   const idVideo = useMemo(() => { try { return video.trim() ? extraerVideoId(video) : ""; } catch { return ""; } }, [video]);
 
   // al cambiar la plantilla: error marcado de entrada y marca fija
   useEffect(() => {
     const t = setTimeout(() => {
       if (fijos?.marca) setMarca(fijos.marca);
-      if (n && opcionesError.length) setError((e) => (opcionesError.includes(e) ? e : PLANTILLA_ERROR_DEFECTO[n] ?? opcionesError[0]));
+      if (n && opcionesError.length) setError((e) => (opcionesError.includes(e) ? e : errorDefectoDe(n) ?? opcionesError[0]));
       if (fijos?.error) setError(fijos.error);
       setPrevia(null);
     }, 0);
@@ -234,7 +244,7 @@ function Generar({ editadas }: { editadas: TextosPlantillas }) {
                 <Label htmlFor="marca">Marca</Label>
                 <select id="marca" className={campo} value={marca} onChange={(e) => { setMarca(e.target.value); setPrevia(null); }}>
                   <option value="">Elige…</option>
-                  {MARCAS.map(([v, nombre]) => <option key={v} value={v}>{nombre}</option>)}
+                  {marcas.map((m) => <option key={m.valor} value={m.valor}>{m.nombre}</option>)}
                 </select>
               </div>
             )}
@@ -252,7 +262,7 @@ function Generar({ editadas }: { editadas: TextosPlantillas }) {
                 ) : (
                   <>
                     <Input id="error" list="errores" className="[color-scheme:dark]" value={error} maxLength={30} placeholder="Almohadillas, E-11, 5B00, 0014BD…" autoComplete="off" onChange={(e) => { setError(e.target.value); setPrevia(null); }} />
-                    <datalist id="errores">{ERRORES_COMUNES.map((o) => <option key={o} value={o} />)}</datalist>
+                    <datalist id="errores">{cfg.errores.map((o) => <option key={o} value={o} />)}</datalist>
                   </>
                 )}
               </div>
@@ -283,7 +293,7 @@ function Generar({ editadas }: { editadas: TextosPlantillas }) {
           <CardHeader>
             <CardTitle>2 · Textos generados</CardTitle>
             <div className="flex flex-wrap gap-2 text-xs">
-              {previa.datos && <span className="rounded-full bg-primary/15 px-2.5 py-1">{MARCAS.find((m) => m[0] === previa.datos!.marca)?.[1]} {previa.datos.modelo_texto || previa.datos.modelo}{previa.datos.error ? ` · ${previa.datos.error}` : ""}</span>}
+              {previa.datos && <span className="rounded-full bg-primary/15 px-2.5 py-1">{cfg.marcas.find((m) => m.valor === previa.datos!.marca)?.nombre ?? previa.datos.marca} {previa.datos.modelo_texto || previa.datos.modelo}{previa.datos.error ? ` · ${previa.datos.error}` : ""}</span>}
               {t ? <span className="rounded-full bg-emerald-500/15 px-2.5 py-1">Plantilla {t.plantilla} · {t.nombre_plantilla}</span> : <span className="rounded-full bg-amber-500/15 px-2.5 py-1">Sin plantilla</span>}
             </div>
           </CardHeader>
@@ -342,31 +352,70 @@ function Generar({ editadas }: { editadas: TextosPlantillas }) {
 }
 
 /* ───────────────────────── 2 · plantillas ───────────────────────── */
-function Plantillas({ editadas, onCambio }: { editadas: TextosPlantillas; onCambio: (e: TextosPlantillas) => void }) {
+function Plantillas({ editadas, onCambio, cfg, onEditarCfg }: { editadas: TextosPlantillas; onCambio: (e: TextosPlantillas) => void; cfg: Config; onEditarCfg: (fn: (c: Config) => Config) => void }) {
+  const PLANTILLAS = listaPlantillas();
   const [n, setN] = useState<number>(1);
-  const [texto, setTexto] = useState(PLANTILLAS_DEFECTO[1]);
-  const [modelo, setModelo] = useState(MODELO_EJEMPLO[1]);
-  const p = PLANTILLAS.find((x) => x.n === n)!;
-  const modificada = editadas[n] !== undefined;
+  const actualN = numerosPlantilla().includes(n) ? n : 1;
+  const original = textoOriginal(actualN);
+  const [texto, setTexto] = useState(textoOriginal(1) ?? "");
+  const [modelo, setModelo] = useState(modeloEjemploDe(1));
+  const p = PLANTILLAS.find((x) => x.n === actualN)!;
+  const propia = esPropia(actualN);
+  const modificada = !propia && editadas[actualN] !== undefined;
 
   // cambiar de plantilla carga su texto (el editado, si existe)
   useEffect(() => {
-    const t = setTimeout(() => { setTexto(editadas[n] ?? PLANTILLAS_DEFECTO[n]); setModelo(MODELO_EJEMPLO[n]); }, 0);
+    const t = setTimeout(() => { setTexto(editadas[actualN] ?? textoOriginal(actualN) ?? ""); setModelo(modeloEjemploDe(actualN)); }, 0);
     return () => clearTimeout(t);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [n]);
+  }, [actualN]);
+
+  function nueva(desde: number | null) {
+    if (cfg.propias.length >= MAX_PROPIAS) return toast.error(`Máximo ${MAX_PROPIAS} plantillas propias.`);
+    const nombre = prompt(desde ? "Nombre de la copia:" : "Nombre de la plantilla nueva:", desde ? `${nombreDe(desde)} (copia)` : "")?.trim();
+    if (!nombre) return;
+    const num = Math.max(PRIMERA_PROPIA - 1, ...cfg.propias.map((x) => x.n)) + 1;
+    const base = desde ? (editadas[desde] ?? textoOriginal(desde) ?? "") : (editadas[1] ?? textoOriginal(1) ?? "");
+    onEditarCfg((c) => ({ ...c, propias: [...c.propias, { n: num, nombre, cuando: desde ? cuandoDe(desde) : "Plantilla propia (se elige a mano)", modelo: modeloEjemploDe(desde ?? 1), marca: "", error: "", opciones: [], opcionDefecto: "" }] }));
+    const nuevas = { ...editadas, [num]: base };
+    guardarLS(CLAVE_PLANTILLAS, nuevas);
+    onCambio(nuevas);
+    setN(num);
+    toast.success(`Plantilla «${nombre}» creada${desde ? "" : ": reemplaza el texto de ejemplo por el tuyo"}.`);
+  }
+  function renombrar() {
+    const nombre = prompt("Nombre de la plantilla:", p.nombre)?.trim();
+    if (!nombre) return;
+    const cuando = prompt("¿Cuándo se usa? (texto de ayuda)", p.cuando)?.trim() ?? p.cuando;
+    onEditarCfg((c) => (propia ? { ...c, propias: c.propias.map((x) => (x.n === actualN ? { ...x, nombre, cuando } : x)) } : { ...c, nombres: { ...c.nombres, [actualN]: { nombre, cuando } } }));
+  }
+  function eliminar() {
+    if (!propia || !confirm(`¿Eliminar la plantilla «${p.nombre}»? Se borra también su texto.`)) return;
+    onEditarCfg((c) => ({ ...c, propias: c.propias.filter((x) => x.n !== actualN) }));
+    const nuevas = { ...editadas };
+    delete nuevas[actualN];
+    guardarLS(CLAVE_PLANTILLAS, nuevas);
+    onCambio(nuevas);
+    setN(1);
+  }
+  function datosFijos() {
+    const marca = prompt("Marca fija de esta plantilla (código, ej. Epson, Canon, Epson-SC; vacío = se elige):", p.fijos?.marca ?? "")?.trim() ?? "";
+    const error = prompt("Error fijo de esta plantilla (vacío = se elige o se escribe):", p.fijos?.error ?? "")?.trim() ?? "";
+    onEditarCfg((c) => ({ ...c, propias: c.propias.map((x) => (x.n === actualN ? { ...x, marca, error } : x)) }));
+  }
 
   const vista = useMemo(() => {
-    try { return { v: vistaPlantilla(texto, modelo, n), error: "" }; } catch (e) { return { v: null, error: e instanceof Error ? e.message : "Plantilla no válida." }; }
-  }, [texto, modelo, n]);
+    try { return { v: vistaPlantilla(texto, modelo, actualN), error: "" }; } catch (e) { return { v: null, error: e instanceof Error ? e.message : "Plantilla no válida." }; }
+    // cfg no se lee aquí, pero cambia lo que significan las plantillas (opciones de error, nombres): hay que recalcular
+  }, [texto, modelo, actualN, cfg]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function guardar() {
-    try { validarPlantilla(n, texto); } catch (e) { return toast.error(e instanceof Error ? e.message : "La plantilla no es válida."); }
+    try { validarPlantilla(actualN, texto); } catch (e) { return toast.error(e instanceof Error ? e.message : "La plantilla no es válida."); }
     if (!confirm("¿Guardar los cambios en esta plantilla? Se conserva una copia de la anterior.")) return;
     const anteriores = leerLS<{ n: number; fecha: string; texto: string }[]>(CLAVE_ANTERIORES, []);
-    anteriores.unshift({ n, fecha: new Date().toLocaleString(), texto: editadas[n] ?? PLANTILLAS_DEFECTO[n] });
+    anteriores.unshift({ n: actualN, fecha: new Date().toLocaleString(), texto: editadas[actualN] ?? original ?? "" });
     guardarLS(CLAVE_ANTERIORES, anteriores.slice(0, 30));
-    const nuevas = { ...editadas, [n]: texto.replace(/\r\n/g, "\n").replace(/\n+$/, "") + "\n" };
+    const nuevas = { ...editadas, [actualN]: texto.replace(/\r\n/g, "\n").replace(/\n+$/, "") + "\n" };
     guardarLS(CLAVE_PLANTILLAS, nuevas);
     onCambio(nuevas);
     toast.success("Plantilla guardada en este navegador (copia anterior conservada).");
@@ -374,28 +423,33 @@ function Plantillas({ editadas, onCambio }: { editadas: TextosPlantillas; onCamb
   function restaurar() {
     if (!confirm("¿Volver al texto original de esta plantilla? Se pierden tus cambios (queda una copia).")) return;
     const anteriores = leerLS<{ n: number; fecha: string; texto: string }[]>(CLAVE_ANTERIORES, []);
-    if (editadas[n] !== undefined) anteriores.unshift({ n, fecha: new Date().toLocaleString(), texto: editadas[n]! });
+    if (editadas[actualN] !== undefined) anteriores.unshift({ n: actualN, fecha: new Date().toLocaleString(), texto: editadas[actualN]! });
     guardarLS(CLAVE_ANTERIORES, anteriores.slice(0, 30));
     const nuevas = { ...editadas };
-    delete nuevas[n];
+    delete nuevas[actualN];
     guardarLS(CLAVE_PLANTILLAS, nuevas);
     onCambio(nuevas);
-    setTexto(PLANTILLAS_DEFECTO[n]);
+    setTexto(original ?? "");
   }
 
   return (
     <div className="grid gap-6 md:grid-cols-[280px_1fr]">
       <div className="space-y-2">
         {PLANTILLAS.map((x) => (
-          <button key={x.n} type="button" onClick={() => setN(x.n)} className={`w-full rounded-md border p-3 text-left text-sm transition-colors hover:bg-accent ${n === x.n ? "border-primary bg-primary/5" : ""}`}>
-            <b className="block">{x.n} · {x.nombre}{editadas[x.n] !== undefined ? " ✎" : ""}</b>
+          <button key={x.n} type="button" onClick={() => setN(x.n)} className={`w-full rounded-md border p-3 text-left text-sm transition-colors hover:bg-accent ${actualN === x.n ? "border-primary bg-primary/5" : ""}`}>
+            <b className="block">{x.n} · {x.nombre}{esPropia(x.n) ? " ★" : editadas[x.n] !== undefined ? " ✎" : ""}</b>
             <span className="text-xs text-muted-foreground">{x.cuando}</span>
           </button>
         ))}
+        <div className="flex flex-wrap gap-2 pt-1">
+          <Button size="sm" onClick={() => nueva(null)}>➕ Nueva</Button>
+          <Button size="sm" variant="outline" onClick={() => nueva(actualN)}>⧉ Duplicar</Button>
+        </div>
+        <p className="text-xs text-muted-foreground">★ = plantilla propia. Las 6 originales se eligen solas según marca, modelo y error; las propias se eligen a mano en el menú «Plantilla».</p>
       </div>
       <Card>
         <CardHeader>
-          <CardTitle>Plantilla {n} · {p.nombre}</CardTitle>
+          <CardTitle>Plantilla {actualN} · {p.nombre}</CardTitle>
           <CardDescription>Se usa con: {p.cuando}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -405,6 +459,9 @@ function Plantillas({ editadas, onCambio }: { editadas: TextosPlantillas; onCamb
             <div className="space-y-1.5"><Label htmlFor="pl-modelo">Probar con el modelo</Label><Input id="pl-modelo" value={modelo} onChange={(e) => setModelo(e.target.value)} className="w-40" /></div>
             <Button onClick={guardar}>💾 Guardar plantilla</Button>
             <Button variant="outline" onClick={restaurar} disabled={!modificada}>↺ Volver al original</Button>
+            <Button variant="outline" onClick={renombrar}>✎ Nombre y ayuda</Button>
+            {propia && <Button variant="outline" onClick={datosFijos} title="Marca y error que la plantilla trae por defecto">⚙ Marca y error fijos</Button>}
+            {propia && <Button variant="outline" className="text-destructive" onClick={eliminar}>🗑 Eliminar</Button>}
           </div>
           <p className="text-xs text-muted-foreground">Las plantillas se guardan en este navegador (el original queda de respaldo en la app).</p>
           {vista.error && <p className="rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm">{vista.error}</p>}

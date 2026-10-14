@@ -9,6 +9,16 @@ export type Cambio = {
 
 export const CHANGELOG: Cambio[] = [
   {
+    version: "4.18.0",
+    fecha: "2026-10-14",
+    titulo: "TexTUBE: menús editables (crear, cambiar y eliminar)",
+    cambios: [
+      "Nueva pestaña «⚙️ Menús» en TexTUBE. Marcas: renombrar u ocultar las 3 originales y agregar o eliminar las tuyas. Errores sugeridos: agregar, cambiar y eliminar. Opciones de error por plantilla: agregar, cambiar, quitar y marcar la de entrada en las plantillas 2, 3, 4 y 6, o dejarlas libres.",
+      "Plantillas: nueva, duplicar, cambiar nombre y ayuda, y eliminar las propias (★). Las 6 originales se eligen solas según marca, modelo y error; las propias se eligen a mano, con marca y error fijos si quieres.",
+      "Todo se guarda en el navegador y hay copia de seguridad: descargar y cargar un archivo. Con la configuración sin tocar, los resultados siguen siendo idénticos a los de Gestor TUBE (el orden de las opciones también).",
+    ],
+  },
+  {
     version: "4.17.0",
     fecha: "2026-10-14",
     titulo: "Editor de capas más fácil de usar",

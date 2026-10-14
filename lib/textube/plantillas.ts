@@ -9,7 +9,15 @@
 //
 // Lógica pura (sin red ni disco): se usa en el navegador y se puede probar con Vitest.
 import { EPSON_CON_PANTALLA, type DatosVideo } from "./datos-video";
+import { configVacia, type Config } from "./config";
 import { PLANTILLAS_DEFECTO } from "./plantillas-defecto";
+
+/** Configuración activa (menús editados por el usuario). Sin cambios es la de Gestor TUBE. */
+let cfg: Config = configVacia();
+export const configurar = (c: Config) => {
+  cfg = c;
+};
+export const configActual = () => cfg;
 
 export const LIMITE_TITULO = 100;
 export const LIMITE_DESCRIPCION = 5000;
@@ -25,11 +33,14 @@ export const largo = (t: string) => [...t].length;
 const EPSON_SIN_E11 = new Set(["L4150"]);
 const PLOTTERS_CON_PLANTILLA = new Set(["F570", "F571"]);
 
-export const NUMEROS = [1, 2, 3, 4, 5, 6] as const;
-export type NumeroPlantilla = (typeof NUMEROS)[number];
+export const NUMEROS_BASE = [1, 2, 3, 4, 5, 6] as const;
+/** Las 6 originales más las plantillas propias. */
+export const numerosPlantilla = (): number[] => [...NUMEROS_BASE, ...cfg.propias.map((p) => p.n)];
+const esNumeroValido = (n: number) => numerosPlantilla().includes(n);
+const propia = (n: number) => cfg.propias.find((p) => p.n === n);
 
 /** Datos que una plantilla trae por defecto: al elegirla no se piden. */
-export const PLANTILLA_FIJA: Partial<Record<number, { marca: string; error?: string }>> = {
+const FIJOS_BASE: Partial<Record<number, { marca: string; error?: string }>> = {
   1: { marca: "Epson", error: "Almohadillas" },
   2: { marca: "Epson" },
   3: { marca: "Canon" },
@@ -39,7 +50,7 @@ export const PLANTILLA_FIJA: Partial<Record<number, { marca: string; error?: str
 };
 
 /** Errores que se eligen de una lista cerrada → cómo van en el enlace de WhatsApp. */
-export const PLANTILLA_ERRORES: Partial<Record<number, Record<string, string>>> = {
+const ERRORES_BASE_POR_PLANTILLA: Partial<Record<number, Record<string, string>>> = {
   2: { Almohadillas: "Almohadillas", "E-11": "E-11", Tampón: "Tampon", Combinado: "Almohadillas" },
   3: { "5B00": "5B00", "1700": "1700", Combinado: "5B00" },
   4: { "5B00": "5B00", "1700": "1700", E08: "E08", P07: "P07", Combinado: "5B00" },
@@ -52,10 +63,10 @@ export const PLANTILLA_ERRORES: Partial<Record<number, Record<string, string>>> 
 /** La plantilla 6 está redactada para el aviso 00000008. */
 const ERROR_BASE_PLANTILLA: Partial<Record<number, string>> = { 6: "00000008" };
 /** Opción marcada de entrada. */
-export const PLANTILLA_ERROR_DEFECTO: Partial<Record<number, string>> = { 2: "Combinado", 3: "Combinado", 4: "Combinado" };
-export const ERROR_POR_DEFECTO: Record<number, string> = { 1: "Almohadillas", 2: "Almohadillas", 3: "5B00", 4: "5B00", 5: "0014BD", 6: "00000008" };
-export const MODELO_EJEMPLO: Record<number, string> = { 1: "L4150", 2: "L4160", 3: "G6010", 4: "G3110", 5: "F570", 6: "F570" };
-export const NOMBRES: Record<number, string> = {
+const DEFECTO_BASE: Partial<Record<number, string>> = { 2: "Combinado", 3: "Combinado", 4: "Combinado" };
+const ERROR_POR_DEFECTO_BASE: Record<number, string> = { 1: "Almohadillas", 2: "Almohadillas", 3: "5B00", 4: "5B00", 5: "0014BD", 6: "00000008" };
+const MODELO_EJEMPLO_BASE: Record<number, string> = { 1: "L4150", 2: "L4160", 3: "G6010", 4: "G3110", 5: "F570", 6: "F570" };
+const NOMBRES_BASE: Record<number, string> = {
   1: "Epson · Almohadillas",
   2: "Epson (pantalla) · E-11 / Almohadillas",
   3: "Canon G5xxx–G7xxx · 5B00 / 1700",
@@ -63,7 +74,7 @@ export const NOMBRES: Record<number, string> = {
   5: "Epson SureColor · 0014BD",
   6: "Epson SureColor · aviso 000x000x",
 };
-export const CUANDO: Record<number, string> = {
+const CUANDO_BASE: Record<number, string> = {
   1: "Epson sin E-11 · Almohadillas (p. ej. L4150)",
   2: "Epson con pantalla · E-11 / Tampón / Almohadillas (p. ej. L4160)",
   3: "Canon G5xxx–G7xxx · 5B00 / 1700 / combinado (no 5B02, E08 ni P07)",
@@ -71,15 +82,77 @@ export const CUANDO: Record<number, string> = {
   5: "Epson SureColor F570 / F571 · error 0014BD",
   6: "Epson SureColor F570 / F571 · aviso 000x000x",
 };
-export const MARCAS_VALIDAS: Record<string, string> = { EPSON: "Epson", CANON: "Canon", "EPSON-SC": "Epson-SC", "EPSON SC": "Epson-SC", EPSONSC: "Epson-SC" };
+
+// ── lo que cambia según la configuración (plantillas originales o propias) ──
+export const fijosDe = (n: number | null | undefined): { marca?: string; error?: string } | undefined => {
+  if (!n) return undefined;
+  const p = propia(n);
+  if (p) return p.marca || p.error ? { ...(p.marca ? { marca: p.marca } : {}), ...(p.error ? { error: p.error } : {}) } : undefined;
+  return FIJOS_BASE[n];
+};
+/** Opciones de error de una plantilla (nombre → texto del enlace de WhatsApp); undefined si el error se escribe libre. */
+export const erroresDe = (n: number | null | undefined): Record<string, string> | undefined => {
+  if (!n) return undefined;
+  const p = propia(n);
+  const lista = p ? p.opciones : cfg.opcionesError[n];
+  if (lista) return lista.length ? Object.fromEntries(lista.map((o) => [o.nombre, o.enlace])) : undefined;
+  return ERRORES_BASE_POR_PLANTILLA[n];
+};
+/** Orden de las opciones originales (un objeto de JavaScript pondría «1700» antes que «5B00»; en Gestor TUBE va al revés). */
+const ORDEN_BASE: Partial<Record<number, string[]>> = { 3: ["5B00", "1700", "Combinado"], 4: ["5B00", "1700", "E08", "P07", "Combinado"] };
+/** Opciones de error de la plantilla EN ORDEN (lista vacía si el error se escribe libre). */
+export const opcionesDe = (n: number | null | undefined): { nombre: string; enlace: string }[] => {
+  if (!n) return [];
+  const p = propia(n);
+  const lista = p ? p.opciones : cfg.opcionesError[n];
+  if (lista) return lista;
+  const base = ERRORES_BASE_POR_PLANTILLA[n];
+  return base ? (ORDEN_BASE[n] ?? Object.keys(base)).map((nombre) => ({ nombre, enlace: base[nombre] })) : [];
+};
+export const errorDefectoDe = (n: number): string | undefined => {
+  const op = erroresDe(n);
+  if (!op) return undefined;
+  const d = propia(n) ? propia(n)!.opcionDefecto : (cfg.opcionDefecto[n] ?? DEFECTO_BASE[n]);
+  return d && d in op ? d : undefined;
+};
+/** Error que se usa si no se elige ninguno. */
+export const errorPorDefecto = (n: number): string => {
+  const p = propia(n);
+  if (p) return p.error || errorDefectoDe(n) || Object.keys(erroresDe(n) ?? {})[0] || "Almohadillas";
+  const base = ERROR_POR_DEFECTO_BASE[n] ?? "Almohadillas";
+  const op = erroresDe(n);
+  return !op || base in op ? base : Object.keys(op)[0];
+};
+export const nombreDe = (n: number) => propia(n)?.nombre ?? cfg.nombres[n]?.nombre ?? NOMBRES_BASE[n] ?? `Plantilla ${n}`;
+export const cuandoDe = (n: number) => propia(n)?.cuando ?? cfg.nombres[n]?.cuando ?? CUANDO_BASE[n] ?? "";
+export const modeloEjemploDe = (n: number) => propia(n)?.modelo ?? MODELO_EJEMPLO_BASE[n] ?? "L4150";
+export const esPropia = (n: number) => !!propia(n);
+/** Marcas aceptadas al escribir los datos a mano: la clave (en mayúsculas) → el valor guardado. */
+const marcasValidas = (): Record<string, string> => {
+  const m: Record<string, string> = { "EPSON SC": "Epson-SC", EPSONSC: "Epson-SC" };
+  for (const x of cfg.marcas) {
+    m[x.valor.toUpperCase()] = x.valor;
+    m[x.nombre.toUpperCase()] = x.valor;
+  }
+  return m;
+};
 
 export type InfoPlantilla = { n: number; nombre: string; cuando: string; modelo: string; fijos: { marca: string; error?: string } | null; opciones_error: string[]; error_defecto: string | null };
 export const listaPlantillas = (): InfoPlantilla[] =>
-  NUMEROS.map((n) => ({ n, nombre: NOMBRES[n], cuando: CUANDO[n], modelo: MODELO_EJEMPLO[n], fijos: PLANTILLA_FIJA[n] ?? null, opciones_error: Object.keys(PLANTILLA_ERRORES[n] ?? {}), error_defecto: PLANTILLA_ERROR_DEFECTO[n] ?? null }));
+  numerosPlantilla().map((n) => {
+    const f = fijosDe(n);
+    return { n, nombre: nombreDe(n), cuando: cuandoDe(n), modelo: modeloEjemploDe(n), fijos: f?.marca ? { marca: f.marca, ...(f.error ? { error: f.error } : {}) } : null, opciones_error: opcionesDe(n).map((o) => o.nombre), error_defecto: errorDefectoDe(n) ?? null };
+  });
 
 /** Textos de las plantillas: las ediciones del usuario (si hay) mandan sobre las originales. */
 export type TextosPlantillas = Partial<Record<number, string>>;
-const textoDe = (n: number, editadas?: TextosPlantillas) => editadas?.[n] ?? PLANTILLAS_DEFECTO[n];
+const textoDe = (n: number, editadas?: TextosPlantillas) => {
+  const t = editadas?.[n] ?? PLANTILLAS_DEFECTO[n];
+  if (t === undefined) throw new ErrorTextos(`Falta el texto de la plantilla ${n}: escríbelo en la pestaña «Plantillas».`);
+  return t;
+};
+/** Texto con el que arranca una plantilla original (las propias no tienen: se crean con una copia). */
+export const textoOriginal = (n: number): string | undefined => PLANTILLAS_DEFECTO[n];
 
 // ───────────────────────── qué plantilla corresponde ─────────────────────────
 function familiaCanon(modelo: string): 3 | 4 | null {
@@ -110,16 +183,16 @@ export function elegirPlantilla(datos: DatosPlantilla): number | null {
   if (marca === "Epson-SC") {
     if (!PLOTTERS_CON_PLANTILLA.has(modelo)) return null;
     if (error === "0014BD") return 5;
-    return Object.keys(PLANTILLA_ERRORES[6]!).some((o) => o.toUpperCase() === error) ? 6 : null;
+    return Object.keys(erroresDe(6) ?? {}).some((o) => o.toUpperCase() === error) ? 6 : null;
   }
   return null;
 }
 
 /** El error tal como aparece en la lista de la plantilla (sin importar mayúsculas ni tilde). */
 export function errorDeLaLista(numero: number | null, error: string): string {
-  const opciones = numero ? PLANTILLA_ERRORES[numero] : undefined;
+  const opciones = numero ? erroresDe(numero) : undefined;
   if (!opciones) return String(error ?? "").trim();
-  if (!String(error ?? "").trim() && numero && PLANTILLA_ERROR_DEFECTO[numero]) return PLANTILLA_ERROR_DEFECTO[numero]!;
+  if (!String(error ?? "").trim() && numero && errorDefectoDe(numero)) return errorDefectoDe(numero)!;
   const limpio = (v: string) => String(v).trim().toUpperCase().replace(/Ó/g, "O");
   for (const nombre of Object.keys(opciones)) if (limpio(nombre) === limpio(error)) return nombre;
   throw new ErrorTextos(`Elige el error de la lista: ${Object.keys(opciones).join(", ")}.`);
@@ -127,16 +200,16 @@ export function errorDeLaLista(numero: number | null, error: string): string {
 
 /** El error como va en el enlace de WhatsApp. */
 export function errorParaEnlace(error: string, numero: number): string {
-  const lista = PLANTILLA_ERRORES[numero];
+  const lista = erroresDe(numero);
   if (lista) {
     try {
       return lista[errorDeLaLista(numero, error)];
     } catch {
-      return ERROR_POR_DEFECTO[numero];
+      return lista[errorPorDefecto(numero)] ?? errorPorDefecto(numero);
     }
   }
   const e = String(error ?? "").trim().replace(/\s+/g, "-");
-  if (!e) return ERROR_POR_DEFECTO[numero];
+  if (!e) return errorPorDefecto(numero);
   if (["ALMOHADILLA", "ALMOHADILLAS"].includes(e.toUpperCase())) return "Almohadillas";
   return e.toUpperCase();
 }
@@ -191,7 +264,7 @@ export type VistaPlantilla = { titulos: string[]; etiquetas: string[]; etiquetas
 export function vistaPlantilla(texto: string, modeloEntrada: string, numero: number | string = "?"): VistaPlantilla {
   const p = parsearPlantilla(texto, numero);
   const modelo = modeloEntrada.trim().toUpperCase();
-  const error = (typeof numero === "number" ? ERROR_POR_DEFECTO[numero] : undefined) ?? "Almohadillas";
+  const error = typeof numero === "number" ? errorPorDefecto(numero) : "Almohadillas";
   const r = (t: string) => rellenar(t, modelo, error, "rdMXeYj8c7Y", error);
   const { etiquetas, recortadas } = etiquetasDe(r(p.etiquetas));
   const avisos: string[] = [];
@@ -211,7 +284,7 @@ export function vistaPlantilla(texto: string, modeloEntrada: string, numero: num
 }
 
 /** Comprueba que el texto de una plantilla editada es válido (lanza ErrorTextos si no). */
-export const validarPlantilla = (numero: number, texto: string) => vistaPlantilla(texto, MODELO_EJEMPLO[numero], numero);
+export const validarPlantilla = (numero: number, texto: string) => vistaPlantilla(texto, modeloEjemploDe(numero), numero);
 
 // ───────────────────────── generar los textos ─────────────────────────
 export type Textos = {
@@ -252,11 +325,11 @@ export function generarTextos(datos: DatosPlantilla, o: OpcionesGenerar = {}): T
   const sugerida = elegirPlantilla(datos);
   const numero = o.plantilla ?? sugerida;
   if (numero == null) return null;
-  if (!(NUMEROS as readonly number[]).includes(numero)) throw new ErrorTextos(`La plantilla debe ser un número del 1 al ${NUMEROS.length}.`);
+  if (!esNumeroValido(numero)) throw new ErrorTextos("Esa plantilla no existe.");
   const p = parsearPlantilla(textoDe(numero, o.editadas), numero);
   const modelo = String(datos.modelo_texto || datos.modelo).toUpperCase();
   const errorEnlace = errorParaEnlace(datos.error ?? "", numero);
-  const errorTexto = PLANTILLA_ERRORES[numero] ? errorDeLaLista(numero, datos.error ?? "") : String(datos.error ?? "").trim() || ERROR_POR_DEFECTO[numero];
+  const errorTexto = erroresDe(numero) ? errorDeLaLista(numero, datos.error ?? "") : String(datos.error ?? "").trim() || errorPorDefecto(numero);
   const video = o.videoId || "";
   let i: number;
   if (o.tituloN != null) {
@@ -270,7 +343,7 @@ export function generarTextos(datos: DatosPlantilla, o: OpcionesGenerar = {}): T
   const textos: Textos = {
     plantilla: numero,
     sugerida,
-    nombre_plantilla: NOMBRES[numero],
+    nombre_plantilla: nombreDe(numero),
     titulo_n: i + 1,
     titulo: r(p.titulos[i]),
     titulos: p.titulos.map(r),
@@ -291,25 +364,25 @@ export type EntradaManual = { plantilla?: string | number | null; marca?: string
 export function plantillaElegida(v: EntradaManual["plantilla"]): number | null {
   if (v === undefined || v === null || v === "" || v === "auto" || v === 0 || v === "0") return null;
   const n = Number(v);
-  if (!Number.isInteger(n) || !(NUMEROS as readonly number[]).includes(n)) throw new ErrorTextos(`La plantilla debe ser un número del 1 al ${NUMEROS.length}.`);
+  if (!Number.isInteger(n) || !esNumeroValido(n)) throw new ErrorTextos("Esa plantilla no existe.");
   return n;
 }
 
 /** Marca, modelo y error escritos a mano, ya limpios. null si no se escribió nada. */
 export function datosManual(d: EntradaManual): DatosVideo | null {
   const plantilla = plantillaElegida(d.plantilla);
-  const fijos = plantilla ? PLANTILLA_FIJA[plantilla] : undefined;
+  const fijos = fijosDe(plantilla);
   let marca = String(d.marca ?? "").trim();
   let error = String(d.error ?? "").trim();
   const modelo = String(d.modelo ?? "").trim();
   if (fijos) {
-    marca = fijos.marca;
+    if (fijos.marca) marca = fijos.marca;
     if (fijos.error) error = fijos.error;
   }
-  if (plantilla && PLANTILLA_ERRORES[plantilla]) error = errorDeLaLista(plantilla, error);
+  if (plantilla && erroresDe(plantilla)) error = errorDeLaLista(plantilla, error);
   if (!(marca || modelo || error)) return null;
-  const marcaOk = MARCAS_VALIDAS[marca.toUpperCase()];
-  if (!marcaOk) throw new ErrorTextos("Elige la marca: Epson, Canon o Epson SureColor.");
+  const marcaOk = marcasValidas()[marca.toUpperCase()];
+  if (!marcaOk) throw new ErrorTextos("Elige la marca: " + cfg.marcas.filter((m) => !m.oculta).map((m) => m.nombre).join(", ") + ".");
   if (!/^[A-Za-z0-9-]{2,12}$/.test(modelo)) throw new ErrorTextos("Escribe el modelo, p. ej. L4150, G6010 o F570 (letras, números y guion).");
   if (!/^[A-Za-z0-9 ./áéíóúüñÁÉÍÓÚÜÑ-]{0,30}$/.test(error)) throw new ErrorTextos("El error solo puede llevar letras, números, espacio, punto, guion y barra.");
   return { marca: marcaOk, modelo: modelo.toUpperCase().replace(/-/g, ""), modelo_texto: modelo.toUpperCase(), error: error.toUpperCase(), error_largo: error };
