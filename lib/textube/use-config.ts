@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { normalizarConfig, type Config } from "./config";
 import { configurar } from "./plantillas";
+import { fotoAntesDeEditar } from "./versiones";
 
 export const CLAVE_CONFIG = "textube:config";
 
@@ -27,6 +28,7 @@ export function useConfigTextube(): [Config, (fn: (c: Config) => Config) => void
   }, []);
 
   const poner = useCallback((c: Config) => {
+    fotoAntesDeEditar("Antes de cambiar los menús");
     const n = normalizarConfig(c);
     configurar(n); // primero se activa, para que lo que se dibuje a continuación ya use la configuración nueva
     setCfg(n);
@@ -40,6 +42,7 @@ export function useConfigTextube(): [Config, (fn: (c: Config) => Config) => void
   const editar = useCallback(
     (fn: (c: Config) => Config) => {
       setCfg((actual) => {
+        fotoAntesDeEditar("Antes de cambiar los menús");
         const n = normalizarConfig(fn(structuredClone(actual)));
         configurar(n);
         try {

@@ -9,6 +9,16 @@ export type Cambio = {
 
 export const CHANGELOG: Cambio[] = [
   {
+    version: "4.27.0",
+    fecha: "2026-10-14",
+    titulo: "Control de versiones de cada módulo",
+    cambios: [
+      "Cada módulo tiene su propia versión (TexTUBE 1.4.0, PrompTUBE 2.2.0, CapaTUBE 1.3.0) y su historial de cambios: bajo el título, «ver historial de versiones».",
+      "Historial de tus datos con vuelta atrás: TexTUBE (menús, variables y plantillas) y PrompTUBE (menús del panel y catálogo) guardan versiones solas antes de empezar a editar (como mucho una cada 10 minutos) y cuando tú lo pides; hasta 20, con «Volver a esta» y «Borrar». Antes de volver se guarda cómo estaba todo, para poder deshacerlo.",
+      "CapaTUBE ya tenía el suyo: los proyectos se guardan como variaciones L3210-01, -02… y hay configuraciones guardadas con nombre.",
+    ],
+  },
+  {
     version: "4.26.0",
     fecha: "2026-10-14",
     titulo: "Ocultar la descripción de los módulos",

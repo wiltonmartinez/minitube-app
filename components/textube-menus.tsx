@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { HistorialVersiones } from "@/components/historial-versiones";
+import { CLAVES_TEXTUBE } from "@/lib/textube/versiones";
 import { ERRORES_BASE, MARCAS_BASE, MAX_VALORES, MAX_VARIABLES, VARIABLES_BASE, claveDeNombre, claveValida, configVacia, normalizarConfig, type Config, type OpcionError } from "@/lib/textube/config";
 import { errorDefectoDe, esPropia, listaPlantillas, nombreDe, opcionesDe } from "@/lib/textube/plantillas";
 
@@ -21,6 +23,7 @@ export function MenusTextube({ cfg, onEditar, onReemplazar, plantillas }: Props)
       <Marcas cfg={cfg} onEditar={onEditar} />
       <ErroresSugeridos cfg={cfg} onEditar={onEditar} />
       <OpcionesPorPlantilla cfg={cfg} onEditar={onEditar} />
+      <HistorialVersiones modulo="textube" claves={CLAVES_TEXTUBE} descripcion="Versiones de tus menús, variables y plantillas (se guardan solas antes de empezar a editar, o cuando tú lo pides). Puedes volver a cualquiera; hasta 20." />
       <Copia cfg={cfg} plantillas={plantillas} onReemplazar={onReemplazar} />
     </div>
   );

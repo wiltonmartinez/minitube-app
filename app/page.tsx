@@ -32,6 +32,8 @@ import { EDADES_PANEL, EMOCION_AUTO, EMOCIONES_EDAD, EMOCIONES_POR_TONO, GRUPOS_
 import { ENFOQUES, ENFOQUE_AUTO, ENFOQUE_LIBRE, OPCIONES_ENFOQUE, edadesDeEnfoque, enfoqueDe, enfoqueEfectivo, etiquetaEnfoque, normalizarEnfoque, profesionEnEnfoque } from "@/lib/enfoques";
 import { toast } from "sonner";
 import { EnviarAlEditor } from "@/components/enviar-al-editor";
+import { HistorialVersiones } from "@/components/historial-versiones";
+import { CLAVES_PROMPTUBE } from "@/lib/promptube-versiones";
 import { CONTENEDOR_MODULO, EncabezadoModulo } from "@/components/encabezado-modulo";
 import { Button } from "@/components/ui/button";
 import {
@@ -739,6 +741,7 @@ export default function Home() {
       <EncabezadoModulo
         icono="🎨"
         nombre="PrompTUBE"
+        modulo="promptube"
         pie={
           <Link href="/cambios" className="underline-offset-2 hover:underline">
             v{VERSION} · {COMMIT} · ver cambios
@@ -765,6 +768,7 @@ export default function Home() {
                 <>
                   <CatalogEditor catalogo={catalogo} personalizado={personalizado} onChange={guardarCatalogo} />
                   <ListsEditor listas={listas} modificadas={modificadas} onGuardar={guardarLista} />
+                  <HistorialVersiones modulo="promptube" claves={CLAVES_PROMPTUBE} descripcion="Versiones de los menús del panel y del catálogo de profesiones que editas (se guardan solas antes de empezar a editar, o cuando tú lo pides). Puedes volver a cualquiera; hasta 20." />
                 </>
               )}
             </div>

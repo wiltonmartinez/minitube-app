@@ -13,6 +13,7 @@ import { CONTENEDOR_MODULO, EncabezadoModulo } from "@/components/encabezado-mod
 import { Pestanas } from "@/components/pestanas";
 import { PRIMERA_PROPIA, MAX_PROPIAS, type Config } from "@/lib/textube/config";
 import { useConfigTextube } from "@/lib/textube/use-config";
+import { fotoAntesDeEditar } from "@/lib/textube/versiones";
 import {
   COSTO_CUOTA, ErrorTextos, LIMITE_DESCRIPCION, LIMITE_ETIQUETAS, cuandoDe, errorDefectoDe, esPropia, opcionesDe, fijosDe, modeloEjemploDe, nombreDe, numerosPlantilla, textoOriginal,
   datosManual, generarTextos, largo, valoresDeVariables, listaPlantillas, plantillaElegida, validarPlantilla, vistaPlantilla, type Textos, type TextosPlantillas,
@@ -68,7 +69,7 @@ export default function TexTubePage() {
 
   return (
     <main className={`${CONTENEDOR_MODULO} space-y-6`}>
-      <EncabezadoModulo icono="✍️" nombre="TexTUBE">
+      <EncabezadoModulo icono="✍️" nombre="TexTUBE" modulo="textube">
         TexTUBE es un módulo de gestión que te permite editar el título, la descripción y las etiquetas de tus videos de YouTube de forma manual y centralizada. En lugar de navegar por la página de YouTube Studio, utiliza la API oficial para inyectar y guardar tus cambios video por video directamente desde la aplicación.
       </EncabezadoModulo>
       <div><Pestanas valor={pestana} onCambio={setPestana} opciones={[["video", "✨ Generar y aplicar"], ["plantillas", "📄 Plantillas"], ["menus", "⚙️ Menús"]] as const} /></div>
@@ -77,7 +78,7 @@ export default function TexTubePage() {
           ponerCfg(c);
           const nuevas: TextosPlantillas = {};
           for (const [k, v] of Object.entries(pl)) nuevas[Number(k)] = v;
-          guardarLS(CLAVE_PLANTILLAS, nuevas);
+          fotoAntesDeEditar("Antes de cambiar plantillas"); guardarLS(CLAVE_PLANTILLAS, nuevas);
           setEditadas(nuevas);
         }} />
       )}
@@ -397,7 +398,7 @@ function Plantillas({ editadas, onCambio, cfg, onEditarCfg }: { editadas: Textos
     const base = desde ? (editadas[desde] ?? textoOriginal(desde) ?? "") : (editadas[1] ?? textoOriginal(1) ?? "");
     onEditarCfg((c) => ({ ...c, propias: [...c.propias, { n: num, nombre, cuando: desde ? cuandoDe(desde) : "Plantilla propia (se elige a mano)", modelo: modeloEjemploDe(desde ?? 1), marca: "", error: "", opciones: [], opcionDefecto: "" }] }));
     const nuevas = { ...editadas, [num]: base };
-    guardarLS(CLAVE_PLANTILLAS, nuevas);
+    fotoAntesDeEditar("Antes de cambiar plantillas"); guardarLS(CLAVE_PLANTILLAS, nuevas);
     onCambio(nuevas);
     setN(num);
     toast.success(`Plantilla «${nombre}» creada${desde ? "" : ": reemplaza el texto de ejemplo por el tuyo"}.`);
@@ -413,7 +414,7 @@ function Plantillas({ editadas, onCambio, cfg, onEditarCfg }: { editadas: Textos
     onEditarCfg((c) => ({ ...c, propias: c.propias.filter((x) => x.n !== actualN) }));
     const nuevas = { ...editadas };
     delete nuevas[actualN];
-    guardarLS(CLAVE_PLANTILLAS, nuevas);
+    fotoAntesDeEditar("Antes de cambiar plantillas"); guardarLS(CLAVE_PLANTILLAS, nuevas);
     onCambio(nuevas);
     setN(1);
   }
@@ -435,7 +436,7 @@ function Plantillas({ editadas, onCambio, cfg, onEditarCfg }: { editadas: Textos
     anteriores.unshift({ n: actualN, fecha: new Date().toLocaleString(), texto: editadas[actualN] ?? original ?? "" });
     guardarLS(CLAVE_ANTERIORES, anteriores.slice(0, 30));
     const nuevas = { ...editadas, [actualN]: texto.replace(/\r\n/g, "\n").replace(/\n+$/, "") + "\n" };
-    guardarLS(CLAVE_PLANTILLAS, nuevas);
+    fotoAntesDeEditar("Antes de cambiar plantillas"); guardarLS(CLAVE_PLANTILLAS, nuevas);
     onCambio(nuevas);
     toast.success("Plantilla guardada en este navegador (copia anterior conservada).");
   }
@@ -446,7 +447,7 @@ function Plantillas({ editadas, onCambio, cfg, onEditarCfg }: { editadas: Textos
     guardarLS(CLAVE_ANTERIORES, anteriores.slice(0, 30));
     const nuevas = { ...editadas };
     delete nuevas[actualN];
-    guardarLS(CLAVE_PLANTILLAS, nuevas);
+    fotoAntesDeEditar("Antes de cambiar plantillas"); guardarLS(CLAVE_PLANTILLAS, nuevas);
     onCambio(nuevas);
     setTexto(original ?? "");
   }

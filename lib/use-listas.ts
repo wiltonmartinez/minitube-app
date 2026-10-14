@@ -1,5 +1,6 @@
 "use client";
 
+import { fotoAntesDeEditarMenus } from "@/lib/promptube-versiones";
 import { useCallback, useMemo, useSyncExternalStore } from "react";
 import { LISTAS_BASE, type CampoLista, type Listas, type Opcion } from "@/lib/rostro";
 
@@ -53,6 +54,7 @@ export function useListas() {
   /** Guarda una lista editada (o la restablece si `opciones` es null). */
   const guardar = useCallback(
     (campo: CampoLista, opciones: Opcion[] | null) => {
+      fotoAntesDeEditarMenus();
       try {
         const actual = (() => {
           try {

@@ -17,6 +17,7 @@
       <header class="encabezado">
         <div class="enc-fila"><h1>🧩 CapaTUBE</h1><button type="button" class="btn-desc" id="cp-desc-alternar" aria-expanded="true" title="Ocultar la descripción para tener más espacio">▲ Ocultar descripción</button></div>
         <p class="lema">CapaTUBE es el módulo de ensamblaje gráfico definitivo para estructurar miniaturas de YouTube, permitiendo al usuario componer la imagen final superponiendo capas PNG transparentes —como textos, badges 3D y marcas de agua— sobre los fondos generados previamente por IA que permanecen bloqueados al fondo. Mediante un sistema ágil e intuitivo, los fondos generados se cargan de forma organizada para su selección manual, mientras que los elementos frontales pueden ajustarse con precisión milimétrica arrastrándolos con el ratón o moviéndolos píxel a píxel con las flechas del teclado. Como resultado del proceso, la herramienta combina estas capas y guarda automáticamente múltiples variaciones de la miniatura, entregando el material perfecto para optimizar el CTR del canal a través de la función de pruebas A/B de YouTube.</p>
+      <div id="cp-version" class="version-modulo"></div>
       </header>
       <div class="cp-pasos" id="cp-pasos">
         <button type="button" data-cp-ir="fondo"><b>1</b> Elige el fondo <small>pestaña «Fondo»</small></button>
@@ -125,6 +126,15 @@
     window.addEventListener("storage", pintar);
     pintar();
   })();
+  /* versión e historial de cambios de CapaTUBE (los mismos datos que muestran los otros módulos) */
+  fetch("/api/versiones").then((r) => (r.ok ? r.json() : null)).then((d) => {
+    const lista = d && d.capatube; if (!lista || !lista.length) return;
+    const caja = document.getElementById("cp-version"), esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+    caja.innerHTML = '<button type="button" class="vm-boton" aria-expanded="false">CapaTUBE v' + esc(lista[0].version) + ' · ver historial de versiones</button><ol class="vm-lista" hidden>' +
+      lista.map((v, i) => "<li><div><b>v" + esc(v.version) + "</b> " + (i === 0 ? '<span class="vm-actual">actual</span> ' : "") + '<span class="suave">' + esc(v.fecha) + "</span> <b>" + esc(v.titulo) + "</b></div><ul>" + v.cambios.map((c) => "<li>" + esc(c) + "</li>").join("") + "</ul></li>").join("") + "</ol>";
+    const b = caja.querySelector(".vm-boton"), ol = caja.querySelector(".vm-lista");
+    b.onclick = () => { ol.hidden = !ol.hidden; b.setAttribute("aria-expanded", String(!ol.hidden)); b.textContent = "CapaTUBE v" + lista[0].version + " · " + (ol.hidden ? "ver historial de versiones" : "ocultar historial"); };
+  }).catch(() => {});
   cpIniciar();
 </script>
 </body>

@@ -1,5 +1,6 @@
 "use client";
 
+import { fotoAntesDeEditarMenus } from "@/lib/promptube-versiones";
 import { useCallback, useMemo, useSyncExternalStore } from "react";
 import { PERFILES, type Perfil } from "@/lib/prompt-config";
 
@@ -61,6 +62,7 @@ export function useCatalogo() {
   }, [raw]);
 
   const guardar = useCallback((nuevo: Record<string, Perfil> | null) => {
+    fotoAntesDeEditarMenus();
     try {
       if (nuevo) window.localStorage.setItem(KEY, JSON.stringify(nuevo));
       else window.localStorage.removeItem(KEY);

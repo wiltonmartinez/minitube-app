@@ -1,6 +1,8 @@
 "use client";
 
 import { useSyncExternalStore, type ReactNode } from "react";
+import { VersionModulo } from "@/components/version-modulo";
+import type { Modulo } from "@/lib/modulos";
 
 /** La preferencia «ocultar la descripción» se guarda en el navegador y vale para los tres módulos (CapaTUBE lee la misma llave). */
 const LLAVE = "gt_ocultar_descripcion";
@@ -26,7 +28,7 @@ const suscribir = (aviso: () => void) => {
  * Encabezado común de los tres módulos (TexTUBE, PrompTUBE y CapaTUBE): icono + nombre y la descripción debajo, que se puede ocultar
  * para ganar espacio. CapaTUBE vive en una página aparte (public/editor/index.html) y repite estas mismas medidas en su CSS: si cambias algo aquí, cámbialo allí.
  */
-export function EncabezadoModulo({ icono, nombre, children, pie }: { icono: string; nombre: string; children: ReactNode; pie?: ReactNode }) {
+export function EncabezadoModulo({ icono, nombre, children, pie, modulo }: { icono: string; nombre: string; children: ReactNode; pie?: ReactNode; modulo?: Modulo }) {
   const oculta = useSyncExternalStore(suscribir, leer, () => false);
   const alternar = () => {
     try {
@@ -53,6 +55,7 @@ export function EncabezadoModulo({ icono, nombre, children, pie }: { icono: stri
         </button>
       </div>
       {!oculta && <p className="mt-2 max-w-3xl text-muted-foreground">{children}</p>}
+      {modulo && <div className="mt-2"><VersionModulo modulo={modulo} /></div>}
       {pie && <div className="mt-2 text-xs text-muted-foreground">{pie}</div>}
     </header>
   );
