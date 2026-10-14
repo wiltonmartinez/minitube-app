@@ -96,6 +96,8 @@ function Generar({ editadas, cfg }: { editadas: TextosPlantillas; cfg: Config })
   const [error, setError] = useState("");
   const [video, setVideo] = useState("");
   const [msg, setMsg] = useState("");
+  const [hecho, setHecho] = useState(""); // resultado bueno de aplicar/deshacer, visible junto al botón
+  const [pendiente, setPendiente] = useState<"aplicar" | "deshacer" | null>(null); // confirmación dentro de la página (el confirm() del navegador puede estar bloqueado)
   const [previa, setPrevia] = useState<Previa | null>(null);
   const [tituloN, setTituloN] = useState(1);
   const [que, setQue] = useState({ titulo: true, descripcion: true, etiquetas: true });
@@ -154,13 +156,14 @@ function Generar({ editadas, cfg }: { editadas: TextosPlantillas; cfg: Config })
     setPrevia({ textos: t, datos, tituloActual });
   }
 
-  async function accion(fn: () => Promise<void>) {
+  async function accion(fn: () => Promise<void>, conservar = false) {
     setMsg("");
+    setHecho("");
     setOcupado(true);
     try {
       await fn();
     } catch (e) {
-      setPrevia(null);
+      if (!conservar) setPrevia(null); // al aplicar o deshacer se conservan los textos para poder reintentar
       const m = e instanceof Error ? e.message : "Error.";
       setMsg(m);
       setSinPermiso(/autorizaci[oó]n de YouTube/i.test(m));
@@ -190,10 +193,10 @@ function Generar({ editadas, cfg }: { editadas: TextosPlantillas; cfg: Config })
   });
 
   const alAplicar = () => accion(async () => {
+    setPendiente(null);
     if (!idVideo) throw new Error("Para aplicar escribe la URL o el ID del video (arriba).");
     if (!previa?.textos || !previa.datos) throw new Error("Primero genera los textos.");
     const t = generarTextos(previa.datos, { tituloN, semilla: idVideo, plantilla: n ?? previa.textos.plantilla, videoId: idVideo, editadas, variables: vars })!;
-    if (!confirm(`¿Cambiar este video con la plantilla ${t.plantilla}? Se guarda un respaldo del título, la descripción y las etiquetas actuales para poder deshacer.`)) return;
     const r = await llamar<{ original: Snip; cuota: number }>("/api/youtube/aplicar", {
       video: idVideo,
       ...(que.titulo ? { titulo: t.titulo } : {}), ...(que.descripcion ? { descripcion: t.descripcion } : {}), ...(que.etiquetas ? { etiquetas: t.etiquetas } : {}),
@@ -202,18 +205,21 @@ function Generar({ editadas, cfg }: { editadas: TextosPlantillas; cfg: Config })
     if (!localStorage.getItem(claveRespaldo(idVideo))) guardarLS(claveRespaldo(idVideo), r.original);
     setRespaldo(leerLS<Snip | null>(claveRespaldo(idVideo), null));
     setPrevia((p) => (p ? { ...p, tituloActual: t.titulo } : p));
-    toast.success(`✅ Textos aplicados al video (cuota de YouTube usada: ${r.cuota ?? COSTO_CUOTA} unidades).`);
-  });
+    const texto = `✅ Textos aplicados al video (cuota de YouTube usada: ${r.cuota ?? COSTO_CUOTA} unidades). Se guardó un respaldo para poder deshacer.`;
+    setHecho(texto);
+    toast.success(texto);
+  }, true);
 
   const alDeshacer = () => accion(async () => {
+    setPendiente(null);
     if (!idVideo) throw new Error("Escribe la URL o el ID del video.");
     const original = leerLS<Snip | null>(claveRespaldo(idVideo), null);
     if (!original) throw new Error("No hay respaldo de este video en este navegador: TexTUBE nunca cambió sus textos aquí.");
-    if (!confirm("¿Volver a los textos originales de este video?")) return;
     const r = await llamar<{ titulo: string }>("/api/youtube/deshacer", { video: idVideo, snippet: original });
+    setHecho(`↩️ Textos originales restaurados: ${r.titulo}`);
     toast.success(`↩️ Textos originales restaurados: ${r.titulo}`);
     setPrevia((p) => (p ? { ...p, tituloActual: r.titulo } : p));
-  });
+  }, true);
 
   const copiar = async (texto: string, que2: string) => {
     try { await navigator.clipboard.writeText(texto); toast.success(`${que2} copiado.`); } catch { toast.error("No pude copiar: selecciona el texto a mano."); }
@@ -288,9 +294,17 @@ function Generar({ editadas, cfg }: { editadas: TextosPlantillas; cfg: Config })
           <div className="flex flex-wrap gap-2">
             <Button onClick={alGenerar} disabled={ocupado}>✨ Generar textos</Button>
             <Button variant="outline" onClick={alLeer} disabled={ocupado || !video.trim()}>👁️ Leer del video</Button>
-            <Button variant="outline" className="text-destructive" onClick={alDeshacer} disabled={ocupado || !respaldo} title={respaldo ? "" : "No hay respaldo de este video en este navegador"}>↩️ Deshacer textos del video</Button>
+            <Button variant="outline" className="text-destructive" onClick={() => setPendiente("deshacer")} disabled={ocupado || !respaldo} title={respaldo ? "" : "No hay respaldo de este video en este navegador"}>↩️ Deshacer textos del video</Button>
           </div>
-          {msg && <p className="rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm">{msg}</p>}
+          {pendiente === "deshacer" && (
+            <div className="space-y-2 rounded-md border border-amber-500/50 bg-amber-500/10 p-3 text-sm" role="alertdialog">
+              <p>¿Volver a los textos originales de este video?</p>
+              <div className="flex gap-2"><Button size="sm" onClick={alDeshacer} disabled={ocupado}>Sí, deshacer</Button><Button size="sm" variant="outline" onClick={() => setPendiente(null)}>Cancelar</Button></div>
+            </div>
+          )}
+          {ocupado && <p className="text-sm text-muted-foreground" aria-live="polite">⏳ Trabajando con YouTube…</p>}
+          {hecho && <p className="rounded-md border border-emerald-500/40 bg-emerald-500/10 p-3 text-sm" role="status">{hecho}</p>}
+          {msg && <p className="rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm" role="alert">{msg}</p>}
           {sinPermiso && (
             <p className="text-sm">
               {/* recarga completa: lleva a Google y vuelve */}
@@ -351,7 +365,16 @@ function Generar({ editadas, cfg }: { editadas: TextosPlantillas; cfg: Config })
                       </label>
                     ))}
                   </div>
-                  <Button onClick={alAplicar} disabled={ocupado || !idVideo || !(que.titulo || que.descripcion || que.etiquetas)}>✅ Aplicar al video</Button>
+                  <Button onClick={() => setPendiente("aplicar")} disabled={ocupado || !idVideo || !(que.titulo || que.descripcion || que.etiquetas)}>✅ Aplicar al video</Button>
+                  {pendiente === "aplicar" && (
+                    <div className="space-y-2 rounded-md border border-amber-500/50 bg-amber-500/10 p-3 text-sm" role="alertdialog">
+                      <p>¿Cambiar este video con la plantilla {t.plantilla}? Se guarda un respaldo del título, la descripción y las etiquetas actuales para poder deshacer.</p>
+                      <div className="flex gap-2"><Button size="sm" onClick={alAplicar} disabled={ocupado}>Sí, aplicar</Button><Button size="sm" variant="outline" onClick={() => setPendiente(null)}>Cancelar</Button></div>
+                    </div>
+                  )}
+                  {ocupado && <p className="text-sm text-muted-foreground" aria-live="polite">⏳ Aplicando al video…</p>}
+                  {hecho && <p className="rounded-md border border-emerald-500/40 bg-emerald-500/10 p-3 text-sm" role="status">{hecho}</p>}
+                  {msg && <p className="rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm" role="alert">{msg}</p>}
                   <p className="text-xs text-muted-foreground">Se aplica al video de arriba (cuesta {COSTO_CUOTA} unidades de la cuota de YouTube). El respaldo queda en este navegador{respaldo ? <> · <button type="button" className="underline" onClick={() => { const b = new Blob([JSON.stringify({ video: idVideo, snippet: respaldo }, null, 1)], { type: "application/json" }); const a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = `respaldo-${idVideo}.json`; a.click(); }}>descargar respaldo</button></> : null}.</p>
                 </div>
               </>
