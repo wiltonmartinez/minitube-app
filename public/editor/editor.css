@@ -117,3 +117,20 @@
     .app { grid-template-columns:1fr; } nav.lateral { position:static; height:auto; flex-direction:row; overflow-x:auto; padding:8px; } .marca, nav.lateral .pie, nav.lateral .sub { display:none; }
     nav.lateral a { white-space:nowrap; padding:8px 12px; } nav.lateral { scrollbar-width:none; } nav.lateral::-webkit-scrollbar { display:none; } main { padding:16px; } .actividad { left:0; } .fila3, .fila2 { grid-template-columns:1fr; }
   }
+
+/* ── editor más fácil de usar: pestañas, pasos y secciones plegables ── */
+.cp-pestanas { position:sticky; top:0; z-index:6; display:flex; width:100%; box-sizing:border-box; margin:0 0 12px; box-shadow:0 6px 8px -8px rgba(0,0,0,.35); }
+.cp-pestanas button { flex:1; padding:9px 8px; }
+.cp-pasos { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin:0 0 14px; }
+.cp-pasos button { display:flex; align-items:center; gap:8px; text-align:left; border:1px solid var(--borde); background:var(--tarjeta); color:var(--texto); border-radius:10px; padding:8px 12px; cursor:pointer; font-weight:600; font-size:13.5px; }
+.cp-pasos button:hover { border-color:var(--azul); background:var(--azul-fondo); }
+.cp-pasos b { display:inline-grid; place-items:center; width:24px; height:24px; border-radius:50%; background:var(--azul); color:#fff; flex:none; }
+.cp-pasos small { display:block; color:var(--suave); font-weight:400; font-size:12px; }
+@media (max-width:760px) { .cp-pasos { grid-template-columns:1fr; } }
+details.cp-sec { border:1px solid var(--borde); border-radius:10px; margin:10px 0 0; background:var(--tarjeta); }
+details.cp-sec > summary { cursor:pointer; padding:9px 12px; font-weight:700; font-size:14px; list-style:none; display:flex; justify-content:space-between; align-items:center; }
+details.cp-sec > summary::-webkit-details-marker { display:none; }
+details.cp-sec > summary::after { content:"▸"; color:var(--suave); transition:transform .15s; }
+details.cp-sec[open] > summary::after { transform:rotate(90deg); }
+details.cp-sec > .cp-sec-cuerpo { padding:0 12px 12px; }
+#cp-lienzo { cursor:pointer; }

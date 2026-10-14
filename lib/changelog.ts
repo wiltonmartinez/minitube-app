@@ -9,6 +9,16 @@ export type Cambio = {
 
 export const CHANGELOG: Cambio[] = [
   {
+    version: "4.17.0",
+    fecha: "2026-10-14",
+    titulo: "Editor de capas más fácil de usar",
+    cambios: [
+      "Un clic sobre una capa en la miniatura la elige (como en Canva o Photoshop) y se puede arrastrar; ya no hay que buscarla en la lista. Las flechas del teclado la mueven de 1 en 1 (con Mayús, de 10 en 10).",
+      "La columna derecha pasa a tres pestañas: «Capas y ajustes» (la lista y los ajustes de la capa elegida, juntos), «Fondo» (imágenes de entrada por enfoque) y «Guardar» (carpeta de salida, proyectos y configuraciones). Antes los ajustes quedaban al final de una página de más de 6000 px.",
+      "Guía de 3 pasos arriba (elige el fondo, edita texto y badge, guarda) y secciones plegables (Sombra, Contorno, Relieve, Efectos…) que recuerdan si las dejaste abiertas.",
+    ],
+  },
+  {
     version: "4.16.0",
     fecha: "2026-10-14",
     titulo: "TexTUBE dentro de la app: títulos, descripciones y etiquetas de YouTube",

@@ -974,8 +974,13 @@ function cpIniciar(cargar = true) {
   L.addEventListener("pointerdown", (e) => {
     const c0 = CP.capas.find((k) => k.id === CP.sel), pts = cpPuntosEsquinas(c0);
     if (pts) { const p = cpPunto(e), i = pts.findIndex(([x, y]) => Math.hypot(x - p.x, y - p.y) < 28); if (i >= 0) { CP.esquina = i; L.setPointerCapture(e.pointerId); return; } }
-    const c = CP.capas.find((k) => k.id === CP.sel); if (!c || c.fijo || (c.sinPos && c.tipo !== "marco") || !c.bmp || !c.visible) return;
-    const p = cpPunto(e); CP.arrastre = { dx: p.x - c.x, dy: p.y - c.y }; L.setPointerCapture(e.pointerId);
+    let c = CP.capas.find((k) => k.id === CP.sel); const p = cpPunto(e);
+    // si el clic cae sobre otra capa y no sobre la elegida, se elige esa (como en Canva o Photoshop)
+    const [sx0, sy0] = c && c.bmp ? cpEsc(c) : [1, 1], lx0 = c && c.bmp ? Math.floor((p.x - c.x) / sx0) : -1, ly0 = c && c.bmp ? Math.floor((p.y - c.y) / sy0) : -1;
+    let sobreElegida = false; try { sobreElegida = !!c && !!c.bmp && lx0 >= 0 && ly0 >= 0 && lx0 < c.bmp.width && ly0 < c.bmp.height && c.bmp.getContext("2d").getImageData(lx0, ly0, 1, 1).data[3] > 24; } catch { /* sin lienzo legible */ }
+    if (!sobreElegida) { const otra = cpCapaBajoPuntero(p); if (otra) { CP.sel = otra.id; c = otra; cpPestana("capas"); cpLista(); cpAjustes(); } }
+    if (!c || c.fijo || (c.sinPos && c.tipo !== "marco") || !c.bmp || !c.visible) return;
+    CP.arrastre = { dx: p.x - c.x, dy: p.y - c.y }; L.setPointerCapture(e.pointerId);
   });
   L.addEventListener("pointermove", (e) => {
     if (CP.esquina != null) {
@@ -988,6 +993,7 @@ function cpIniciar(cargar = true) {
     const q = cpImantar(c, Math.round(p.x - CP.arrastre.dx), Math.round(p.y - CP.arrastre.dy)); c.x = q.x; c.y = q.y; cpDibujar();
   });
   L.addEventListener("pointerup", () => { CP.arrastre = null; if (CP.esquina != null) { CP.esquina = null; cpAjustes(); } });
+  cpIniciarFacilidades();
   $("cp-agregar").onclick = () => { CP.subiendoA = "nueva"; $("cp-archivo").click(); };
   $("cp-archivo").onchange = async (e) => {
     const f = e.target.files[0]; e.target.value = ""; if (!f) return;
@@ -1219,6 +1225,50 @@ function cpLista() {
   $("cp-lista").querySelectorAll("[data-sube]").forEach((b) => (b.onclick = (e) => { e.stopPropagation(); mover(b.dataset.sube, -1); }));
   $("cp-lista").querySelectorAll("[data-baja]").forEach((b) => (b.onclick = (e) => { e.stopPropagation(); mover(b.dataset.baja, 1); }));
 }
+/** Cada título pequeño (Sombra, Contorno, Relieve, Efectos…) se vuelve una sección que se abre y se cierra; se recuerda cuáles dejaste abiertas. */
+function cpPlegarSecciones(caja) {
+  const abiertas = (() => { try { return JSON.parse(localStorage.getItem("cp_secciones") || "{}"); } catch { return {}; } })();
+  let actual = null;
+  for (const el of [...caja.children]) {
+    if (el.matches("i[data-fin-sec]")) { actual = null; el.remove(); continue; }
+    if (el.tagName === "H3") {
+      const nombre = el.textContent.trim(), d = document.createElement("details"), s = document.createElement("summary"), cuerpo = document.createElement("div");
+      d.className = "cp-sec"; d.dataset.sec = nombre; d.open = !!abiertas[nombre]; s.textContent = nombre; cuerpo.className = "cp-sec-cuerpo";
+      d.append(s, cuerpo); el.replaceWith(d); actual = cuerpo;
+      d.addEventListener("toggle", () => { abiertas[nombre] = d.open; try { localStorage.setItem("cp_secciones", JSON.stringify(abiertas)); } catch { /* sin almacenamiento */ } });
+    } else if (actual) actual.append(el);
+  }
+}
+/** Pestañas «Capas y ajustes · Fondo · Guardar», guía de 3 pasos y teclas de flecha. */
+function cpPestana(nombre) {
+  document.querySelectorAll("[data-cp-panel]").forEach((p) => (p.hidden = p.dataset.cpPanel !== nombre));
+  document.querySelectorAll("[data-cp-tab]").forEach((b) => { b.classList.toggle("activo", b.dataset.cpTab === nombre); b.setAttribute("aria-selected", b.dataset.cpTab === nombre); });
+  try { localStorage.setItem("cp_pestana", nombre); } catch { /* sin almacenamiento */ }
+}
+function cpIniciarFacilidades() {
+  document.querySelectorAll("[data-cp-tab]").forEach((b) => (b.onclick = () => cpPestana(b.dataset.cpTab)));
+  document.querySelectorAll("[data-cp-ir]").forEach((b) => (b.onclick = () => { cpPestana(b.dataset.cpIr); document.getElementById("cp-pestanas").scrollIntoView({ block: "nearest", behavior: "smooth" }); }));
+  let guardada = "capas"; try { guardada = localStorage.getItem("cp_pestana") || "capas"; } catch { /* sin almacenamiento */ }
+  cpPestana(["capas", "fondo", "guardar"].includes(guardada) ? guardada : "capas");
+  // flechas del teclado: mueven la capa elegida (Mayús = de 10 en 10)
+  document.addEventListener("keydown", (e) => {
+    const t = e.target; if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT" || t.isContentEditable)) return;
+    const d = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[e.key]; if (!d || e.ctrlKey || e.metaKey || e.altKey) return;
+    const c = CP.capas.find((k) => k.id === CP.sel); if (!c || c.fijo || (c.sinPos && c.tipo !== "marco") || !c.bmp) return;
+    e.preventDefault(); const paso = e.shiftKey ? 10 : 1; c.x += d[0] * paso; c.y += d[1] * paso; cpDibujar();
+    const px = document.querySelector("#cp-ajustes [data-x]"), py = document.querySelector("#cp-ajustes [data-y]"); if (px) px.value = c.x; if (py) py.value = c.y;
+  });
+}
+/** La capa visible más alta que tiene algo dibujado justo bajo el puntero (como en Canva o Photoshop). */
+function cpCapaBajoPuntero(p) {
+  for (const c of CP.capas) {
+    if (!c.visible || !c.bmp || c.fijo || (c.sinPos && c.tipo !== "marco")) continue;
+    const [sx, sy] = cpEsc(c), lx = Math.floor((p.x - c.x) / sx), ly = Math.floor((p.y - c.y) / sy);
+    if (lx < 0 || ly < 0 || lx >= c.bmp.width || ly >= c.bmp.height) continue;
+    try { if (c.bmp.getContext("2d").getImageData(lx, ly, 1, 1).data[3] > 24) return c; } catch { /* capa sin lienzo legible */ }
+  }
+  return null;
+}
 function cpAjustes() {
   const c = CP.capas.find((k) => k.id === CP.sel), caja = $("cp-ajustes");
   if (!c) { caja.innerHTML = '<p class="suave">' + (CP.capas.length ? "Elige una capa." : "No hay capas.") + "</p>"; return; }
@@ -1247,7 +1297,9 @@ function cpAjustes() {
       <label class="campo">Margen del borde</label><input type="range" min="0" max="140" value="${c.margen}" data-mm>
       <label class="campo">Esquinas redondeadas (estilo Redondeado)</label><input type="range" min="0" max="240" value="${c.radio}" data-mr></div>`;
   }
+  h += "<i data-fin-sec></i>";
   if ((c.tipo === "imagen" || c.tipo === "marca") && c.imagen) h += cpHtmlFx(c);
+  h += "<i data-fin-sec></i>";
   if (c.tipo === "imagen" || c.tipo === "marca") h += `<div class="botones"><button class="btn" data-subir>📁 ${c.tipo === "marca" ? "Subir logo PNG" : "Elegir imagen / PNG"}</button>${c.tipo === "marca" && c.imagen ? '<button class="btn" data-quitar-logo>Usar texto</button>' : ""}</div>`;
   if (!c.fijo && !c.sinPos) h += `<label class="campo">Tamaño de la capa: <span data-ev="esc">${Math.round(c.escala * 100)}%</span></label><input type="range" min="5" max="300" value="${Math.round(c.escala * 100)}" data-esc>`;
   h += `<label class="campo">Opacidad (transparencia): <span data-ev="op">${Math.round(c.opacidad * 100)}%</span></label><input type="range" min="5" max="100" value="${Math.round(c.opacidad * 100)}" data-op>`;
@@ -1347,6 +1399,7 @@ function cpAjustes() {
     c.bmp.toBlob((b) => { const a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = (cpNombreArchivo() ? cpNombreArchivo() + "_" : "") + c.nombre.replace(/[^\w#-]+/g, "_") + ".png"; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); }, "image/png");
   };
   caja.querySelector("[data-borrar]").onclick = () => cpQuitar(c.id);
+  cpPlegarSecciones(caja);
 }
 
 /* PNG FINAL a tamaño completo (1920×1080), sin cuadrícula de fondo */
