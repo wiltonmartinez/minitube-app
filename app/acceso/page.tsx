@@ -20,7 +20,7 @@ export default function AccesoPage() {
       const d = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(d.error || "No se pudo entrar.");
       const volver = new URLSearchParams(window.location.search).get("volver");
-      window.location.href = volver && volver.startsWith("/") && !volver.startsWith("//") ? volver : "/textube";
+      window.location.href = volver && volver.startsWith("/") && !volver.startsWith("//") ? volver : "/";
     } catch (er) {
       setError(er instanceof Error ? er.message : "No se pudo entrar.");
       setEnviando(false);
@@ -32,7 +32,7 @@ export default function AccesoPage() {
       <Card className="w-full">
         <CardHeader>
           <CardTitle>🔒 Acceso</CardTitle>
-          <CardDescription>Esta sección cambia títulos y descripciones de tu canal de YouTube. Escribe tu contraseña.</CardDescription>
+          <CardDescription>Gestor TUBE está protegido: escribe tu contraseña para entrar.</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={entrar} className="space-y-3">

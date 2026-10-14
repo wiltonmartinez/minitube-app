@@ -15,7 +15,7 @@ export const CHANGELOG: Cambio[] = [
     cambios: [
       "Nueva sección TexTUBE (✍️ en la barra superior): elige la plantilla (o automática), escribe marca, modelo y error —o pega el video y pulsa «Leer del video»—, genera 5 títulos, descripción y etiquetas, y aplícalos al video con respaldo para deshacer. Los resultados son idénticos a los de Gestor TUBE (comprobado con 25 casos).",
       "Las 6 plantillas se pueden editar desde la pantalla (con vista previa y límites de YouTube) y se guardan en el navegador; siempre se puede volver al original.",
-      "Acceso protegido: TexTUBE y sus rutas de YouTube piden contraseña (GESTOR_CLAVE) en la web publicada; PromptTUBE y el Editor siguen libres. En tu PC no se pide.",
+      "Acceso protegido: todo Gestor TUBE (PromptTUBE, Editor de capas y TexTUBE) pide una contraseña (GESTOR_CLAVE) y la barra superior trae «Cerrar sesión». Quedan libres solo las imágenes públicas /Assets (los prompts las enlazan para Gemini, ChatGPT y fal.ai) y la API v1, que lleva su propio token. En tu PC solo se pide si GESTOR_CLAVE está en .env.local.",
       "Las credenciales de YouTube viven solo en el servidor (YT_CLIENT_ID, YT_CLIENT_SECRET y YT_REFRESH_TOKEN), nunca llegan al navegador. Si el permiso vence, el botón «Renovar el permiso de YouTube» lo renueva desde tu PC.",
     ],
   },

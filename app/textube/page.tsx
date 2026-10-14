@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -57,7 +56,6 @@ async function llamar<T>(ruta: string, cuerpo: unknown): Promise<T> {
 const campo = "w-full rounded-md border bg-transparent px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
 export default function TexTubePage() {
-  const router = useRouter();
   const [pestana, setPestana] = useState<"video" | "plantillas">("video");
   const [editadas, setEditadas] = useState<TextosPlantillas>({});
   useEffect(() => {
@@ -72,9 +70,6 @@ export default function TexTubePage() {
           <h1 className="text-3xl font-bold tracking-tight">✍️ TexTUBE</h1>
           <p className="mt-1 text-muted-foreground">Títulos, descripción y etiquetas con tus plantillas. Antes de cambiar nada se guarda un respaldo para poder deshacer.</p>
         </div>
-        <Button variant="ghost" size="sm" onClick={async () => { await fetch("/api/acceso", { method: "DELETE" }); router.push("/acceso"); }}>
-          Cerrar sesión
-        </Button>
       </header>
       <div className="flex gap-2">
         {([["video", "✨ Generar y aplicar"], ["plantillas", "📄 Plantillas"]] as const).map(([id, nombre]) => (
