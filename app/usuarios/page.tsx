@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { fetchConReintentos } from "@/lib/reintentar";
 import { MODULOS, TODOS_LOS_MODULOS, type Modulo, type Rol } from "@/lib/modulos";
 
 type Usuario = { id: string; nombre: string; apellido: string; correo: string; telefono: string; rol: Rol; modulos: Modulo[]; activo: boolean; tieneClaveDeLaApp: boolean; actualizado: string };
@@ -17,7 +18,7 @@ const VACIO: Formulario = { id: null, nombre: "", apellido: "", correo: "", tele
 const campoSelect = "h-8 w-full min-w-0 rounded-lg border border-input bg-input/30 px-2.5 py-1 text-sm text-foreground outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 [color-scheme:dark] [&>option]:bg-background [&>option]:text-foreground";
 
 async function pedir<T>(ruta: string, metodo: "GET" | "POST" | "PUT" | "DELETE", cuerpo?: unknown): Promise<T> {
-  const r = await fetch(ruta, { method: metodo, headers: { "Content-Type": "application/json" }, body: cuerpo === undefined ? undefined : JSON.stringify(cuerpo) });
+  const r = await (metodo === "GET" ? fetchConReintentos : fetch)(ruta, { method: metodo, headers: { "Content-Type": "application/json" }, body: cuerpo === undefined ? undefined : JSON.stringify(cuerpo) });
   const d = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(d.error || "Error.");
   return d as T;

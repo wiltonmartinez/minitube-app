@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { CampoClave } from "@/components/campo-clave";
 import { Label } from "@/components/ui/label";
+import { fetchConReintentos } from "@/lib/reintentar";
 
 type Modo = "entrar" | "recuperar";
 
@@ -23,7 +24,7 @@ export default function AccesoPage() {
     const t = setTimeout(async () => {
       if (new URLSearchParams(window.location.search).get("enlace") === "invalido") setError("Ese enlace ya no sirve (venció o ya se usó). Pide uno nuevo con «¿Olvidaste la contraseña?».");
       try {
-        const d = await (await fetch("/api/acceso")).json();
+        const d = await (await fetchConReintentos("/api/acceso")).json();
         setPideCorreo(!!d.pideCorreo);
       } catch {
         /* sin respuesta: se pide solo la contraseña */
@@ -37,7 +38,7 @@ export default function AccesoPage() {
     setEnviando(true);
     setError("");
     try {
-      const r = await fetch("/api/acceso", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ correo, clave }) });
+      const r = await fetchConReintentos("/api/acceso", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ correo, clave }) });
       const d = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(d.error || "No se pudo entrar.");
       const volver = new URLSearchParams(window.location.search).get("volver");
@@ -55,7 +56,7 @@ export default function AccesoPage() {
     setInfo("");
     setEnlaceDev("");
     try {
-      const r = await fetch("/api/acceso/recuperar", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ correo }) });
+      const r = await fetchConReintentos("/api/acceso/recuperar", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ correo }) });
       const d = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(d.error || "No se pudo enviar el enlace.");
       setInfo(d.mensaje || "Listo.");

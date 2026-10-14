@@ -7,13 +7,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { CampoClave } from "@/components/campo-clave";
 import { Label } from "@/components/ui/label";
+import { fetchConReintentos } from "@/lib/reintentar";
 import { MODULOS } from "@/lib/modulos";
 
 type Perfil = { nombre: string; apellido: string; correo: string; telefono: string };
 type Estado = { perfil: Perfil; rol: "admin" | "usuario"; modulos: string[]; claveDeLaApp: boolean; sinActual: boolean; almacenamiento: "redis" | "archivo" | "ninguno"; puedeGuardar: boolean; actualizado: string | null };
 
 async function pedir<T>(ruta: string, metodo: "GET" | "PUT" | "POST", cuerpo?: unknown): Promise<T> {
-  const r = await fetch(ruta, { method: metodo, headers: { "Content-Type": "application/json" }, body: cuerpo === undefined ? undefined : JSON.stringify(cuerpo) });
+  const r = await (metodo === "GET" ? fetchConReintentos : fetch)(ruta, { method: metodo, headers: { "Content-Type": "application/json" }, body: cuerpo === undefined ? undefined : JSON.stringify(cuerpo) });
   const d = await r.json().catch(() => ({}));
   if (r.status === 401 && d.error === "Necesitas iniciar sesión.") {
     window.location.assign("/acceso?volver=/cuenta"); // eslint-disable-line @next/next/no-location-assign-relative-destination -- recarga completa para que el servidor revise la sesión
