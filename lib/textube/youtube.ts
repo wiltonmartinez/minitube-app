@@ -14,7 +14,10 @@ export class ErrorYouTube extends Error {
 
 export type Snippet = { title?: string; description?: string; tags?: string[]; categoryId?: string; defaultLanguage?: string; defaultAudioLanguage?: string };
 
-export const youtubeConfigurado = () => !!(process.env.YT_CLIENT_ID && process.env.YT_CLIENT_SECRET && process.env.YT_REFRESH_TOKEN);
+/** Lee una variable quitando espacios, saltos de línea y comillas que se cuelan al pegarla en Vercel. */
+const credencial = (nombre: "YT_CLIENT_ID" | "YT_CLIENT_SECRET" | "YT_REFRESH_TOKEN") => (process.env[nombre] ?? "").trim().replace(/^["']|["']$/g, "").trim();
+
+export const youtubeConfigurado = () => !!(credencial("YT_CLIENT_ID") && credencial("YT_CLIENT_SECRET") && credencial("YT_REFRESH_TOKEN"));
 
 let cache: { token: string; hasta: number } | null = null;
 
@@ -29,11 +32,11 @@ async function tokenDeAcceso(): Promise<string> {
   const r = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({ client_id: process.env.YT_CLIENT_ID!, client_secret: process.env.YT_CLIENT_SECRET!, refresh_token: process.env.YT_REFRESH_TOKEN!, grant_type: "refresh_token" }),
+    body: new URLSearchParams({ client_id: credencial("YT_CLIENT_ID"), client_secret: credencial("YT_CLIENT_SECRET"), refresh_token: credencial("YT_REFRESH_TOKEN"), grant_type: "refresh_token" }),
     cache: "no-store",
   });
   const d = await r.json().catch(() => ({}));
-  if (!r.ok || !d.access_token) throw new ErrorYouTube("La autorización de YouTube venció o fue revocada: hay que volver a autorizarla.", 401);
+  if (!r.ok || !d.access_token) throw new ErrorYouTube(`La autorización de YouTube venció o fue revocada: hay que volver a autorizarla.${typeof d.error === "string" ? ` (Google dice: ${d.error.slice(0, 40)})` : ""}`, 401);
   cache = { token: d.access_token, hasta: Date.now() + (Number(d.expires_in) || 3000) * 1000 };
   return cache.token;
 }
