@@ -9,6 +9,16 @@ export type Cambio = {
 
 export const CHANGELOG: Cambio[] = [
   {
+    version: "4.25.0",
+    fecha: "2026-10-14",
+    titulo: "Las 6 plantillas originales usan la variable {accion}",
+    cambios: [
+      "En la descripción de las 6 plantillas, la palabra «Reset» (entera, con mayúscula) ahora es {accion}: 3 cambios por plantilla, como «🚀 {accion} en 1 minuto» y «{accion} Epson {modelo}» en las búsquedas relacionadas. Los nombres propios no se tocan (ResetOkey, ResetEnLinea.com, las direcciones y #ResetEpson).",
+      "En las etiquetas, «reset» ahora es {accion_h} (6 a 8 por plantilla): con «Reset» sale «Reset», y con «Diagnóstico» sale «Diagnostico», sin espacios ni tildes. «resetenlinea» no se toca.",
+      "Con el valor «Reset» (el de entrada) todo sale igual que antes; solo cambia la mayúscula inicial en las etiquetas. Con otros valores, como las etiquetas son más largas, se quitan 1 o 2 del final por el límite de 490 caracteres de YouTube. Los títulos no se cambiaron.",
+    ],
+  },
+  {
     version: "4.24.0",
     fecha: "2026-10-14",
     titulo: "TexTUBE: variables propias para las plantillas (con CRUD)",

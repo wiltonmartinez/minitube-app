@@ -5,21 +5,24 @@ import { ErrorTextos, datosManual, elegirPlantilla, generarTextos, parsearPlanti
 import { PLANTILLAS_DEFECTO } from "@/lib/textube/plantillas-defecto";
 
 // Los valores esperados salen del programa de Python de Gestor TUBE (textos_video.py y datos_video.py): el port debe dar lo mismo.
+// Única diferencia buscada: en las etiquetas, la palabra «reset» ahora es la variable {accion_h} (con el valor de entrada «Reset» sale
+// como «Reset»), así que las etiquetas se comparan sin distinguir mayúsculas; todo lo demás (títulos, descripción, largos) debe ser idéntico.
+const sinMayusEnEtiquetas = <T extends { etiquetas: string[] }>(t: T): T => ({ ...t, etiquetas: t.etiquetas.map((e) => e.toLowerCase()) });
 describe("TexTUBE · mismo resultado que Gestor TUBE (Python)", () => {
   it.each(golden.casos)("«$titulo»", (c) => {
     const datos = extraerDatos(c.titulo);
     expect(datos).toEqual(c.datos);
     if (!datos) return;
     expect(elegirPlantilla(datos)).toBe(c.plantilla);
-    if (c.textos) expect(generarTextos(datos, { semilla: "abcDEF12345", videoId: "abcDEF12345" })).toEqual(c.textos);
+    if (c.textos) expect(sinMayusEnEtiquetas(generarTextos(datos, { semilla: "abcDEF12345", videoId: "abcDEF12345" })!)).toEqual(sinMayusEnEtiquetas(c.textos));
   });
 
   it.each(golden.manual)("plantilla $plantilla con datos a mano", (m) => {
-    expect(generarTextos(m.datos, { tituloN: m.tituloN, semilla: "L1", plantilla: m.plantilla, videoId: null })).toEqual(m.textos);
+    expect(sinMayusEnEtiquetas(generarTextos(m.datos, { tituloN: m.tituloN, semilla: "L1", plantilla: m.plantilla, videoId: null })!)).toEqual(sinMayusEnEtiquetas(m.textos));
   });
 
   it.each(golden.vistas)("vista de la plantilla $n", (v) => {
-    expect(vistaPlantilla(PLANTILLAS_DEFECTO[v.n], v.modelo, v.n)).toEqual(v.vista);
+    expect(sinMayusEnEtiquetas(vistaPlantilla(PLANTILLAS_DEFECTO[v.n], v.modelo, v.n))).toEqual(sinMayusEnEtiquetas(v.vista));
   });
 });
 

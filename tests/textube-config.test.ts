@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { claveDeNombre, claveValida, configVacia, normalizarConfig } from "@/lib/textube/config";
-import { opcionesDe, configurar, datosManual, elegirPlantilla, erroresDe, errorDefectoDe, fijosDe, generarTextos, listaPlantillas, nombreDe, numerosPlantilla, textoOriginal, valoresDeVariables, vistaPlantilla } from "@/lib/textube/plantillas";
+import { opcionesDe, configurar, datosManual, elegirPlantilla, erroresDe, errorDefectoDe, fijosDe, generarTextos, largoEtiquetas, listaPlantillas, nombreDe, numerosPlantilla, textoOriginal, valoresDeVariables, vistaPlantilla } from "@/lib/textube/plantillas";
 
 afterEach(() => configurar(configVacia()));
 
@@ -162,5 +162,40 @@ describe("TexTUBE · variables propias (CRUD)", () => {
     expect(sucio.variables[0]).toMatchObject({ valores: ["a", "b"], defecto: "a" }); // sin repetidos ni vacíos; el valor marcado siempre es uno de la lista
     expect(normalizarConfig({}).variables).toEqual(configVacia().variables); // sin dato: la original
     expect(normalizarConfig({ variables: [] }).variables).toEqual([]); // vaciarlas a propósito se respeta
+  });
+});
+
+describe("TexTUBE · la variable {accion} en las plantillas originales", () => {
+  const casos = [
+    { n: 1, datos: { marca: "Epson", modelo: "L4150", modelo_texto: "L4150", error: "Almohadillas" } },
+    { n: 2, datos: { marca: "Epson", modelo: "L4160", modelo_texto: "L4160", error: "Combinado" } },
+    { n: 3, datos: { marca: "Canon", modelo: "G6010", modelo_texto: "G6010", error: "Combinado" } },
+    { n: 4, datos: { marca: "Canon", modelo: "G3110", modelo_texto: "G3110", error: "Combinado" } },
+    { n: 5, datos: { marca: "Epson-SC", modelo: "F570", modelo_texto: "F570", error: "0014BD" } },
+    { n: 6, datos: { marca: "Epson-SC", modelo: "F570", modelo_texto: "F570", error: "00080000" } },
+  ];
+
+  it.each(casos)("plantilla $n: con cada valor queda dentro de los límites de YouTube y sin marcadores sueltos", ({ n, datos }) => {
+    for (const accion of ["Reset", "Diagnóstico", "Activación"]) {
+      const t = generarTextos(datos, { plantilla: n, tituloN: 1, videoId: "abcDEF12345", variables: { accion } })!;
+      expect(t.descripcion, accion).not.toMatch(/\{[a-z][a-z0-9_]*\}/);
+      expect(t.etiquetas.join(","), accion).not.toMatch(/[{}]/);
+      // las etiquetas siempre caben en el límite de YouTube; con valores más largos que «Reset» se quitan 1 o 2 del final (las menos importantes)
+      expect(largoEtiquetas(t.etiquetas), accion).toBeLessThanOrEqual(490);
+      expect(t.etiquetas_recortadas, accion).toBeLessThanOrEqual(4);
+      expect(t.descripcion).toContain(accion + " "); // «🚀 {accion} en 1 minuto…»
+    }
+  });
+
+  it("la descripción cambia solo la palabra «Reset» entera: los nombres propios quedan igual", () => {
+    const t = generarTextos(casos[0].datos, { plantilla: 1, tituloN: 1, videoId: "abcDEF12345", variables: { accion: "Diagnóstico" } })!;
+    expect(t.descripcion).toContain("🚀 Diagnóstico en 1 minuto");
+    expect(t.descripcion).toContain("ResetOkey, ResetAlmohadillas y hoy ResetEnLinea.com"); // nombres de marca
+    expect(t.descripcion).toContain("https://resetenlinea.com/reset/epson/l4150/"); // direcciones
+    expect(t.descripcion).toContain("#ResetEpson"); // hashtag que ya existía
+    expect(t.descripcion).toContain("Diagnóstico Epson L4150"); // «Búsquedas relacionadas: … Reset Epson {modelo}»
+    expect(t.etiquetas.slice(0, 2)).toEqual(["Diagnostico epson L4150", "epson L4150"]); // {accion_h}: sin tilde
+    expect(t.etiquetas).toContain("resetenlinea"); // la marca no se toca
+    expect(t.titulo).toBe("Reset Epson L4150 Almohadillas en 1 Minuto 🚀 o Reembolso 🔒"); // los títulos no se tocaron
   });
 });
