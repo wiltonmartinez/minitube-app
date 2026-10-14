@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-/** Barra superior de la app unificada: PromptTUBE (generador de prompts) y Editor de capas (arma la miniatura final). */
+/** Barra superior de la app unificada: PromptTUBE (generador de prompts), Editor de capas (arma la miniatura final) y TexTUBE (títulos y descripciones de YouTube). */
 export function BarraApp() {
   const enlace = "rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground";
   return (
@@ -11,6 +11,9 @@ export function BarraApp() {
       </Link>
       <Link href="/editor" className={enlace}>
         🧩 Editor de capas
+      </Link>
+      <Link href="/textube" className={enlace}>
+        ✍️ TexTUBE
       </Link>
     </nav>
   );

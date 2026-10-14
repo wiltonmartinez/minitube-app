@@ -9,6 +9,17 @@ export type Cambio = {
 
 export const CHANGELOG: Cambio[] = [
   {
+    version: "4.16.0",
+    fecha: "2026-10-14",
+    titulo: "TexTUBE dentro de la app: títulos, descripciones y etiquetas de YouTube",
+    cambios: [
+      "Nueva sección TexTUBE (✍️ en la barra superior): elige la plantilla (o automática), escribe marca, modelo y error —o pega el video y pulsa «Leer del video»—, genera 5 títulos, descripción y etiquetas, y aplícalos al video con respaldo para deshacer. Los resultados son idénticos a los de Gestor TUBE (comprobado con 25 casos).",
+      "Las 6 plantillas se pueden editar desde la pantalla (con vista previa y límites de YouTube) y se guardan en el navegador; siempre se puede volver al original.",
+      "Acceso protegido: TexTUBE y sus rutas de YouTube piden contraseña (GESTOR_CLAVE) en la web publicada; PromptTUBE y el Editor siguen libres. En tu PC no se pide.",
+      "Las credenciales de YouTube viven solo en el servidor (YT_CLIENT_ID, YT_CLIENT_SECRET y YT_REFRESH_TOKEN), nunca llegan al navegador. Si el permiso vence, el botón «Renovar el permiso de YouTube» lo renueva desde tu PC.",
+    ],
+  },
+  {
     version: "4.15.0",
     fecha: "2026-10-13",
     titulo: "App unificada: Editor de capas dentro de PromptTUBE",
