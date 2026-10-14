@@ -134,3 +134,53 @@ details.cp-sec > summary::after { content:"▸"; color:var(--suave); transition:
 details.cp-sec[open] > summary::after { transform:rotate(90deg); }
 details.cp-sec > .cp-sec-cuerpo { padding:0 12px 12px; }
 #cp-lienzo { cursor:pointer; }
+
+/* ═══ Armonía con Gestor TUBE: un solo tema oscuro y las mismas medidas que TexTUBE y PrompTUBE ═══
+   (los valores son los de app/globals.css; si cambias allí los colores, cámbialos aquí) */
+:root {
+  color-scheme: dark;
+  --fondo: oklch(0.145 0 0); --tarjeta: oklch(0.205 0 0); --texto: oklch(0.985 0 0); --suave: oklch(0.708 0 0);
+  --borde: oklch(1 0 0 / 15%); --hover: oklch(0.269 0 0);
+  --azul: oklch(0.922 0 0); --azul-fondo: oklch(1 0 0 / 10%);
+  --verde: oklch(0.765 0.177 163); --verde-fondo: oklch(0.3 0.06 163);
+  --rojo: oklch(0.704 0.191 22.216); --rojo-fondo: oklch(0.3 0.08 22);
+  --ambar: oklch(0.82 0.16 85); --ambar-fondo: oklch(0.3 0.06 85);
+  --radio: 0.625rem; --anillo: 0 0 0 1px oklch(1 0 0 / 10%);
+}
+body { font: 14px/1.5 var(--fuente-app, ui-sans-serif, system-ui, "Segoe UI", Roboto, sans-serif); -webkit-font-smoothing: antialiased; }
+main { max-width:72rem; margin:0 auto; padding:32px 16px; }
+h1 { font-size:30px; line-height:36px; font-weight:700; letter-spacing:-0.025em; margin:0; }
+@media (min-width:640px) { h1 { font-size:36px; line-height:40px; } }
+.lema { font-size:16px; line-height:24px; max-width:48rem; margin:8px 0 24px; color:var(--suave); }
+h2 { font-size:16px; line-height:1.375; font-weight:500; margin:0 0 4px; }
+h3 { font-weight:600; }
+
+/* tarjetas como las de la app */
+.tarjeta { border:0; box-shadow:var(--anillo); border-radius:14px; padding:16px; margin-bottom:16px; }
+
+/* botones y campos con la medida de los de la app */
+.btn { height:32px; padding:0 10px; gap:6px; border-radius:var(--radio); border:1px solid var(--borde); background:oklch(1 0 0 / 4.5%); font-size:14px; font-weight:500; transition:background-color .15s, border-color .15s; }
+.btn:hover:not(:disabled) { background:oklch(1 0 0 / 8%); border-color:var(--borde); }
+.btn.primario { background:oklch(0.922 0 0); color:oklch(0.205 0 0); border-color:transparent; } .btn.primario:hover:not(:disabled) { background:oklch(0.922 0 0 / 80%); }
+.btn.verde { background:oklch(0.765 0.177 163 / 20%); color:var(--verde); border-color:transparent; } .btn.verde:hover:not(:disabled) { background:oklch(0.765 0.177 163 / 30%); }
+.btn.rojo, .btn.contorno-rojo { background:oklch(0.704 0.191 22.216 / 15%); color:var(--rojo); border-color:transparent; } .btn.rojo:hover:not(:disabled), .btn.contorno-rojo:hover:not(:disabled) { background:oklch(0.704 0.191 22.216 / 25%); }
+input[type=text], input[type=number], input[type=time], select { height:32px; padding:4px 10px; border-radius:var(--radio); border:1px solid var(--borde); background:oklch(1 0 0 / 4.5%); font-size:14px; }
+textarea { padding:8px 10px; border-radius:var(--radio); border:1px solid var(--borde); background:oklch(1 0 0 / 4.5%); }
+input:focus, select:focus, textarea:focus { outline:none; border-color:oklch(0.556 0 0); box-shadow:0 0 0 3px oklch(0.556 0 0 / 50%); }
+select option { background:oklch(0.205 0 0); color:oklch(0.985 0 0); }
+label.campo { font-size:14px; font-weight:500; color:var(--texto); }
+.check { border-radius:var(--radio); background:oklch(1 0 0 / 4.5%); } .check:has(input:checked) { border-color:oklch(1 0 0 / 40%); background:oklch(1 0 0 / 10%); }
+.suave, .nota { color:var(--suave); }
+.chip { background:oklch(1 0 0 / 8%); }
+details.cp-sec { background:oklch(1 0 0 / 3%); border-color:var(--borde); border-radius:var(--radio); }
+.cp-pasos button { background:var(--tarjeta); border:0; box-shadow:var(--anillo); border-radius:14px; }
+.cp-pasos button:hover { background:oklch(0.269 0 0); box-shadow:var(--anillo); }
+.cp-pasos b { background:oklch(0.922 0 0); color:oklch(0.205 0 0); }
+
+/* pestañas con aspecto de pestañas de navegador (iguales a las de la barra superior de la app) */
+.seg.cp-pestanas { display:flex; align-items:flex-end; gap:4px; padding:0; margin:0 0 16px; border-radius:0; background:var(--fondo); border-bottom:1px solid var(--borde); box-shadow:none; position:sticky; top:0; z-index:6; }
+.seg.cp-pestanas button { position:relative; flex:none; margin-bottom:-1px; height:36px; padding:0 16px; border:1px solid transparent; border-bottom:0; border-radius:var(--radio) var(--radio) 0 0; background:transparent; color:var(--suave); font-weight:500; box-shadow:none; transition:background-color .15s, color .15s; }
+.seg.cp-pestanas button:hover { background:oklch(1 0 0 / 8%); color:var(--texto); }
+.seg.cp-pestanas button.activo { background:var(--tarjeta); color:var(--texto); border-color:var(--borde); box-shadow:none; }
+.seg.cp-pestanas button.activo::before { content:""; position:absolute; left:12px; right:12px; top:0; height:2px; border-radius:2px; background:oklch(1 0 0 / 70%); }
+.seg.cp-pestanas button.activo::after { content:""; position:absolute; left:0; right:0; bottom:-1px; height:1px; background:var(--tarjeta); }

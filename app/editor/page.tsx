@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { MarcoCapaTube } from "@/components/marco-capatube";
 
 export const metadata: Metadata = {
   title: "CapaTUBE – Gestor TUBE",
@@ -7,5 +8,5 @@ export const metadata: Metadata = {
 
 /** CapaTUBE vive como página estática independiente (public/editor); aquí se muestra dentro de la app. */
 export default function EditorPage() {
-  return <iframe src="/editor/index.html" title="CapaTUBE" className="h-[calc(100vh-49px)] w-full flex-1 border-0 bg-white" />;
+  return <MarcoCapaTube />;
 }

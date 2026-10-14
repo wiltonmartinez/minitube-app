@@ -9,6 +9,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { extraerDatos, extraerVideoId, type DatosVideo } from "@/lib/textube/datos-video";
 import { MenusTextube } from "@/components/textube-menus";
+import { CONTENEDOR_MODULO, EncabezadoModulo } from "@/components/encabezado-modulo";
+import { Pestanas } from "@/components/pestanas";
 import { PRIMERA_PROPIA, MAX_PROPIAS, type Config } from "@/lib/textube/config";
 import { useConfigTextube } from "@/lib/textube/use-config";
 import {
@@ -53,7 +55,7 @@ async function llamar<T>(ruta: string, cuerpo: unknown): Promise<T> {
 }
 
 // Los menús desplegables nativos llevan fondo y letra propios para que las opciones se vean en modo oscuro y claro
-const campo = "w-full rounded-md border bg-background px-3 py-2 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring [color-scheme:dark] [&>option]:bg-background [&>option]:text-foreground";
+const campo = "h-8 w-full min-w-0 rounded-lg border border-input bg-input/30 px-2.5 py-1 text-sm text-foreground outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 [color-scheme:dark] [&>option]:bg-background [&>option]:text-foreground";
 
 export default function TexTubePage() {
   const [pestana, setPestana] = useState<"video" | "plantillas" | "menus">("video");
@@ -65,20 +67,11 @@ export default function TexTubePage() {
   }, []);
 
   return (
-    <main className="mx-auto w-full max-w-5xl flex-1 space-y-6 px-4 py-8">
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">✍️ TexTUBE</h1>
-          <p className="mt-1 max-w-3xl text-muted-foreground">TexTUBE es un módulo de gestión que te permite editar el título, la descripción y las etiquetas de tus videos de YouTube de forma manual y centralizada. En lugar de navegar por la página de YouTube Studio, utiliza la API oficial para inyectar y guardar tus cambios video por video directamente desde la aplicación.</p>
-        </div>
-      </header>
-      <div className="flex gap-2">
-        {([["video", "✨ Generar y aplicar"], ["plantillas", "📄 Plantillas"], ["menus", "⚙️ Menús"]] as const).map(([id, nombre]) => (
-          <Button key={id} variant={pestana === id ? "default" : "outline"} onClick={() => setPestana(id)}>
-            {nombre}
-          </Button>
-        ))}
-      </div>
+    <main className={`${CONTENEDOR_MODULO} space-y-6`}>
+      <EncabezadoModulo icono="✍️" nombre="TexTUBE">
+        TexTUBE es un módulo de gestión que te permite editar el título, la descripción y las etiquetas de tus videos de YouTube de forma manual y centralizada. En lugar de navegar por la página de YouTube Studio, utiliza la API oficial para inyectar y guardar tus cambios video por video directamente desde la aplicación.
+      </EncabezadoModulo>
+      <div><Pestanas valor={pestana} onCambio={setPestana} opciones={[["video", "✨ Generar y aplicar"], ["plantillas", "📄 Plantillas"], ["menus", "⚙️ Menús"]] as const} /></div>
       {pestana === "video" ? <Generar editadas={editadas} cfg={cfg} /> : pestana === "plantillas" ? <Plantillas editadas={editadas} onCambio={setEditadas} cfg={cfg} onEditarCfg={editarCfg} /> : (
         <MenusTextube cfg={cfg} onEditar={editarCfg} plantillas={editadas as Record<number, string>} onReemplazar={(c, pl) => {
           ponerCfg(c);

@@ -9,6 +9,16 @@ export type Cambio = {
 
 export const CHANGELOG: Cambio[] = [
   {
+    version: "4.22.0",
+    fecha: "2026-10-14",
+    titulo: "Los tres módulos con el mismo formato y pestañas de navegador",
+    cambios: [
+      "Un solo tema oscuro para PrompTUBE, CapaTUBE y TexTUBE: CapaTUBE deja de ser claro y usa los mismos colores, la misma letra (Geist), botones, campos y tarjetas que el resto de la app.",
+      "La barra superior y las pestañas internas (Generar / Plantillas / Menús, y Capas / Fondo / Guardar) tienen aspecto de pestañas de navegador: la activa se une a la página y lleva una raya arriba, y las demás se iluminan al pasar el ratón.",
+      "Encabezado, ancho y márgenes iguales en los tres módulos: icono + nombre y debajo su descripción.",
+    ],
+  },
+  {
     version: "4.21.0",
     fecha: "2026-10-14",
     titulo: "Nuevos nombres: PrompTUBE y CapaTUBE",

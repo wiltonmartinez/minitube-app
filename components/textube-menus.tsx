@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { ERRORES_BASE, MARCAS_BASE, configVacia, normalizarConfig, type Config, type OpcionError } from "@/lib/textube/config";
 import { errorDefectoDe, esPropia, listaPlantillas, nombreDe, opcionesDe } from "@/lib/textube/plantillas";
 
-const campo = "w-full rounded-md border bg-background px-3 py-2 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring [color-scheme:dark] [&>option]:bg-background [&>option]:text-foreground";
+const campo = "h-8 w-full min-w-0 rounded-lg border border-input bg-input/30 px-2.5 py-1 text-sm text-foreground outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 [color-scheme:dark] [&>option]:bg-background [&>option]:text-foreground";
 
 type Props = { cfg: Config; onEditar: (fn: (c: Config) => Config) => void; onReemplazar: (c: Config, plantillas: Record<string, string>) => void; plantillas: Record<number, string> };
 

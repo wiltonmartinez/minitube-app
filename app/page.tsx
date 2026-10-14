@@ -32,6 +32,7 @@ import { EDADES_PANEL, EMOCION_AUTO, EMOCIONES_EDAD, EMOCIONES_POR_TONO, GRUPOS_
 import { ENFOQUES, ENFOQUE_AUTO, ENFOQUE_LIBRE, OPCIONES_ENFOQUE, edadesDeEnfoque, enfoqueDe, enfoqueEfectivo, etiquetaEnfoque, normalizarEnfoque, profesionEnEnfoque } from "@/lib/enfoques";
 import { toast } from "sonner";
 import { EnviarAlEditor } from "@/components/enviar-al-editor";
+import { CONTENEDOR_MODULO, EncabezadoModulo } from "@/components/encabezado-modulo";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -734,20 +735,18 @@ export default function Home() {
   }
 
   return (
-    <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-10">
-      <header className="mb-8 text-center">
-        <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
-          Generador de prompts para miniaturas de YouTube
-        </h1>
-        <p className="mx-auto mt-2 max-w-3xl text-muted-foreground">
-          PrompTUBE es un generador de prompts fotográficos hiperrealistas diseñado para crear miniaturas de YouTube altamente atractivas para cualquier tipo de canal o temática. Su objetivo es estructurar descripciones detalladas y precisas que el usuario copia y pega en modelos generativos, como Gemini o ChatGPT, para obtener imágenes cinematográficas en formato panorámico 16:9.
-        </p>
-        <p className="mt-2 text-xs text-muted-foreground">
+    <main className={`${CONTENEDOR_MODULO} space-y-8`}>
+      <EncabezadoModulo
+        icono="🎨"
+        nombre="PrompTUBE"
+        pie={
           <Link href="/cambios" className="underline-offset-2 hover:underline">
             v{VERSION} · {COMMIT} · ver cambios
           </Link>
-        </p>
-      </header>
+        }
+      >
+        PrompTUBE es un generador de prompts fotográficos hiperrealistas diseñado para crear miniaturas de YouTube altamente atractivas para cualquier tipo de canal o temática. Su objetivo es estructurar descripciones detalladas y precisas que el usuario copia y pega en modelos generativos, como Gemini o ChatGPT, para obtener imágenes cinematográficas en formato panorámico 16:9.
+      </EncabezadoModulo>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
