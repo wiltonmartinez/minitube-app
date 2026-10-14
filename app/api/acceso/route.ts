@@ -1,8 +1,16 @@
 import { NextResponse } from "next/server";
-import { COOKIE_SESION, DURACION_SESION_S, accesoConfigurado, claveCorrecta, crearSesion } from "@/lib/acceso";
+import { COOKIE_SESION, DURACION_SESION_S, accesoConfigurado, claveCorrecta, correoPermitido, correosPermitidos, crearSesion } from "@/lib/acceso";
 
 // Frena los intentos repetidos de adivinar la contraseña (por dirección, en memoria).
 const intentos = new Map<string, { n: number; hasta: number }>();
+
+/** ¿El correo escrito es uno de los autorizados? Si no hay correos configurados, solo se pide la contraseña. */
+const informaCorreo = () => correosPermitidos().length > 0;
+
+export async function GET() {
+  // la pantalla de acceso pregunta si debe pedir el correo
+  return NextResponse.json({ pideCorreo: informaCorreo(), configurado: accesoConfigurado() });
+}
 
 export async function POST(req: Request) {
   if (!accesoConfigurado()) return NextResponse.json({ error: "Falta configurar la contraseña (GESTOR_CLAVE) en el servidor." }, { status: 503 });
@@ -10,14 +18,20 @@ export async function POST(req: Request) {
   const e = intentos.get(quien);
   if (e && e.n >= 5 && e.hasta > Date.now()) return NextResponse.json({ error: "Demasiados intentos. Espera un minuto." }, { status: 429 });
   let clave = "";
+  let correo = "";
   try {
-    clave = String((await req.json()).clave ?? "");
+    const d = await req.json();
+    clave = String(d.clave ?? "");
+    correo = String(d.correo ?? "");
   } catch {
     /* cuerpo vacío */
   }
-  if (!(await claveCorrecta(clave))) {
+  // el mismo mensaje para correo o contraseña malos: no se revela cuál de los dos falló
+  const correoOk = !informaCorreo() || correoPermitido(correo);
+  const claveOk = await claveCorrecta(clave);
+  if (!(correoOk && claveOk)) {
     intentos.set(quien, { n: (e && e.hasta > Date.now() ? e.n : 0) + 1, hasta: Date.now() + 60_000 });
-    return NextResponse.json({ error: "Contraseña incorrecta." }, { status: 401 });
+    return NextResponse.json({ error: informaCorreo() ? "Correo o contraseña incorrectos." : "Contraseña incorrecta." }, { status: 401 });
   }
   intentos.delete(quien);
   const r = NextResponse.json({ ok: true });

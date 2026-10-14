@@ -47,3 +47,50 @@ describe("acceso con contraseña", () => {
     expect(cookieDe(new Request("http://x/"))).toBeUndefined();
   });
 });
+
+describe("correo autorizado y enlace de acceso", () => {
+  const previoCorreo = process.env.GESTOR_EMAIL;
+  beforeEach(() => {
+    process.env.GESTOR_EMAIL = "Dueno@Ejemplo.com, otro@ejemplo.com";
+  });
+  afterEach(() => {
+    if (previoCorreo === undefined) delete process.env.GESTOR_EMAIL;
+    else process.env.GESTOR_EMAIL = previoCorreo;
+  });
+
+  it("reconoce solo los correos autorizados, sin importar mayúsculas", async () => {
+    const { correoPermitido, correosPermitidos } = await import("@/lib/acceso");
+    expect(correosPermitidos()).toEqual(["dueno@ejemplo.com", "otro@ejemplo.com"]);
+    expect(correoPermitido(" DUENO@ejemplo.com ")).toBe(true);
+    expect(correoPermitido("intruso@ejemplo.com")).toBe(false);
+    expect(correoPermitido("")).toBe(false);
+  });
+
+  it("el enlace vale 15 minutos y devuelve el correo", async () => {
+    const { crearEnlaceAcceso, verificarEnlaceAcceso } = await import("@/lib/acceso");
+    const ahora = Date.now();
+    const t = await crearEnlaceAcceso("dueno@ejemplo.com", ahora);
+    expect(await verificarEnlaceAcceso(t, ahora + 60_000)).toBe("dueno@ejemplo.com");
+    expect(await verificarEnlaceAcceso(t, ahora + 14 * 60_000)).toBe("dueno@ejemplo.com");
+    expect(await verificarEnlaceAcceso(t, ahora + 16 * 60_000)).toBeNull();
+  });
+
+  it("un enlace alterado, de otro correo o sin autorización no sirve", async () => {
+    const { crearEnlaceAcceso, verificarEnlaceAcceso } = await import("@/lib/acceso");
+    const ahora = Date.now();
+    const t = await crearEnlaceAcceso("dueno@ejemplo.com", ahora);
+    const [caduca, , firma] = t.split(".");
+    const otroB64 = btoa("intruso@ejemplo.com").replace(/=+$/, "");
+    expect(await verificarEnlaceAcceso(`${caduca}.${otroB64}.${firma}`, ahora)).toBeNull(); // cambiar el correo
+    expect(await verificarEnlaceAcceso(`${Number(caduca) + 9999}.${t.split(".")[1]}.${firma}`, ahora)).toBeNull(); // alargar la fecha
+    expect(await verificarEnlaceAcceso("basura", ahora)).toBeNull();
+    expect(await verificarEnlaceAcceso(null, ahora)).toBeNull();
+    // se quitó el correo de la lista: el enlace anterior deja de servir
+    process.env.GESTOR_EMAIL = "otro@ejemplo.com";
+    expect(await verificarEnlaceAcceso(t, ahora)).toBeNull();
+    // otra contraseña = otra firma
+    process.env.GESTOR_EMAIL = "dueno@ejemplo.com";
+    process.env.GESTOR_CLAVE = "distinta";
+    expect(await verificarEnlaceAcceso(t, ahora)).toBeNull();
+  });
+});

@@ -9,6 +9,16 @@ export type Cambio = {
 
 export const CHANGELOG: Cambio[] = [
   {
+    version: "4.19.0",
+    fecha: "2026-10-14",
+    titulo: "Entrar con correo y recuperar el acceso por correo",
+    cambios: [
+      "La pantalla de acceso pide correo y contraseña (el correo autorizado va en GESTOR_EMAIL; varios, separados por coma). Si el correo o la contraseña fallan, el mensaje es el mismo: no se revela cuál estaba mal.",
+      "«¿Olvidaste la contraseña?»: se manda un enlace de acceso al correo autorizado, que vale 15 minutos y sirve una vez. Pedir el enlace con un correo no autorizado da la misma respuesta, sin enviar nada. Hay un tope de pedidos por hora.",
+      "El correo sale con Resend (RESEND_API_KEY). En tu PC, sin esa clave, el enlace se muestra en pantalla; en internet nunca. Para cambiar la contraseña de verdad se cambia GESTOR_CLAVE en Vercel.",
+    ],
+  },
+  {
     version: "4.18.0",
     fecha: "2026-10-14",
     titulo: "TexTUBE: menús editables (crear, cambiar y eliminar)",

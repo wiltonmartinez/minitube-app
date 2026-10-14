@@ -49,3 +49,36 @@ export async function sesionValida(valor: string | undefined | null, ahora = Dat
 /** Lee la cookie de sesión de una petición. */
 export const cookieDe = (req: Request): string | undefined => req.headers.get("cookie")?.split(/;\s*/).find((c) => c.startsWith(COOKIE_SESION + "="))?.slice(COOKIE_SESION.length + 1);
 export const exigirSesion = async (req: Request) => sesionValida(cookieDe(req));
+
+// ───────────────────────── correo autorizado y enlace de acceso ─────────────────────────
+// GESTOR_EMAIL: el correo (o varios, separados por coma) que pueden entrar. Si falta, solo se pide la contraseña.
+// «¿Olvidaste la contraseña?»: se manda a ese correo un enlace de acceso que dura 15 minutos (firmado, sin guardar nada en el servidor).
+
+export const correosPermitidos = (): string[] => (process.env.GESTOR_EMAIL ?? "").split(",").map((c) => c.trim().toLowerCase()).filter(Boolean);
+export const correoPermitido = (correo: string) => correosPermitidos().includes(String(correo ?? "").trim().toLowerCase());
+export const DURACION_ENLACE_S = 15 * 60;
+
+const aB64 = (t: string) => btoa(String.fromCharCode(...enc.encode(t))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+const deB64 = (t: string) => new TextDecoder().decode(Uint8Array.from(atob(t.replace(/-/g, "+").replace(/_/g, "/")), (c) => c.charCodeAt(0)));
+
+/** Enlace de acceso para un correo autorizado: «caduca.correo.firma». */
+export async function crearEnlaceAcceso(correo: string, ahora = Date.now()): Promise<string> {
+  const c = correo.trim().toLowerCase();
+  const caduca = Math.floor(ahora / 1000) + DURACION_ENLACE_S;
+  return `${caduca}.${aB64(c)}.${await hmac(`enlace|${caduca}|${c}`)}`;
+}
+
+/** El correo del enlace si es válido (firma buena, no vencido y correo todavía autorizado); si no, null. */
+export async function verificarEnlaceAcceso(token: string | null | undefined, ahora = Date.now()): Promise<string | null> {
+  if (!token || !clave()) return null;
+  const [caduca, b64, firma] = token.split(".");
+  if (!/^\d{9,12}$/.test(caduca ?? "") || !b64 || !firma || Number(caduca) < Math.floor(ahora / 1000)) return null;
+  let correo: string;
+  try {
+    correo = deB64(b64);
+  } catch {
+    return null;
+  }
+  if (!igualesConstante(firma, await hmac(`enlace|${caduca}|${correo}`))) return null;
+  return correoPermitido(correo) ? correo : null;
+}
