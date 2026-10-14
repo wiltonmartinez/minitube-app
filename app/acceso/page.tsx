@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { CampoClave } from "@/components/campo-clave";
 import { Label } from "@/components/ui/label";
 
 type Modo = "entrar" | "recuperar";
@@ -83,7 +84,7 @@ export default function AccesoPage() {
                   </>
                 )}
                 <Label htmlFor="clave">Contraseña</Label>
-                <Input id="clave" type="password" autoComplete="current-password" autoFocus={!pideCorreo} value={clave} onChange={(e) => setClave(e.target.value)} />
+                <CampoClave id="clave" autoComplete="current-password" autoFocus={!pideCorreo} value={clave} onChange={(e) => setClave(e.target.value)} />
                 {error && <p className="text-sm text-destructive">{error}</p>}
                 <Button type="submit" className="w-full" disabled={!clave || (pideCorreo && !correo) || enviando}>
                   Entrar

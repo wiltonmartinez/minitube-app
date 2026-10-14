@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { CampoClave } from "@/components/campo-clave";
 import { Label } from "@/components/ui/label";
 import { MODULOS } from "@/lib/modulos";
 
@@ -135,7 +136,7 @@ export default function CuentaPage() {
             {cambiaCorreo && (
               <div className="space-y-1.5 rounded-md border border-amber-500/40 bg-amber-500/10 p-3">
                 <Label htmlFor="clave-correo">Para cambiar el correo, escribe tu contraseña actual</Label>
-                <Input id="clave-correo" type="password" autoComplete="current-password" value={claveParaCorreo} onChange={(e) => setClaveParaCorreo(e.target.value)} />
+                <CampoClave id="clave-correo" autoComplete="current-password" value={claveParaCorreo} onChange={(e) => setClaveParaCorreo(e.target.value)} />
                 <p className="text-xs text-muted-foreground">Desde ahora entrarás con el correo nuevo y el enlace de recuperación llegará a él.</p>
               </div>
             )}
@@ -158,11 +159,11 @@ export default function CuentaPage() {
             {estado?.sinActual ? (
               <p className="rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-sm">✅ Entraste con el enlace del correo: no necesitas la contraseña actual. Escribe la nueva (el permiso vale 15 minutos).</p>
             ) : (
-              <div className="space-y-1.5"><Label htmlFor="actual">Contraseña actual</Label><Input id="actual" type="password" autoComplete="current-password" value={actual} onChange={(e) => setActual(e.target.value)} disabled={bloqueada} /></div>
+              <div className="space-y-1.5"><Label htmlFor="actual">Contraseña actual</Label><CampoClave id="actual" autoComplete="current-password" value={actual} onChange={(e) => setActual(e.target.value)} disabled={bloqueada} /></div>
             )}
             <div className="space-y-1.5">
               <Label htmlFor="nueva">Contraseña nueva</Label>
-              <Input id="nueva" type="password" autoComplete="new-password" value={nueva} onChange={(e) => setNueva(e.target.value)} disabled={bloqueada} />
+              <CampoClave id="nueva" autoComplete="new-password" value={nueva} onChange={(e) => setNueva(e.target.value)} disabled={bloqueada} />
               {nueva && (
                 <div className="flex items-center gap-2" aria-live="polite">
                   <div className="h-1.5 flex-1 rounded-full bg-muted"><div className={`h-1.5 rounded-full transition-all ${f.n <= 1 ? "bg-red-500" : f.n === 2 ? "bg-amber-500" : "bg-emerald-500"}`} style={{ width: `${(f.n / 4) * 100}%` }} /></div>
@@ -170,7 +171,7 @@ export default function CuentaPage() {
                 </div>
               )}
             </div>
-            <div className="space-y-1.5"><Label htmlFor="repetir">Repite la contraseña nueva</Label><Input id="repetir" type="password" autoComplete="new-password" value={repetir} onChange={(e) => setRepetir(e.target.value)} disabled={bloqueada} /></div>
+            <div className="space-y-1.5"><Label htmlFor="repetir">Repite la contraseña nueva</Label><CampoClave id="repetir" autoComplete="new-password" value={repetir} onChange={(e) => setRepetir(e.target.value)} disabled={bloqueada} /></div>
             {errorClave && <p className="text-sm text-destructive">{errorClave}</p>}
             <Button type="submit" disabled={bloqueada || cambiando || (!actual && !estado?.sinActual) || !nueva || !repetir}>🔑 Cambiar contraseña</Button>
             {estado && !estado.claveDeLaApp && !bloqueada && <p className="text-xs text-muted-foreground">Ahora entras con la contraseña de la configuración del servidor; al cambiarla aquí, la nueva pasa a ser la que vale.</p>}
