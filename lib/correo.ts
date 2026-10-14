@@ -21,8 +21,11 @@ async function porBackend(b: { url: string; token: string }, o: { para: string; 
     body: JSON.stringify(o),
     cache: "no-store",
     signal: AbortSignal.timeout(25_000),
-  }).catch(() => null);
-  if (!r) throw new ErrorCorreo("No se pudo conectar con el servidor de correo.");
+  }).catch((e: unknown) => {
+    const c = (e as { cause?: { code?: string; message?: string } })?.cause;
+    return String(c?.code ?? c?.message ?? (e as Error)?.message ?? "error").slice(0, 80);
+  });
+  if (typeof r === "string") throw new ErrorCorreo(`No se pudo conectar con el servidor de correo (${r}).`);
   if (!r.ok) {
     const d = await r.json().catch(() => ({}));
     throw new ErrorCorreo(r.status === 401 ? "El servidor de correo rechazó el token (GESTOR_CORREO_TOKEN)." : r.status === 503 ? "El servidor de correo está apagado (falta GESTOR_CORREO_TOKEN allá)." : `No se pudo enviar el correo (${d?.message ?? "HTTP " + r.status}).`);
